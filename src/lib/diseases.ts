@@ -63,6 +63,10 @@ export interface DiseaseInfo {
   group?: ChronicGroup;
   /** Organ pages list the condition slugs they watch over; back-links are computed. */
   related?: string[];
+  /** Organ pages: conditions that ORIGINATE in this organ (vs ones it suffers
+   *  downstream). A condition's home organ leads its back-link list. */
+  homeFor?: string[];
+
   name: string;
   short: string;
   icon: LucideIcon;
@@ -263,6 +267,7 @@ export const DISEASES: DiseaseInfo[] = [
     kind: "chronic",
     group: "organ",
     related: ["hypertension", "cholesterol", "obesity"],
+    homeFor: ["hypertension", "cholesterol"],
     name: "Heart Health",
     short: "Heart",
     icon: Heart,
@@ -628,6 +633,7 @@ export const DISEASES: DiseaseInfo[] = [
     kind: "chronic",
     group: "organ",
     related: ["asthma"],
+    homeFor: ["asthma"],
     name: "Lung Health",
     short: "Lungs",
     icon: Wind,
@@ -807,7 +813,7 @@ export const DISEASES: DiseaseInfo[] = [
     slug: "gut",
     kind: "chronic",
     group: "organ",
-    related: ["obesity", "diabetes"],
+    related: ["obesity"],
     name: "Gut Health",
     short: "Gut",
     icon: Salad,
@@ -890,6 +896,57 @@ export const DISEASES: DiseaseInfo[] = [
       if: {
         title: "16:8 lipid window",
         manage: ["Eat 10 AM – 6 PM", "No snacking after dinner", "Black coffee/green tea OK while fasting"],
+      },
+    },
+  },
+  {
+    slug: "pancreas",
+    kind: "chronic",
+    group: "organ",
+    related: ["diabetes", "obesity"],
+    homeFor: ["diabetes"],
+    name: "Pancreas Health",
+    short: "Pancreas",
+    icon: Zap,
+    gradient: "var(--gradient-gold)",
+    blurb: "Protect the insulin factory — steady sugar, light meals, and real rest between them.",
+    basic: {
+      what: "The pancreas makes insulin — the hormone that lets sugar leave your blood and enter your cells. Every sugar spike asks it to work. Decades of spikes wear the factory out, and that is how type 2 diabetes begins.",
+      causes: ["Constant sugar spikes from refined carbs & sweet drinks", "All-day grazing — the factory never gets a break", "Belly fat, which makes cells deaf to insulin", "Alcohol binges (can inflame it acutely)"],
+      symptoms: ["Silent for years — insulin quietly works harder", "Energy crashes 2 hours after meals", "Constant sweet cravings", "Dark velvety patches on neck/underarms (insulin resistance)"],
+      redFlags: ["Severe belly pain radiating to the back — pancreatitis needs a doctor now", "Fasting sugar above 100 on repeat tests", "Unexplained weight loss with thirst and frequent urination"],
+    },
+    dosDonts: {
+      dos: ["Protein and fiber before carbs — flattens every spike", "10-minute walk after meals", "Real gaps between meals, no grazing", "Fasting sugar + HbA1c once a year after 30"],
+      donts: ["No sweet drinks — the fastest spike there is", "Don't snack all day 'to keep sugar steady' — the opposite is true", "Avoid maida + sugar combos (biscuits, bakery)", "Don't wait for a diagnosis to start — insulin resistance comes years earlier"],
+    },
+    relevance: { diet: 5, if: 5, exercise: 4, herbs: 4, remedies: 3, yoga: 3, fasting: 3, meditation: 2, detox: 2 },
+    readyPlans: {
+      diet: {
+        title: "Spike-free plate",
+        manage: ["Salad or veg first, carbs last", "Protein at every meal — 25 g target", "Millets/whole grains over white rice & maida", "Zero sweet drinks — including fresh juice"],
+        prevent: ["Eat protein or fiber before any carb", "Swap sweet drinks for water or chaas", "Keep dessert to a planned joy meal"],
+      },
+      if: {
+        title: "Give the factory a shift break",
+        manage: ["14-hour overnight gap", "Three meals, no grazing between", "Dinner by 7 PM"],
+        prevent: ["Close the kitchen after dinner", "Let hunger arrive before the next meal"],
+      },
+      exercise: {
+        title: "Muscle: your sugar sink",
+        manage: ["10-min walk after every meal", "Strength work 2×/week — muscle pulls sugar without insulin", "150 min/week moderate movement"],
+      },
+      herbs: {
+        title: "Pancreas herbs",
+        manage: ["Methi seed water on waking", "Jamun seed powder (season)", "Karela juice 30 ml (vaidya guidance)", "Cinnamon in warm water"],
+      },
+      remedies: {
+        title: "Desi nuskhe",
+        manage: ["Methi water first thing AM", "Cinnamon-water after heavy meals", "Amla daily", "Bitter veg weekly: karela, methi"],
+      },
+      yoga: {
+        title: "Pancreas-stimulating flow",
+        manage: ["Ardha Matsyendrasana × 2 each side", "Mandukasana × 3", "Kapalbhati 5–10 min", "Vajrasana 5 min after meals"],
       },
     },
   },
@@ -1248,9 +1305,13 @@ export function getOrganHealth(): DiseaseInfo[] {
   return DISEASES.filter((d) => d.group === "organ");
 }
 
-/** Organs that watch over a given condition (computed back-link). */
+/** Organs that watch over a given condition (computed back-link).
+ *  The organ the condition ORIGINATES in leads; organs it damages downstream follow. */
 export function organsForCondition(slug: string): DiseaseInfo[] {
-  return DISEASES.filter((d) => d.group === "organ" && d.related?.includes(slug));
+  const rank = (d: DiseaseInfo) => (d.homeFor?.includes(slug) ? 0 : 1);
+  return DISEASES
+    .filter((d) => d.group === "organ" && d.related?.includes(slug))
+    .sort((a, b) => rank(a) - rank(b));
 }
 
 export function getSeasonalDiseases(): DiseaseInfo[] {

@@ -187,6 +187,15 @@ export const RISK: Record<string, RiskProfile> = {
     note: "Kidneys fail quietly — dehydration, salt, painkillers, BP and sugar all chip away. Protection is far easier than repair.",
     factors: [family("kidney disease"), hydration, saltDiet, painkillers, bpSugar, age40],
   },
+  pancreas: {
+    note: "Your pancreas works hardest on spikes. Insulin resistance shows up years before sugar readings do — which is exactly when it's easiest to reverse.",
+    factors: [family("diabetes"), sugarDiet, weight, activity,
+      { id: "grazing", question: "How often do you eat between meals?", options: [
+        { label: "Rarely — proper meals only", score: 0 }, { label: "A snack or two", score: 2 }, { label: "Grazing all day", score: 4 }] },
+      { id: "spike-crash", question: "Do you crash or crave sweets 2 hours after eating?", options: [
+        { label: "Rarely", score: 0 }, { label: "Sometimes", score: 2 }, { label: "Most days", score: 4 }] },
+      sleep, age40],
+  },
   pcod: {
     note: "PCOD is driven by insulin resistance — food, movement and sleep now can keep cycles regular later.",
     factors: [family("PCOD or diabetes"), weight, sugarDiet, activity, sleep, stress],
@@ -197,6 +206,15 @@ export const RISK: Record<string, RiskProfile> = {
       { id: "alcohol", question: "How often do you drink alcohol?", options: [
         { label: "Never", score: 0 }, { label: "Socially", score: 2 }, { label: "Weekly or more", score: 4 }] },
       activity, family("diabetes or fatty liver")],
+  },
+  liver: {
+    note: "The liver regenerates like no other organ — but only if you stop the daily load and give it food-free hours.",
+    factors: [weight, sugarDiet,
+      { id: "alcohol", question: "How often do you drink alcohol?", options: [
+        { label: "Never", score: 0 }, { label: "Socially", score: 2 }, { label: "Weekly or more", score: 4 }] },
+      { id: "fried", question: "How often do you eat fried or packaged food?", options: [
+        { label: "Rarely", score: 0 }, { label: "A few times a week", score: 2 }, { label: "Most days", score: 4 }] },
+      painkillers, activity, family("fatty liver or diabetes")],
   },
   thyroid: {
     note: "Thyroid trouble often follows years of stress, poor sleep and family history — early support keeps it in range.",
