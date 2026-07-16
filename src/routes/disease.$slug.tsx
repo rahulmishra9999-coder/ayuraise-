@@ -2,7 +2,6 @@ import { createFileRoute, Link, notFound, useRouter } from "@tanstack/react-rout
 import { useEffect, useState } from "react";
 import { BottomNav } from "@/components/BottomNav";
 import { Stars } from "@/components/Stars";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { QuizRunner } from "@/components/QuizRunner";
 import {
@@ -127,98 +126,120 @@ function ChronicPage({ disease }: { disease: DiseaseInfo }) {
         </div>
       </div>
 
-      <div className="mx-auto -mt-4 max-w-xl px-4">
+      {/* Floating section nav — follows the scroll, no clicks to reveal content */}
+      <SectionNav
+        items={[
+          { id: "overview", label: "💡 Understand" },
+          { id: "dos-donts", label: "✅ Do & Don't" },
+          ...(track === "prevent" && RISK[disease.slug] ? [{ id: "risk", label: "🛡️ My risk" }] : []),
+          { id: "plans", label: "🗺️ Plans" },
+          { id: "learn", label: "🎓 Learn" },
+        ]}
+      />
+
+      <div className="mx-auto -mt-2 max-w-xl px-4">
         {/* Plan state banner (State B entry) */}
         {plan && <ActivePlanCard plan={plan} />}
 
         {/* Cross-links: organ ↔ conditions */}
         <CrossLinks disease={disease} />
 
-        {/* Prevention risk check */}
+        {/* ---- UNDERSTAND ---- */}
+        <section id="overview" className="mt-4 scroll-mt-16 rounded-3xl bg-card p-5 shadow-[var(--shadow-soft)] ring-1 ring-border/60 animate-float-up">
+          <SectionHead emoji="💡" title="Understand it" sub="What's actually happening inside" />
+          <Lead text={disease.basic.what} />
+
+          <p className="mt-5 text-[11px] font-bold uppercase tracking-wide text-foreground/60">Why it happens</p>
+          <ul className="mt-2 space-y-2">
+            {disease.basic.causes.map((c, i) => (
+              <li key={c} className="flex items-start gap-2.5 text-[13.5px] leading-snug text-foreground/85 animate-float-up" style={{ animationDelay: `${i * 80}ms` }}>
+                <span className="mt-0.5 shrink-0 text-saffron">◆</span> {c}
+              </li>
+            ))}
+          </ul>
+
+          <p className="mt-5 text-[11px] font-bold uppercase tracking-wide text-foreground/60">How it shows up</p>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {disease.basic.symptoms.map((s) => (
+              <span key={s} className="rounded-full bg-secondary/70 px-3 py-1.5 text-[12px] font-medium leading-snug text-foreground/85 ring-1 ring-border/50">
+                {s}
+              </span>
+            ))}
+          </div>
+
+          <RedFlags items={disease.basic.redFlags} />
+        </section>
+
+        {/* ---- DO & DON'T ---- */}
+        <section id="dos-donts" className="mt-4 scroll-mt-16 rounded-3xl bg-card p-5 shadow-[var(--shadow-soft)] ring-1 ring-border/60 animate-float-up" style={{ animationDelay: "60ms" }}>
+          <SectionHead emoji="✅" title="Do & Don't" sub="The guardrails, at a glance" />
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            <DoCard tone="do" title="Do's" items={disease.dosDonts.dos} />
+            <DoCard tone="dont" title="Don'ts" items={disease.dosDonts.donts} />
+          </div>
+        </section>
+
+        {/* ---- RISK CHECK (prevent track) ---- */}
         {track === "prevent" && RISK[disease.slug] && (
-          <RiskCheck slug={disease.slug} />
+          <section id="risk" className="scroll-mt-16">
+            <RiskCheck slug={disease.slug} />
+          </section>
         )}
 
-        <div className="mt-4 rounded-3xl bg-card p-4 shadow-[var(--shadow-soft)] ring-1 ring-border/60">
-          <Tabs defaultValue="understand">
-            <TabsList className="grid h-auto w-full grid-cols-3 gap-1 bg-muted/70 p-1">
-              <TabsTrigger value="understand" className="text-[12px]">Understand</TabsTrigger>
-              <TabsTrigger value="learn" className="text-[12px]">Learn</TabsTrigger>
-              <TabsTrigger value="manage" className="text-[12px]">Manage</TabsTrigger>
-            </TabsList>
+        {/* ---- PLANS ---- */}
+        <section id="plans" className="mt-4 scroll-mt-16 rounded-3xl bg-card p-5 shadow-[var(--shadow-soft)] ring-1 ring-border/60 animate-float-up" style={{ animationDelay: "120ms" }}>
+          <SectionHead
+            emoji="🗺️"
+            title={track === "prevent" ? "Prevention plans" : "Ready-made plans"}
+            sub={track === "prevent"
+              ? "Lighter tier, ranked by impact — built to keep this away."
+              : "Ranked by how much each moves the needle. Tap to open."}
+          />
+          <ul className="mt-4 space-y-2">
+            {tools.map((t, i) => {
+              const meta = TOOL_META[t];
+              const ready = disease.readyPlans[t]!;
+              return (
+                <li key={t} className="animate-float-up" style={{ animationDelay: `${i * 70}ms` }}>
+                  <button
+                    onClick={() => { setDownloadView(false); setOpenPlan({ tool: t, plan: ready }); }}
+                    className="flex w-full items-center gap-3 rounded-2xl bg-background/70 p-3 text-left ring-1 ring-border/50 transition-transform active:scale-[0.98]"
+                  >
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent/60 text-lg">{meta.emoji}</span>
+                    <span className="flex-1">
+                      <span className="flex items-center justify-between gap-2">
+                        <span className="text-[13px] font-semibold text-foreground/90">{meta.label}</span>
+                        <Stars n={disease.relevance[t]} />
+                      </span>
+                      <span className="mt-0.5 block text-[12px] text-muted-foreground">{ready.title}</span>
+                    </span>
+                    <ChevronRight size={15} className="shrink-0 text-muted-foreground" />
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
 
-            {/* UNDERSTAND */}
-            <TabsContent value="understand" className="pt-3">
-              <p className="text-[13.5px] leading-relaxed text-foreground/85">{disease.basic.what}</p>
-
-              <MiniSection title="Root causes">
-                {disease.basic.causes.map((c) => <li key={c}>{c}</li>)}
-              </MiniSection>
-              <MiniSection title="Common symptoms">
-                {disease.basic.symptoms.map((c) => <li key={c}>{c}</li>)}
-              </MiniSection>
-
-              <RedFlags items={disease.basic.redFlags} />
-
-              {/* Do's & Don'ts */}
-              <div className="mt-4 grid grid-cols-2 gap-2">
-                <DoCard tone="do" title="Do's" items={disease.dosDonts.dos} />
-                <DoCard tone="dont" title="Don'ts" items={disease.dosDonts.donts} />
-              </div>
-            </TabsContent>
-
-            {/* LEARN */}
-            <TabsContent value="learn" className="pt-3">
-              <div className="mb-3 rounded-2xl bg-accent/40 p-3 ring-1 ring-border/60">
-                <div className="flex items-center gap-2 text-primary">
-                  <BookOpen size={15} />
-                  <p className="text-[13px] font-semibold text-foreground/90">The science, simply</p>
-                </div>
-                <p className="mt-1 text-[12.5px] leading-snug text-foreground/80">{disease.basic.what}</p>
-              </div>
-              <p className="mb-2 px-0.5 text-[12px] font-semibold uppercase tracking-wide text-foreground/70">Test your knowledge</p>
-              <QuizRunner quizId="disease" />
-              <button
-                onClick={() => setQuizOpen(true)}
-                className="mt-3 inline-flex items-center gap-2 rounded-full bg-secondary px-3.5 py-2 text-[12.5px] font-medium text-secondary-foreground"
-              >
-                <HelpCircle size={14} /> Open as a quick quiz
-              </button>
-            </TabsContent>
-
-            {/* MANAGE */}
-            <TabsContent value="manage" className="pt-3">
-              <p className="mb-3 text-[12.5px] text-muted-foreground">
-                {track === "prevent"
-                  ? "Prevention interventions, ranked by impact. Lighter than the full protocol — built to keep this away."
-                  : "Interventions ranked by how much they move the needle for this condition."}
-              </p>
-              <ul className="space-y-2">
-                {tools.map((t) => {
-                  const meta = TOOL_META[t];
-                  const ready = disease.readyPlans[t]!;
-                  return (
-                    <li key={t}>
-                      <button
-                        onClick={() => { setDownloadView(false); setOpenPlan({ tool: t, plan: ready }); }}
-                        className="flex w-full items-center gap-3 rounded-2xl bg-background/70 p-3 text-left ring-1 ring-border/50 transition-transform active:scale-[0.98]"
-                      >
-                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent/60 text-lg">{meta.emoji}</span>
-                        <span className="flex-1">
-                          <span className="flex items-center justify-between gap-2">
-                            <span className="text-[13px] font-semibold text-foreground/90">{meta.label}</span>
-                            <Stars n={disease.relevance[t]} />
-                          </span>
-                          <span className="mt-0.5 block text-[12px] text-muted-foreground">{ready.title}</span>
-                        </span>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            </TabsContent>
-          </Tabs>
-        </div>
+        {/* ---- LEARN ---- */}
+        <section id="learn" className="mt-4 scroll-mt-16 rounded-3xl bg-card p-5 shadow-[var(--shadow-soft)] ring-1 ring-border/60 animate-float-up" style={{ animationDelay: "180ms" }}>
+          <SectionHead emoji="🎓" title="Learn it" sub="Two minutes now saves months later" />
+          <div className="mt-4 rounded-2xl bg-accent/40 p-3.5 ring-1 ring-border/60">
+            <div className="flex items-center gap-2 text-primary">
+              <BookOpen size={15} />
+              <p className="text-[13px] font-semibold text-foreground/90">The science, simply</p>
+            </div>
+            <p className="mt-1.5 text-[13px] leading-relaxed text-foreground/80">{disease.basic.what}</p>
+          </div>
+          <p className="mb-2 mt-4 px-0.5 text-[11px] font-bold uppercase tracking-wide text-foreground/60">Test your knowledge</p>
+          <QuizRunner quizId="disease" />
+          <button
+            onClick={() => setQuizOpen(true)}
+            className="mt-3 inline-flex items-center gap-2 rounded-full bg-secondary px-3.5 py-2 text-[12.5px] font-medium text-secondary-foreground"
+          >
+            <HelpCircle size={14} /> Open as a quick quiz
+          </button>
+        </section>
       </div>
 
       {/* Sticky Build-my-plan CTA */}
@@ -381,6 +402,88 @@ function SeasonalPage({ disease }: { disease: DiseaseInfo }) {
 /* ================================================================== */
 /*  Shared pieces                                                     */
 /* ================================================================== */
+
+/** Smooth glide with an instant fallback — some environments freeze smooth scrolling. */
+function glideTo(id: string) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const target = Math.max(0, el.getBoundingClientRect().top + window.scrollY - 58); // clear the sticky nav
+  const start = window.scrollY;
+  window.scrollTo({ top: target, behavior: "smooth" });
+  window.setTimeout(() => {
+    // smooth didn't move us (throttled tab / reduced motion quirk) → jump
+    if (Math.abs(window.scrollY - start) < 4 && Math.abs(target - start) > 8) window.scrollTo(0, target);
+  }, 250);
+}
+
+/** Floating pill nav that follows the scroll — tapping a pill glides to its section. */
+function SectionNav({ items }: { items: { id: string; label: string }[] }) {
+  const [active, setActive] = useState(items[0]?.id);
+  const key = items.map((i) => i.id).join(",");
+
+  useEffect(() => {
+    const onScroll = () => {
+      let current = items[0]?.id;
+      for (const i of items) {
+        const el = document.getElementById(i.id);
+        if (el && el.getBoundingClientRect().top <= 130) current = i.id;
+      }
+      setActive(current);
+    };
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
+
+  return (
+    <div
+      className="sticky top-0 z-30 px-4 py-2 backdrop-blur-xl"
+      style={{ background: "color-mix(in oklab, var(--background) 80%, transparent)" }}
+    >
+      <div className="mx-auto flex max-w-xl gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {items.map((i) => (
+          <button
+            key={i.id}
+            onClick={() => { setActive(i.id); glideTo(i.id); }}
+            className={`shrink-0 rounded-full px-3.5 py-1.5 text-[12px] font-semibold transition-all ${
+              active === i.id
+                ? "bg-primary text-primary-foreground shadow-[var(--shadow-glow)]"
+                : "bg-card text-foreground/70 ring-1 ring-border/60"
+            }`}
+          >
+            {i.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SectionHead({ emoji, title, sub }: { emoji: string; title: string; sub?: string }) {
+  return (
+    <div className="flex items-center gap-3">
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-accent/60 text-xl">{emoji}</span>
+      <div>
+        <h2 className="font-display text-[16.5px] font-bold leading-tight text-foreground">{title}</h2>
+        {sub && <p className="mt-0.5 text-[11.5px] leading-snug text-muted-foreground">{sub}</p>}
+      </div>
+    </div>
+  );
+}
+
+/** First sentence gets display treatment; the rest flows as body text. */
+function Lead({ text }: { text: string }) {
+  const m = text.match(/^(.+?[.!?])\s+(.+)$/s);
+  const first = m ? m[1] : text;
+  const rest = m ? m[2] : "";
+  return (
+    <>
+      <p className="mt-4 font-display text-[17px] font-semibold leading-snug text-foreground">{first}</p>
+      {rest && <p className="mt-2 text-[13.5px] leading-relaxed text-foreground/80">{rest}</p>}
+    </>
+  );
+}
 
 /** Organ pages link down to their conditions; condition pages link up to their organ(s). */
 function CrossLinks({ disease }: { disease: DiseaseInfo }) {
