@@ -28,6 +28,15 @@ import {
   Flower,
   Snowflake,
   Droplets,
+  Flame,
+  Footprints,
+  Armchair,
+  Smartphone,
+  Sparkles,
+  Brush,
+  Dumbbell,
+  Eye,
+  Shield,
   type LucideIcon,
 } from "lucide-react";
 
@@ -167,8 +176,8 @@ export const DISEASES: DiseaseInfo[] = [
   {
     slug: "hypertension",
     kind: "chronic",
-    name: "Hypertension / BP",
-    short: "BP",
+    name: "BP / Hypertension",
+    short: "BP/Hypertension",
     icon: Activity,
     gradient: "var(--gradient-dawn)",
     blurb: "Bring BP into range with pranayam, low-salt meals and stress work.",
@@ -365,7 +374,7 @@ export const DISEASES: DiseaseInfo[] = [
     slug: "kidney",
     kind: "chronic",
     group: "organ",
-    related: ["diabetes", "hypertension"],
+    related: ["diabetes", "hypertension", "gout"],
     name: "Kidney Health",
     short: "Kidney",
     icon: Droplet,
@@ -409,8 +418,8 @@ export const DISEASES: DiseaseInfo[] = [
   {
     slug: "pcod",
     kind: "chronic",
-    name: "PCOD / PCOS",
-    short: "PCOD",
+    name: "PCOS",
+    short: "PCOS",
     icon: CircleDot,
     gradient: "var(--gradient-violet)",
     blurb: "Regulate cycles via insulin-friendly food, strength & seed cycling.",
@@ -547,34 +556,39 @@ export const DISEASES: DiseaseInfo[] = [
   {
     slug: "arthritis",
     kind: "chronic",
-    name: "Arthritis",
-    short: "Arthritis",
+    name: "Osteoarthritis",
+    short: "Osteoarthritis",
     icon: Bone,
     gradient: "var(--gradient-clay)",
-    blurb: "Reduce joint pain with warm oils, gentle mobility and anti-vata food.",
+    blurb: "Knees, hips, fingers — rebuild the joint with strength, warm oil and anti-vata food.",
     basic: {
-      what: "Arthritis (Amavata / Sandhivata) = ama lodged in joints + vata dryness. Warm oil, movement and anti-vata food are key.",
-      causes: ["Cold, dry, raw food", "Poor digestion → ama", "Overuse or complete inactivity"],
-      symptoms: ["Morning joint stiffness", "Swelling, warmth in joints", "Reduced range of motion"],
-      redFlags: ["Sudden severe swelling", "Fever with joint pain", "Deformity of joints"],
+      what: "Osteoarthritis (Sandhivata) is wear + dryness in a joint — most often the knees. The fix is counter-intuitive: muscles around the joint are its shock absorbers, so strength — not rest — is the best long-term painkiller.",
+      causes: ["Weak thighs/glutes leave the joint unprotected", "Extra weight — every kilo adds 4 on the knees", "Prolonged sitting, no mobility", "Cold, dry, raw food aggravating vata"],
+      symptoms: ["Pain going up/down stairs", "Morning stiffness that eases with movement", "Clicking, reduced range", "Stiffness after long sitting"],
+      redFlags: ["Locked joint, can't bend", "Sudden hot swelling", "Fever with joint pain", "Night pain waking you (get checked)"],
     },
     dosDonts: {
-      dos: ["Warm sesame-oil massage 3×/week", "Gentle mobility 15 min daily — motion is lotion", "Warm, oily, cooked food with ghee", "Keep joints warm in cold weather"],
-      donts: ["No cold, raw, dry food", "Don't push through sharp pain", "Avoid curd + fish + cold combos", "No long dry fasts — aggravates vata"],
+      dos: ["Strengthen quads & glutes — the best painkiller", "Warm sesame/mahanarayan oil massage 3×/week", "Gentle mobility 15 min daily — motion is lotion", "Every extra kilo lost = 4 kg off the knees"],
+      donts: ["Don't rest completely — joints starve without movement", "Avoid deep squats during flares", "No cold, raw, dry food", "Don't rely on daily painkillers"],
     },
-    relevance: { yoga: 5, remedies: 4, herbs: 4, diet: 4, detox: 3, exercise: 3, meditation: 2, if: 0, fasting: 0 },
+    relevance: { exercise: 5, yoga: 5, remedies: 4, herbs: 4, diet: 4, detox: 3, meditation: 2, if: 0, fasting: 0 },
     readyPlans: {
+      exercise: {
+        title: "Joint-protection strength",
+        manage: ["Wall sits 3 × 30 sec", "Straight-leg raises 3 × 12", "Glute bridges 3 × 12", "Calf raises 3 × 15", "Walk on flat ground — skip stairs marathons during flares"],
+        prevent: ["Strength 2×/week — squats to a chair, bridges", "Break sitting every 45 min", "10k steps on soft/flat ground"],
+      },
       yoga: {
         title: "Joint-mobility flow",
-        manage: ["Pawanmuktasana series 15 min", "Marjariasana × 10", "Setu Bandhasana × 3", "Shavasana 10 min", "Deep breathing 5 min"],
+        manage: ["Pawanmuktasana series 15 min", "Vajrasana 5 min after meals", "Setu Bandhasana × 5", "Marjariasana × 10", "Ankle rotations 20 each side"],
       },
       diet: {
-        title: "Anti-ama food",
-        manage: ["Warm cooked, oily food (ghee)", "Ginger + ajwain water AM", "Avoid curd, refined sugar, cold", "Turmeric milk night"],
+        title: "Anti-ama, anti-inflammatory food",
+        manage: ["Warm cooked, oily food (ghee 1 tsp)", "Turmeric + black pepper daily", "Ginger + ajwain water AM", "Avoid curd at night, refined sugar, cold food"],
       },
       detox: {
         title: "Warm oil abhyanga",
-        manage: ["Mahanarayan oil massage 3× / week", "Warm bath after", "Steam if no swelling"],
+        manage: ["Mahanarayan oil massage 3×/week", "Hot fomentation / rock-salt bag on stiff joints", "Warm bath after; steam if no swelling"],
       },
       herbs: {
         title: "Joint herbs",
@@ -582,49 +596,7 @@ export const DISEASES: DiseaseInfo[] = [
       },
       remedies: {
         title: "Desi nuskhe",
-        manage: ["Warm sesame oil massage + hot fomentation", "Turmeric + black pepper + ghee daily", "Rock-salt bag fomentation on stiff joints", "Methi ladoo (small) in winter"],
-      },
-    },
-  },
-  {
-    slug: "knee-pain",
-    kind: "chronic",
-    name: "Knee Pain",
-    short: "Knees",
-    icon: Bone,
-    gradient: "var(--gradient-clay)",
-    blurb: "Rebuild knees with strength, oil massage and turmeric-milk protocols.",
-    basic: {
-      what: "Knee pain is vata + weak quads + inflammation. Strength around the joint and warm oil beat painkillers long-term.",
-      causes: ["Weak thighs / glutes", "Extra weight", "Prolonged sitting, no mobility"],
-      symptoms: ["Pain going up/down stairs", "Stiffness after sitting", "Clicking sounds"],
-      redFlags: ["Locked knee, can't bend", "Sudden swelling with heat", "Instability while walking"],
-    },
-    dosDonts: {
-      dos: ["Strengthen quads & glutes — best painkiller", "Daily knee oil massage (mahanarayan)", "Break sitting every 45 min", "Keep knees warm"],
-      donts: ["Avoid deep squats during flare-ups", "Don't run on hard surfaces with pain", "No stairs marathons during flares", "Don't rely on painkillers daily"],
-    },
-    relevance: { exercise: 5, yoga: 4, remedies: 4, diet: 3, herbs: 3, detox: 1, meditation: 0, if: 0, fasting: 0 },
-    readyPlans: {
-      exercise: {
-        title: "Knee-strength routine",
-        manage: ["Wall sits 3 × 30 sec", "Straight-leg raises 3 × 12", "Glute bridges 3 × 12", "Calf raises 3 × 15"],
-      },
-      yoga: {
-        title: "Gentle knee mobility",
-        manage: ["Vajrasana 5 min after meals", "Setu Bandhasana × 5", "Ankle rotations 20 each side", "Supta Padangusthasana × 5"],
-      },
-      diet: {
-        title: "Anti-inflammatory food",
-        manage: ["Turmeric + black pepper daily", "Ghee 1 tsp with food", "Ginger tea 2× / day", "Avoid nightshades if pain flares"],
-      },
-      herbs: {
-        title: "Knee herbs",
-        manage: ["Shallaki (vaidya dose)", "Ashwagandha churna at night", "Yogaraj guggulu (consult vaidya)"],
-      },
-      remedies: {
-        title: "Desi nuskhe",
-        manage: ["Mahanarayan tail massage + hot fomentation", "Turmeric milk at night", "Methi seeds 1 tsp soaked, chew AM"],
+        manage: ["Turmeric milk at night", "Methi seeds 1 tsp soaked, chew AM", "Warm sesame oil massage + hot fomentation", "Methi ladoo (small) in winter"],
       },
     },
   },
@@ -677,7 +649,8 @@ export const DISEASES: DiseaseInfo[] = [
     slug: "brain",
     kind: "chronic",
     group: "organ",
-    related: ["migraine", "sleep"],
+    related: ["migraine", "stress-anxiety", "sleep"],
+    homeFor: ["migraine", "stress-anxiety"],
     name: "Brain Health",
     short: "Brain",
     icon: Brain,
@@ -813,7 +786,8 @@ export const DISEASES: DiseaseInfo[] = [
     slug: "gut",
     kind: "chronic",
     group: "organ",
-    related: ["obesity"],
+    related: ["acidity-gerd", "ibs", "constipation", "obesity"],
+    homeFor: ["acidity-gerd", "ibs", "constipation"],
     name: "Gut Health",
     short: "Gut",
     icon: Salad,
@@ -987,6 +961,573 @@ export const DISEASES: DiseaseInfo[] = [
       if: {
         title: "Give the filter quiet hours",
         manage: ["14-hour overnight gap", "Dinner by 7–8 PM", "No late-night snacking — that's the liver's repair shift"],
+      },
+    },
+  },
+
+  /* ================== NEW CONDITIONS (launch 19) ================== */
+  {
+    slug: "acidity-gerd",
+    kind: "chronic",
+    name: "Acidity / GERD",
+    short: "Acidity/GERD",
+    icon: Flame,
+    gradient: "var(--gradient-clay)",
+    blurb: "Calm the fire — meal timing, trigger discipline and Amlapitta protocols beat lifelong antacids.",
+    basic: {
+      what: "Acidity (Amlapitta) is pitta out of rhythm — acid arriving when there's no food to digest, or rising where it doesn't belong. Antacids mask it; timing, triggers and gravity actually fix it.",
+      causes: ["Irregular meal times — acid shows up, food doesn't", "Lying down within 2–3 hours of eating", "Tea/coffee on empty stomach", "Spicy-fried-late-night trio", "Stress — the gut feels it first"],
+      symptoms: ["Burning behind the chest after meals", "Sour burps, regurgitation", "Throat clearing, night cough", "Heaviness even after light meals"],
+      redFlags: ["Difficulty swallowing", "Vomiting blood / black stools", "Unintended weight loss", "Chest pain on exertion — rule out the heart first"],
+    },
+    dosDonts: {
+      dos: ["Fixed meal times — acid loves rhythm", "Dinner by 7–8, nothing 3 hours before bed", "Left-side sleeping, head slightly raised", "Small sips of cold milk or coconut water in a flare"],
+      donts: ["No tea/coffee on empty stomach", "Don't lie down after meals — gravity is medicine", "Avoid citrus, fried, very spicy in flares", "Don't pop antacids daily without fixing the routine"],
+    },
+    relevance: { diet: 5, remedies: 4, herbs: 4, yoga: 3, meditation: 3, if: 3, detox: 2, fasting: 2, exercise: 2 },
+    readyPlans: {
+      diet: {
+        title: "Pitta-calming plate",
+        manage: ["Fixed meal times, no skipping", "Cooling foods: coconut water, gulkand, soaked raisins", "Small early dinner", "Cut the trigger trio: fried, very spicy, very late"],
+        prevent: ["Keep meal times steady", "Tea/coffee only after food", "Dinner by 8"],
+      },
+      remedies: {
+        title: "Desi nuskhe",
+        manage: ["Saunf + mishri after meals", "Cold milk sips in a flare", "Gulkand 1 tsp after lunch", "Coconut water between meals"],
+      },
+      herbs: {
+        title: "Amlapitta herbs",
+        manage: ["Amla powder 1 tsp with water AM", "Mulethi (licorice) tea — skip if BP is high", "Avipattikar churna (vaidya dose)", "Shatavari with milk at night"],
+      },
+      yoga: {
+        title: "Cooling practice",
+        manage: ["Vajrasana 10 min after meals — the one asana for acidity", "Sheetali pranayama 5 min", "Avoid inversions right after eating"],
+      },
+      if: {
+        title: "Timing over suppression",
+        manage: ["Same eating window daily", "3-hour gap before lying down", "No grazing — let the stomach empty"],
+      },
+    },
+  },
+  {
+    slug: "ibs",
+    kind: "chronic",
+    name: "IBS",
+    short: "IBS",
+    icon: Waves,
+    gradient: "var(--gradient-sage)",
+    blurb: "The gut-brain condition — food rhythm + stress work together or neither works.",
+    basic: {
+      what: "IBS (Grahani) is a sensitive gut-brain loop: stress speaks to the gut, the gut speaks back. No scan shows it, no single pill fixes it — rhythm, food pattern and a calm nervous system do.",
+      causes: ["Chronic stress and anxiety — the loop's fuel", "Irregular meals, heavy-light-heavy pattern", "Trigger foods (varies by person — track yours)", "Poor sleep amplifying gut sensitivity"],
+      symptoms: ["Cramping relieved after motion", "Alternating loose motion & constipation", "Bloating that builds through the day", "Urgency after meals, especially stressful days"],
+      redFlags: ["Blood in stool", "Fever, night symptoms waking you", "Unintended weight loss", "Onset after 50 — get scoped first"],
+    },
+    dosDonts: {
+      dos: ["Same meal times daily — the gut loves boring", "Keep a 2-week food-symptom diary — your triggers are yours", "Buttermilk with jeera at lunch", "20 min daily on the stress side: bhramari, walk, or meditation"],
+      donts: ["Don't chase every new 'gut cure' — consistency beats novelty", "No large heavy meals — smaller and warm wins", "Don't skip meals to 'rest' the gut on bad days", "Avoid raw salads in flare weeks"],
+    },
+    relevance: { diet: 5, meditation: 5, yoga: 4, remedies: 3, herbs: 3, exercise: 3, if: 2, fasting: 2, detox: 2 },
+    readyPlans: {
+      diet: {
+        title: "Grahani rhythm plate",
+        manage: ["Warm, cooked, well-spiced (not hot) food", "Fixed times, moderate portions", "Buttermilk + jeera + hing at lunch", "Trigger diary 2 weeks → drop your top 2"],
+      },
+      meditation: {
+        title: "Calm the loop",
+        manage: ["Bhramari 10 rounds before meals", "10-min body scan at night", "4-7-8 breathing when cramps start"],
+      },
+      yoga: {
+        title: "Gut-soothing flow",
+        manage: ["Pawanmuktasana series", "Vajrasana after meals", "Marjariasana × 10", "Shavasana with belly breathing"],
+      },
+      herbs: {
+        title: "Grahani herbs",
+        manage: ["Bilva (bael) — churna or sharbat", "Kutaj (vaidya dose) for loose phases", "Isabgol at night for constipated phases", "Jeera-saunf-ajwain tea after meals"],
+      },
+      remedies: {
+        title: "Desi nuskhe",
+        manage: ["Pomegranate peel water (loose phase)", "Soaked raisins AM (constipated phase)", "Ginger + rock salt before meals", "Warm water through the day"],
+      },
+    },
+  },
+  {
+    slug: "constipation",
+    kind: "chronic",
+    name: "Constipation",
+    short: "Constipation",
+    icon: CircleDot,
+    gradient: "var(--gradient-gold)",
+    blurb: "Vibandha — fiber, water, oil and a fixed morning ritual. The gut is trainable.",
+    basic: {
+      what: "Constipation (Vibandha) is dry vata in the colon — too little water, fiber, oil or routine. The colon is a creature of habit: give it the same signal daily and it learns.",
+      causes: ["Low fiber (maida life), low water", "Ignoring the morning urge — it stops coming", "Zero fat in food — the colon needs oil", "Sedentary days, late nights"],
+      symptoms: ["Hard, strained, incomplete motion", "Heaviness and dullness all morning", "Gas, bloating by evening", "Skin dullness, bad breath, headaches"],
+      redFlags: ["Blood in stool", "Pencil-thin stools for weeks", "Unintended weight loss", "New constipation after 50 — get checked"],
+    },
+    dosDonts: {
+      dos: ["2 glasses warm water on waking, then sit — same time daily", "1 tsp ghee in dal/rice daily — lubrication", "Fiber up: guava, papaya, soaked figs, whole grains", "Squat position (footstool) on western toilets"],
+      donts: ["Never ignore the urge — it's a train that stops coming", "Don't live on churnas — train the colon instead", "No maida bakery as daily food", "Don't strain — soften the stool, not push harder"],
+    },
+    relevance: { diet: 5, remedies: 4, herbs: 4, yoga: 4, exercise: 3, detox: 2, meditation: 2, if: 2, fasting: 1 },
+    readyPlans: {
+      diet: {
+        title: "Colon-friendly plate",
+        manage: ["Warm water 2 glasses on waking", "1 tsp ghee daily in food", "Guava/papaya/soaked figs daily", "Millets & whole grains over maida"],
+      },
+      remedies: {
+        title: "Desi nuskhe",
+        manage: ["2 soaked anjeer + 4 munakka AM", "Warm milk + 1 tsp ghee at night", "Ajwain + kala namak after heavy meals", "Footstool under feet on the toilet"],
+      },
+      herbs: {
+        title: "Gentle movers",
+        manage: ["Triphala 1 tsp warm water at night — trainer, not laxative", "Isabgol 1 tsp with warm milk/water", "Haritaki (vaidya guidance for daily use)"],
+      },
+      yoga: {
+        title: "Morning motion flow",
+        manage: ["Malasana (squat) 2 min", "Pawanmuktasana × 10", "Twists: Ardha Matsyendrasana", "10-min brisk walk after warm water"],
+      },
+    },
+  },
+  {
+    slug: "gout",
+    kind: "chronic",
+    name: "Gout / Uric Acid",
+    short: "Gout/Uric Acid",
+    icon: Footprints,
+    gradient: "var(--gradient-clay)",
+    blurb: "The midnight toe fire — cut the real culprits (not dal), flush with water, cool the joint.",
+    basic: {
+      what: "Gout is uric-acid crystals settling in a joint — classically the big toe at 3 AM. Half of what people avoid (dal, tomatoes) barely matters; the real culprits are alcohol, sugary drinks, red meat and dehydration.",
+      causes: ["Alcohol (beer worst), sugary drinks & packaged juice", "Dehydration — concentrated blood crystallizes", "Red meat & organ meats (veg diets: much lower risk)", "Crash dieting — rapid weight loss spikes uric acid"],
+      symptoms: ["Sudden severe joint pain, often big toe, often at night", "Red, hot, shiny, exquisitely tender joint", "Attacks come and go — silence between is not cure"],
+      redFlags: ["Fever with a hot joint — could be infection, ER now", "First attack — confirm with a uric-acid test, don't self-diagnose", "Kidney stone history + gout = see a doctor about both"],
+    },
+    dosDonts: {
+      dos: ["3+ litres water daily — dilution is the cheapest medicine", "Normal dal & vegetables are fine — eat them", "Lose weight slowly if needed (crash diets trigger attacks)", "Test uric acid yearly once you've had one attack"],
+      donts: ["No alcohol during and after attacks — beer is the worst offender", "No sugary drinks / packaged juices", "Don't fast dry or crash-diet — both spike uric acid", "Don't massage/heat the joint during an attack — cool it instead"],
+    },
+    relevance: { diet: 5, remedies: 4, exercise: 3, herbs: 3, yoga: 2, if: 2, detox: 2, meditation: 1, fasting: 0 },
+    readyPlans: {
+      diet: {
+        title: "Uric-acid friendly plate",
+        manage: ["3+ litres water — set bottle targets", "Cut: alcohol, sweet drinks, red meat", "Keep: dal (moderate), all vegetables, fruits", "Low-fat dairy daily — it actively lowers uric acid"],
+        prevent: ["Hydrate 2.5–3 L daily", "Sweet drinks → nimbu pani (no sugar)", "Weight loss slow and steady, never crash"],
+      },
+      remedies: {
+        title: "Desi nuskhe",
+        manage: ["Cold compress on the hot joint (never hot fomentation in attacks)", "Nimbu pani 2–3× daily (citrate helps)", "Cherry / amla daily when available", "Elevate the foot during attacks"],
+      },
+      herbs: {
+        title: "Uric-acid herbs",
+        manage: ["Giloy juice/kadha daily", "Punarnava (vaidya dose)", "Gokshura (consult vaidya)", "Triphala at night"],
+      },
+      exercise: {
+        title: "Between-attack movement",
+        manage: ["Walking daily once attack settles", "No intense exercise during attacks", "Strength 2×/week between flares — but hydrate around workouts"],
+      },
+    },
+  },
+  {
+    slug: "back-pain",
+    kind: "chronic",
+    name: "Back Pain",
+    short: "Back Pain",
+    icon: Armchair,
+    gradient: "var(--gradient-night)",
+    blurb: "Your back isn't weak — it's under-used. Core strength + sitting breaks beat any belt.",
+    basic: {
+      what: "Most chronic back pain isn't damage — it's deconditioning. A weak core makes the spine do muscles' work, and 9 hours of sitting stiffens what remains. Movement is the treatment; rest is the trap.",
+      causes: ["Sitting 8+ hours, especially slouched", "Weak core & glutes", "Lifting with the back, not the legs", "Poor mattress, stomach sleeping, stress tension"],
+      symptoms: ["Dull ache after sitting or standing long", "Morning stiffness easing with movement", "Spasms after unusual effort", "Pain that travels to the buttock"],
+      redFlags: ["Pain shooting below the knee with numbness/tingling", "Loss of bladder/bowel control — ER immediately", "Night pain with fever or weight loss", "After a fall or accident — X-ray first"],
+    },
+    dosDonts: {
+      dos: ["Stand and move 2 min every 45 min — set the alarm", "Core work 10 min daily (it's the spine's scaffolding)", "Lift with legs, load close to body", "Warm oil massage + hot bag for stiff (not acute) phases"],
+      donts: ["Don't bed-rest beyond a day or two — it weakens the cure", "No toe-touch stretches in acute pain", "Don't sit on the wallet / one hip", "Avoid sudden heavy lifting after long sitting"],
+    },
+    relevance: { exercise: 5, yoga: 5, remedies: 3, meditation: 2, diet: 2, herbs: 2, detox: 2, if: 0, fasting: 0 },
+    readyPlans: {
+      exercise: {
+        title: "Core scaffolding",
+        manage: ["Cat-cow × 10 AM", "Bird-dog 3 × 8 each side", "Glute bridges 3 × 12", "Plank build-up: 3 × 20–40 sec", "45-min sitting alarm — stand, 20 steps"],
+        prevent: ["Plank + bridge 3×/week", "Walk 30 min daily", "Sitting breaks hourly"],
+      },
+      yoga: {
+        title: "Spine-mobility flow",
+        manage: ["Marjariasana × 10", "Bhujangasana (gentle) × 5", "Setu Bandhasana × 5", "Supta Matsyendrasana both sides", "Shavasana 5 min"],
+      },
+      remedies: {
+        title: "Desi nuskhe",
+        manage: ["Warm sesame/mahanarayan oil massage evening", "Hot water bag on stiff muscles 15 min", "Ginger-turmeric milk at night in achy phases"],
+      },
+      meditation: {
+        title: "Tension release",
+        manage: ["Body-scan 10 min — backs hold stress", "4-7-8 breathing before sleep"],
+      },
+    },
+  },
+  {
+    slug: "neck-pain",
+    kind: "chronic",
+    name: "Neck Pain",
+    short: "Neck Pain",
+    icon: Smartphone,
+    gradient: "var(--gradient-violet)",
+    blurb: "Text-neck & desk-neck — your head weighs 5 kg; posture decides who carries it.",
+    basic: {
+      what: "Your head weighs ~5 kg upright — but bent 45° over a phone, the neck feels 20+ kg. Hours of that, daily, is why the neck aches. Fix the angles and strengthen the deep neck muscles; the pain follows.",
+      causes: ["Phone at chest height — hours of forward bend", "Monitor below eye level, laptop-on-lap life", "Stress shrugging shoulders toward ears", "Thick pillows or stomach sleeping"],
+      symptoms: ["Ache at the base of the skull by evening", "Stiffness turning while driving", "Tension headaches starting at the neck", "Shoulder knots, upper-back burning"],
+      redFlags: ["Pain radiating down the arm with numbness/tingling", "Weak grip, dropping objects", "Neck pain with fever + stiffness (can't touch chin to chest) — ER", "After any accident — imaging first"],
+    },
+    dosDonts: {
+      dos: ["Raise the phone to eye level — the single biggest fix", "Monitor top at eye height; laptop on a stand", "Chin tucks 10× twice daily", "One thin pillow, back or side sleeping"],
+      donts: ["No hour-long chin-down phone sessions", "Don't crack your own neck", "Avoid shoulder-cradling the phone on calls", "Don't sleep on the stomach"],
+    },
+    relevance: { yoga: 5, exercise: 4, remedies: 3, meditation: 3, diet: 1, herbs: 2, detox: 1, if: 0, fasting: 0 },
+    readyPlans: {
+      yoga: {
+        title: "Neck-release flow",
+        manage: ["Neck rotations slow × 5 each way", "Ear-to-shoulder holds 20 sec each", "Shoulder rolls × 10", "Marjariasana × 10", "Bhujangasana gentle × 5"],
+      },
+      exercise: {
+        title: "Deep-neck strength",
+        manage: ["Chin tucks 2 × 10 daily", "Wall angels 3 × 8", "Band pull-aparts 3 × 12", "Desk reset: screen up, elbows 90°"],
+        prevent: ["Phone at eye level — build the habit", "Hourly shoulder rolls at the desk"],
+      },
+      remedies: {
+        title: "Desi nuskhe",
+        manage: ["Warm sesame oil neck massage evening", "Hot bag 15 min on knots", "Rock-salt potli fomentation"],
+      },
+      meditation: {
+        title: "Un-shrug the stress",
+        manage: ["Hourly check: are shoulders at your ears? Drop them", "Bhramari 5 min evening"],
+      },
+    },
+  },
+  {
+    slug: "osteoporosis",
+    kind: "chronic",
+    name: "Osteoporosis",
+    short: "Osteoporosis",
+    icon: Bone,
+    gradient: "var(--gradient-gold)",
+    blurb: "Bones are a bank account — deposit calcium, vitamin D and load-bearing strength before the balance drops.",
+    basic: {
+      what: "Osteoporosis is bone quietly losing density — no symptoms until a fracture. Bone is living tissue: it grows when loaded (strength work) and fed (calcium + vitamin D + protein). Especially critical for women after menopause.",
+      causes: ["Low calcium + vitamin D for years (most Indians are D-deficient)", "No load-bearing exercise — bones need reasons to stay strong", "Post-menopause estrogen drop", "Smoking, excess alcohol, long steroid use"],
+      symptoms: ["None — that's the danger. It's silent until a fracture", "Height loss > 3 cm over the years", "Stooping posture developing", "Fracture from a minor fall = the alarm bell"],
+      redFlags: ["Fracture from standing height or less — get a DEXA scan", "Sudden severe back pain in seniors (possible vertebral fracture)", "Long-term steroid users — screen early"],
+    },
+    dosDonts: {
+      dos: ["Strength training 2–3×/week — the only signal bones truly obey", "Calcium from food: ragi, til, curd, paneer, moringa", "20 min morning sun on skin (vitamin D) + get levels tested", "Balance work (one-leg stands) — preventing falls prevents fractures"],
+      donts: ["Don't rely on calcium tablets alone — without D and loading they don't land", "No smoking; limit alcohol", "Don't do deep forward bends/heavy twists with low bone density", "Don't fear movement — fragility grows in the armchair"],
+    },
+    relevance: { exercise: 5, diet: 5, yoga: 3, remedies: 2, herbs: 2, meditation: 1, detox: 1, if: 0, fasting: 0 },
+    readyPlans: {
+      exercise: {
+        title: "Bone-loading program",
+        manage: ["Strength 3×/week: squats-to-chair, wall push-ups, band rows", "Brisk walking 30 min daily (load-bearing)", "One-leg balance 30 sec each, twice daily", "Avoid high-fall-risk activities in icy/wet conditions"],
+        prevent: ["Strength 2×/week from age 35 — peak bone is built early", "Daily walk + stairs"],
+      },
+      diet: {
+        title: "Bone-bank deposits",
+        manage: ["Ragi daily (dosa/mudde/porridge) — richest common calcium", "Til (sesame) 1 tbsp — chutney podi or ladoo", "Curd/paneer daily + protein at every meal", "Morning sun 20 min; test vitamin D yearly"],
+      },
+      yoga: {
+        title: "Safe strength & balance",
+        manage: ["Tadasana + Vrikshasana (balance)", "Warrior poses (leg loading)", "Avoid deep forward bends & aggressive twists"],
+      },
+      remedies: {
+        title: "Desi nuskhe",
+        manage: ["Til-gud ladoo (small) in winter", "Ragi malt mornings", "Moringa (drumstick leaves) sabzi weekly"],
+      },
+    },
+  },
+  {
+    slug: "stress-anxiety",
+    kind: "chronic",
+    name: "Stress & Anxiety",
+    short: "Stress & Anxiety",
+    icon: CloudLightning,
+    gradient: "var(--gradient-violet)",
+    blurb: "A nervous system stuck in alarm — breath, routine and grounding practices reset it daily.",
+    basic: {
+      what: "Stress is the alarm system doing its job; anxiety is the alarm stuck ON. The reset lever you control is the breath — it's the only part of the alarm system with a manual override. Daily practice retrains the baseline.",
+      causes: ["Always-on screens & news — the alarm never gets an all-clear", "Caffeine excess, skipped meals (blood-sugar dips read as danger)", "Sleep debt — tired brains see threats everywhere", "No daily discharge: the body stores what it doesn't move out"],
+      symptoms: ["Racing thoughts, restless body", "Tight chest, shallow breathing, sighing", "Irritability, poor focus, jaw clenching", "Gut symptoms — the second brain feels it too"],
+      redFlags: ["Panic attacks disrupting daily life — see a professional, it's very treatable", "Feeling hopeless or thoughts of self-harm — talk to someone NOW: Tele-MANAS 14416 (free, 24×7, all languages)", "Anxiety with chest pain + sweating — rule out the heart once", "Can't function at work/home for weeks — that's the sign to get help, not push harder"],
+    },
+    dosDonts: {
+      dos: ["Bhramari or 4-7-8 breathing 10 min daily — non-negotiable, like brushing", "Morning sunlight walk before screens", "Fixed sleep-wake times — the anxious brain loves predictability", "Name it to tame it: write 3 lines about the worry at a fixed 'worry time'"],
+      donts: ["Don't fight thoughts at 2 AM — get up, breathe, warm milk, return", "No caffeine after 2 PM", "Don't doom-scroll the news first thing or last thing", "Don't isolate — one real conversation beats 100 coping reels"],
+    },
+    relevance: { meditation: 5, yoga: 5, exercise: 4, herbs: 4, diet: 3, remedies: 3, detox: 2, fasting: 1, if: 1 },
+    readyPlans: {
+      meditation: {
+        title: "Daily alarm reset",
+        manage: ["Bhramari 10 rounds AM + PM", "4-7-8 breathing when spirals start", "10-min guided body scan at night", "Weekly: one hour fully offline in nature"],
+        prevent: ["5 min morning breath practice", "Screen sunset 30 min before bed"],
+      },
+      yoga: {
+        title: "Grounding flow",
+        manage: ["Slow Surya Namaskar × 6", "Balasana 2 min", "Viparita Karani (legs up wall) 5 min", "Long Shavasana with belly breathing"],
+      },
+      herbs: {
+        title: "Calming herbs",
+        manage: ["Ashwagandha 1/2 tsp with warm milk at night", "Brahmi tea or churna AM", "Jatamansi (vaidya dose) for sleep-linked anxiety", "Chamomile-tulsi tea evenings"],
+      },
+      exercise: {
+        title: "Discharge the charge",
+        manage: ["30-min brisk walk daily — outdoors beats treadmill for mood", "Any sport you lose yourself in, weekly", "Strength 2×/week — lifting heavy quiets the mind"],
+      },
+      remedies: {
+        title: "Desi nuskhe",
+        manage: ["Warm milk + nutmeg pinch at night", "Warm-oil head massage 2×/week", "Feet in warm salt water 10 min on heavy days"],
+      },
+    },
+  },
+
+  /* ================== NEW PROTECT & STRENGTHEN TILES ================== */
+  {
+    slug: "skin",
+    kind: "chronic",
+    group: "organ",
+    related: [],
+    name: "Skin / Glow",
+    short: "Skin/Glow",
+    icon: Sparkles,
+    gradient: "var(--gradient-gold)",
+    blurb: "Glow is an inside job — gut, water, sleep and oils. The skin just reports the news.",
+    basic: {
+      what: "Skin is the body's mirror: it reports the state of your gut, hydration, sleep and stress. Creams work on the surface; the glow is manufactured inside.",
+      causes: ["Gut trouble showing up as dullness & breakouts", "Low water, high sugar (glycation ages skin fastest)", "Sleep debt — repair happens at night", "Harsh scrubbing, over-washing, sun without cover"],
+      symptoms: ["Dullness, uneven tone", "Breakouts tracking stress & sugar weeks", "Dryness, early fine lines", "Dark circles from poor sleep"],
+      redFlags: ["A mole changing size/shape/color — dermatologist now", "Rashes with fever", "Wounds not healing (test sugar)", "Sudden severe acne with irregular cycles — check PCOS"],
+    },
+    dosDonts: {
+      dos: ["Water 2.5–3 L; seasonal fruit daily", "Sleep 7–8h — the real night cream", "Besan-haldi-malai ubtan weekly", "Coconut/kumkumadi oil few drops at night"],
+      donts: ["Cut sugar spikes — glycation dulls collagen", "Don't over-scrub or hot-wash the face", "No sleeping with makeup", "Don't pop — scars outlast pimples"],
+    },
+    relevance: { diet: 5, remedies: 4, detox: 4, herbs: 3, fasting: 3, meditation: 2, yoga: 2, if: 2, exercise: 2 },
+    readyPlans: {
+      diet: {
+        title: "Glow plate",
+        manage: ["Seasonal fruit + salad daily", "Soaked almonds + walnuts AM", "Cut sugar & maida — biggest skin upgrade", "Amla daily; ghee 1 tsp in food"],
+      },
+      remedies: {
+        title: "Desi glow rituals",
+        manage: ["Besan + haldi + malai ubtan weekly", "Rose water toner after wash", "Kumkumadi/coconut oil 3 drops at night", "Aloe fresh gel on irritated skin"],
+      },
+      detox: {
+        title: "Skin reset",
+        manage: ["1 fruit-only day per fortnight", "Warm lemon water AM", "Dry brushing before bath 2×/week"],
+      },
+      herbs: {
+        title: "Skin herbs",
+        manage: ["Amla juice 30 ml AM", "Manjistha (vaidya dose) for recurring breakouts", "Neem for oily/acne phases", "Turmeric in food daily"],
+      },
+    },
+  },
+  {
+    slug: "hair",
+    kind: "chronic",
+    group: "organ",
+    related: ["thyroid"],
+    name: "Hair Health",
+    short: "Hair",
+    icon: Brush,
+    gradient: "var(--gradient-night)",
+    blurb: "Hair is fed from the plate and protected at the scalp — protein, iron, oiling, calm.",
+    basic: {
+      what: "Hair is protein built with iron, zinc and B12 — a well-fed scalp grows it, stress sheds it. Most hair fall is nutrition + stress + rough handling, and all three are fixable. Sudden heavy fall? Test thyroid, iron (ferritin) and vitamin D first.",
+      causes: ["Protein & iron gaps (very common in vegetarian diets)", "Crash diets — hair is the first budget cut", "Stress (shedding shows 2–3 months after the stressful phase)", "Tight hairstyles, hot tools, harsh chemicals"],
+      symptoms: ["More hair in the comb/drain than usual", "Widening part line, thinning ponytail", "Dry, brittle, split-prone strands", "Itchy or flaky scalp"],
+      redFlags: ["Sudden patchy bald spots (alopecia areata — dermatologist)", "Hair fall with fatigue + weight change — test thyroid & ferritin", "Scalp pain, redness or scarring"],
+    },
+    dosDonts: {
+      dos: ["Protein at every meal — hair IS protein", "Warm oil massage 2×/week, wash after 1–2 hrs", "Amla + curry leaves + til in the weekly diet", "Wide-tooth comb, loose styles, cold-end rinse"],
+      donts: ["No crash diets — the fastest route to hair fall", "Don't tie wet hair tight", "Limit heat styling & harsh colors", "Don't panic-buy serums before testing thyroid/iron/D"],
+    },
+    relevance: { diet: 5, remedies: 4, herbs: 4, meditation: 3, yoga: 2, detox: 2, exercise: 2, if: 1, fasting: 1 },
+    readyPlans: {
+      diet: {
+        title: "Hair-building plate",
+        manage: ["25g+ protein per meal (dal + paneer/curd/sprouts)", "Iron: garden cress (halim), dates, jaggery + lemon (vit C helps absorb)", "Soaked almonds, walnuts, til daily", "B12 check if strictly vegetarian"],
+      },
+      remedies: {
+        title: "Desi hair rituals",
+        manage: ["Warm coconut/bhringraj oil massage 2×/week", "Amla-reetha-shikakai wash option", "Curry-leaves tadka in daily food", "Rice-water rinse weekly"],
+      },
+      herbs: {
+        title: "Hair herbs",
+        manage: ["Amla daily — fresh, juice or churna", "Bhringraj oil for the scalp", "Brahmi + ashwagandha if stress-shedding"],
+      },
+      meditation: {
+        title: "Stop stress-shedding",
+        manage: ["10-min daily breath practice", "Scalp massage doubles as stress relief", "Fixed sleep schedule"],
+      },
+    },
+  },
+  {
+    slug: "bones-joints",
+    kind: "chronic",
+    group: "organ",
+    related: ["arthritis", "osteoporosis", "back-pain", "neck-pain", "gout"],
+    homeFor: ["arthritis", "osteoporosis", "back-pain", "neck-pain"],
+    name: "Bones & Joints",
+    short: "Bones & Joints",
+    icon: Bone,
+    gradient: "var(--gradient-clay)",
+    blurb: "Your frame for 80 years — load it, feed it calcium & D, keep it moving.",
+    basic: {
+      what: "Bones and joints follow one law: use it or lose it. Bones densify under load, joints stay juicy with movement, and both are fed by calcium, vitamin D and protein. Peak bone is built before 35 — after that you defend it.",
+      causes: ["Sedentary years — bones lose what they don't need", "Calcium + vitamin D gaps (most Indians are D-deficient)", "Extra body weight loading the knees", "Cold-dry food patterns aggravating vata in joints"],
+      symptoms: ["Stiffness after sitting", "Clicks and cracks on movement", "Early fatigue in the back and knees", "Height loss or stooping with age"],
+      redFlags: ["Fracture from a minor fall — DEXA scan", "A hot swollen joint — doctor now", "Night bone pain — always get checked"],
+    },
+    dosDonts: {
+      dos: ["Strength training 2–3×/week — the one signal bones obey", "Ragi, til, curd, paneer, moringa in the weekly diet", "20 min morning sun; test vitamin D yearly", "Daily mobility: joints stay juicy with motion"],
+      donts: ["Don't out-supplement a sedentary life", "No sudden heavy lifting after years of nothing — build up", "Don't ignore stiffness for years — it compounds", "Don't fear squatting — the Indian squat kept generations mobile"],
+    },
+    relevance: { exercise: 5, diet: 5, yoga: 4, remedies: 3, herbs: 3, detox: 2, meditation: 1, if: 0, fasting: 0 },
+    readyPlans: {
+      exercise: {
+        title: "Frame-strength program",
+        manage: ["Squats-to-chair, wall push-ups, band rows 2–3×/week", "Brisk walk 30 min daily", "One-leg balance 30 sec × 2 daily", "Stairs over lift, always"],
+      },
+      diet: {
+        title: "Bone-feeding plate",
+        manage: ["Ragi 3–4×/week", "Til 1 tbsp daily", "Curd/paneer daily + protein every meal", "Morning sun 20 min for vitamin D"],
+      },
+      yoga: {
+        title: "Mobility keeper",
+        manage: ["Pawanmuktasana series daily", "Tadasana + Vrikshasana for balance", "Malasana (squat) 2 min", "Warrior poses for leg strength"],
+      },
+      remedies: {
+        title: "Desi nuskhe",
+        manage: ["Til-gud ladoo (small) in winter", "Warm sesame oil self-massage weekly", "Turmeric milk at night"],
+      },
+    },
+  },
+  {
+    slug: "muscles",
+    kind: "chronic",
+    group: "organ",
+    related: ["diabetes", "obesity"],
+    name: "Muscle Health",
+    short: "Muscles",
+    icon: Dumbbell,
+    gradient: "var(--gradient-sage)",
+    blurb: "Muscle is your metabolism, your sugar sink and your old-age insurance — and it's use-it-or-lose-it.",
+    basic: {
+      what: "Muscle is not about looks — it's the organ that eats your blood sugar, holds your joints, burns calories at rest, and decides whether 70-year-old you climbs stairs. After 30 you lose 3–8% per decade unless you actively keep it.",
+      causes: ["No strength work — walking alone doesn't hold muscle", "Protein far below the 1g/kg minimum (typical Indian veg plate)", "Crash diets — half of fast weight loss is muscle", "Age + inactivity compounding after 40"],
+      symptoms: ["Jars getting harder to open", "Needing arms to rise from a chair", "Weight 'normal' but body soft, strength low", "Sugar creeping up despite eating less"],
+      redFlags: ["Rapid unexplained muscle loss — see a doctor", "Muscle weakness with pain + dark urine after extreme workouts — ER", "One-sided weakness — rule out neuro causes urgently"],
+    },
+    dosDonts: {
+      dos: ["Strength train 2–3×/week — bodyweight counts", "Protein 1–1.2 g/kg daily, spread across meals", "Eat protein within an hour of workouts", "Keep strength work into your 60s, 70s, 80s — it works at every age"],
+      donts: ["Don't crash-diet — you'll lose the engine, not just the fat", "Don't fear 'bulking up' — that takes years of dedicated effort", "Walking is not strength work — do both", "Don't train the same soreness daily — muscles grow on rest days"],
+    },
+    relevance: { exercise: 5, diet: 5, yoga: 3, remedies: 2, herbs: 3, if: 2, meditation: 1, detox: 1, fasting: 0 },
+    readyPlans: {
+      exercise: {
+        title: "Minimum effective strength",
+        manage: ["2×/week: squats, push-ups (wall→floor), rows, lunges — 3 sets each", "Progress: more reps → harder version → add weight", "10-min post-meal walks daily (muscle pulls sugar)", "Rest day between strength days"],
+      },
+      diet: {
+        title: "Muscle-feeding plate",
+        manage: ["Protein target: body weight × 1g minimum", "Anchor every meal: dal + paneer/curd/soy/sprouts", "Post-workout: sattu drink or curd bowl", "Don't cut calories hard while building"],
+      },
+      yoga: {
+        title: "Strength-flow",
+        manage: ["Surya Namaskar × 12 (it's loaded movement)", "Warrior & chair poses, long holds", "Plank build-ups"],
+      },
+      herbs: {
+        title: "Strength support",
+        manage: ["Ashwagandha 1/2 tsp at night (evidence-backed for strength)", "Shatavari with milk (women)", "Dates + soaked almonds AM"],
+      },
+    },
+  },
+  {
+    slug: "eyes",
+    kind: "chronic",
+    group: "organ",
+    related: ["diabetes"],
+    name: "Eye Health",
+    short: "Eyes",
+    icon: Eye,
+    gradient: "var(--gradient-water)",
+    blurb: "8 hours of screens need a defense plan — 20-20-20, palming, and food that feeds the retina.",
+    basic: {
+      what: "Eyes evolved for horizons, not screens at 40 cm. Strain, dryness and early power changes are the tax of modern focus — and high blood sugar quietly damages the retina years before vision blurs. Habits + food + yearly checks protect decades of sight.",
+      causes: ["8+ screen hours without breaks (blink rate halves at screens)", "High sugar years — retinopathy is silent early", "Sun exposure without protection", "Vitamin-A-poor diets, low hydration"],
+      symptoms: ["Evening eye strain, heaviness", "Dryness, burning, blurring at day's end", "Headaches around the eyes", "Difficulty with night driving"],
+      redFlags: ["Sudden vision loss/curtain/flashes — ER same day", "Diabetic? Yearly retina exam is non-negotiable", "Eye pain with redness + halos — emergency (acute glaucoma)", "New floaters shower — retina check now"],
+    },
+    dosDonts: {
+      dos: ["20-20-20: every 20 min, 20 seconds, 20 feet away", "Blink consciously at screens; artificial tears if dry", "Palming 1 min × 3 daily", "Yearly eye exam (with retina check if diabetic)"],
+      donts: ["No screens in the dark", "Don't rub itchy eyes — cold splash instead", "Don't ignore 'my power keeps changing' — test sugar", "No self-prescribed eye drops beyond lubricants"],
+    },
+    relevance: { diet: 4, remedies: 4, yoga: 4, meditation: 2, herbs: 3, exercise: 2, detox: 1, if: 1, fasting: 0 },
+    readyPlans: {
+      yoga: {
+        title: "Eye-yoga breaks",
+        manage: ["Palming 1 min × 3 daily", "Slow eye rotations × 5 each way", "Near-far focus shifts × 10", "Trataka (candle gazing) 5 min evenings"],
+      },
+      diet: {
+        title: "Retina-feeding plate",
+        manage: ["Carrot/amla/seasonal orange fruit daily", "Green leafy sabzi daily (lutein)", "Soaked almonds + walnuts AM", "Hydration 2.5 L — dry eyes start with a dry body"],
+      },
+      remedies: {
+        title: "Desi eye care",
+        manage: ["Cold rose-water pads on tired evenings", "Splash eyes with cool water AM", "Ghee 1 tsp in food (classic netra-rasayana)", "Screen brightness matched to room light"],
+      },
+      herbs: {
+        title: "Eye herbs",
+        manage: ["Triphala at night (classic netra tonic)", "Amla daily", "Saffron pinch in milk (evidence for macula)"],
+      },
+    },
+  },
+  {
+    slug: "immunity",
+    kind: "chronic",
+    group: "organ",
+    related: [],
+    name: "Immunity",
+    short: "Immunity",
+    icon: Shield,
+    gradient: "var(--gradient-leaf)",
+    blurb: "Ojas — the classic Ayurveda strength. Built daily by sleep, gut, sun and herbs; spent by stress and sugar.",
+    basic: {
+      what: "Immunity (Ojas) isn't boosted in a week — it's built daily. Sleep is when the immune army trains, the gut is where 70% of it lives, and stress + sugar are its two biggest taxes. Falling sick less starts with boring consistency.",
+      causes: ["Sleep debt — one short night measurably drops immune cells", "Chronic stress (cortisol suppresses defense)", "High sugar (white cells sluggish for hours after a spike)", "Weak gut — most immune tissue lines it"],
+      symptoms: ["Catching every office cold", "Colds lasting 2 weeks instead of 5 days", "Cold sores / mouth ulcers under stress", "Constant low energy without a diagnosis"],
+      redFlags: ["Infections needing antibiotics repeatedly — get evaluated", "Fevers that keep returning", "Unexplained weight loss + night sweats — doctor now"],
+    },
+    dosDonts: {
+      dos: ["7–8h sleep — the #1 immune practice, nothing else is close", "Feed the gut: curd/chaas daily, fiber, fixed meal times", "Morning sun 20 min (vitamin D runs immune genes)", "Seasonal fruit + haldi/ginger/tulsi in daily food"],
+      donts: ["Don't live on 5-hour nights and immunity kadhas — sleep wins", "Cut sugar during infection season", "Don't overuse antibiotics for viral colds", "Don't skip meals repeatedly — the gut army eats too"],
+    },
+    relevance: { herbs: 5, diet: 4, remedies: 4, yoga: 3, meditation: 3, detox: 3, exercise: 3, fasting: 2, if: 2 },
+    readyPlans: {
+      herbs: {
+        title: "Rasayana rack",
+        manage: ["Chyawanprash 1 tsp AM (winter)", "Giloy kadha in season changes", "Tulsi 4–5 leaves or tea daily", "Amla — the everyday rasayana", "Haldi + black pepper in food"],
+      },
+      diet: {
+        title: "Ojas-building plate",
+        manage: ["Curd or chaas daily (gut army)", "Seasonal fruit — the original supplement", "Soaked almonds + dates AM", "Cut sugar in cold-cough season"],
+      },
+      remedies: {
+        title: "Season-change rituals",
+        manage: ["Haldi-milk at night in weather flips", "Steam with ajwain at first sniffle", "Ginger-tulsi-black pepper kadha (small cup, not litres)"],
+      },
+      yoga: {
+        title: "Immune-supportive practice",
+        manage: ["Pranayama 10 min daily (anulom-vilom + bhastrika)", "Surya Namaskar × 6", "Deep rest: Yoga Nidra weekly"],
       },
     },
   },
@@ -1295,14 +1836,35 @@ export function getChronicDiseases(): DiseaseInfo[] {
   return DISEASES;
 }
 
+/** Grid display order — rows of 4, most common problems first (locked with Rahul, Jul 2026). */
+const CONDITION_ORDER = [
+  "diabetes", "hypertension", "cholesterol", "acidity-gerd",
+  "thyroid", "fatty-liver", "constipation", "pcod",
+  "gout", "arthritis", "back-pain", "neck-pain",
+  "ibs", "migraine", "stress-anxiety", "osteoporosis",
+  "sleep", "obesity", "asthma",
+];
+
+const ORGAN_ORDER = [
+  "heart", "kidney", "lungs", "brain",
+  "gut", "pancreas", "liver", "skin",
+  "hair", "bones-joints", "muscles", "eyes",
+  "immunity",
+];
+
+const byOrder = (order: string[]) => (a: DiseaseInfo, b: DiseaseInfo) => {
+  const ia = order.indexOf(a.slug); const ib = order.indexOf(b.slug);
+  return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+};
+
 /** Named diseases only — the "Chronic Conditions" row. */
 export function getChronicConditions(): DiseaseInfo[] {
-  return DISEASES.filter((d) => d.group !== "organ");
+  return DISEASES.filter((d) => d.group !== "organ").sort(byOrder(CONDITION_ORDER));
 }
 
-/** Prevention-first organ pages — the "Organ Health" row. */
+/** Prevention-first organ pages — the "Protect & Strengthen" row. */
 export function getOrganHealth(): DiseaseInfo[] {
-  return DISEASES.filter((d) => d.group === "organ");
+  return DISEASES.filter((d) => d.group === "organ").sort(byOrder(ORGAN_ORDER));
 }
 
 /** Organs that watch over a given condition (computed back-link).

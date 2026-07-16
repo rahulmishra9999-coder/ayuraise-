@@ -1,8 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState } from "react";
 import { BottomNav } from "@/components/BottomNav";
 import { getSection } from "@/lib/sections";
 import { getChronicConditions, getOrganHealth, getSeasonalDiseases, type DiseaseInfo } from "@/lib/diseases";
-import { Sparkles, Bot, Stethoscope, Thermometer, ShieldCheck } from "lucide-react";
+import { Sparkles, Bot, Stethoscope, Thermometer, ShieldCheck, Search, X } from "lucide-react";
 
 export const Route = createFileRoute("/section/disease")({
   head: () => ({
@@ -17,9 +18,12 @@ export const Route = createFileRoute("/section/disease")({
 function DiseaseHub() {
   const section = getSection("disease")!;
   const Icon = section.icon;
-  const conditions = getChronicConditions();
-  const organs = getOrganHealth();
-  const seasonal = getSeasonalDiseases();
+  const [q, setQ] = useState("");
+  const match = (d: DiseaseInfo) =>
+    d.name.toLowerCase().includes(q.toLowerCase()) || d.short.toLowerCase().includes(q.toLowerCase());
+  const conditions = getChronicConditions().filter(match);
+  const organs = getOrganHealth().filter(match);
+  const seasonal = getSeasonalDiseases().filter(match);
 
   return (
     <div className="min-h-svh pb-32" style={{ background: "var(--gradient-hero)" }}>
@@ -65,26 +69,55 @@ function DiseaseHub() {
           …or start from a ready-made plan below
         </p>
 
-        <DiseaseGrid
-          title="Chronic Conditions"
-          hint="Diagnosed conditions you can manage — or prevent — with food, herbs & practice."
-          icon={<Stethoscope size={14} />}
-          diseases={conditions}
-        />
+        {/* Search */}
+        <div className="mt-3 flex items-center gap-2 rounded-2xl bg-card px-3.5 py-2.5 ring-1 ring-border/60">
+          <Search size={15} className="shrink-0 text-muted-foreground" />
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search: BP, acidity, knee, hair…"
+            className="w-full bg-transparent text-[13.5px] text-foreground outline-none placeholder:text-muted-foreground"
+          />
+          {q && (
+            <button onClick={() => setQ("")} className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-secondary text-muted-foreground">
+              <X size={11} />
+            </button>
+          )}
+        </div>
 
-        <DiseaseGrid
-          title="Organ Health"
-          hint="Prevention-first care — keep each organ strong before anything starts."
-          icon={<ShieldCheck size={14} />}
-          diseases={organs}
-        />
+        {conditions.length > 0 && (
+          <DiseaseGrid
+            title="Chronic Conditions"
+            hint="Conditions you can manage — or prevent — with food, herbs & practice."
+            icon={<Stethoscope size={14} />}
+            diseases={conditions}
+          />
+        )}
 
-        <DiseaseGrid
-          title="Seasonal & Acute"
-          hint="Short-term illness. Herbs, home remedies and recovery diet — fast relief."
-          icon={<Thermometer size={14} />}
-          diseases={seasonal}
-        />
+        {organs.length > 0 && (
+          <DiseaseGrid
+            title="Protect & Strengthen"
+            hint="Keep every part of you strong — before anything starts."
+            icon={<ShieldCheck size={14} />}
+            diseases={organs}
+          />
+        )}
+
+        {seasonal.length > 0 && (
+          <DiseaseGrid
+            title="Seasonal & Acute"
+            hint="Short-term illness. Herbs, home remedies and recovery diet — fast relief."
+            icon={<Thermometer size={14} />}
+            diseases={seasonal}
+          />
+        )}
+
+        {conditions.length + organs.length + seasonal.length === 0 && (
+          <div className="mt-6 rounded-3xl bg-card p-6 text-center ring-1 ring-border/60">
+            <p className="text-[14px] font-medium text-foreground">Nothing matches "{q}"</p>
+            <p className="mt-1 text-[12px] text-muted-foreground">Try another word — or ask the bot above, it understands symptoms too.</p>
+          </div>
+        )}
       </div>
 
       <BottomNav />
@@ -110,24 +143,29 @@ function DiseaseGrid({
         <h2 className="font-display text-[13px] font-semibold uppercase tracking-wide text-foreground/80">{title}</h2>
       </div>
       <p className="px-1 pb-2.5 pt-1 text-[11.5px] leading-snug text-muted-foreground">{hint}</p>
-      <ul className="grid grid-cols-3 gap-2">
+      <ul className="grid grid-cols-4 gap-1.5">
         {diseases.map((d) => {
           const Icn = d.icon;
+          const inner = (
+            <>
+              <span
+                className="flex h-9 w-9 items-center justify-center rounded-xl text-primary-foreground ring-1 ring-white/25"
+                style={{ background: d.gradient }}
+              >
+                <Icn size={15} strokeWidth={1.9} />
+              </span>
+              <span className="text-[10px] font-medium leading-tight text-foreground/85">{d.short}</span>
+            </>
+          );
+          const cls = "flex h-full flex-col items-center gap-1.5 rounded-2xl bg-background/70 p-2 text-center ring-1 ring-border/50 transition-transform active:scale-[0.97]";
           return (
             <li key={d.slug}>
-              <Link
-                to="/disease/$slug"
-                params={{ slug: d.slug }}
-                className="flex h-full flex-col items-center gap-1.5 rounded-2xl bg-background/70 p-2.5 text-center ring-1 ring-border/50 transition-transform active:scale-[0.97]"
-              >
-                <span
-                  className="flex h-10 w-10 items-center justify-center rounded-xl text-primary-foreground ring-1 ring-white/25"
-                  style={{ background: d.gradient }}
-                >
-                  <Icn size={17} strokeWidth={1.9} />
-                </span>
-                <span className="text-[11px] font-medium leading-tight text-foreground/85">{d.short}</span>
-              </Link>
+              {d.slug === "obesity" ? (
+                // Obesity's real home is the full Weight Loss section — no duplicate page.
+                <Link to="/section/weight-loss" className={cls}>{inner}</Link>
+              ) : (
+                <Link to="/disease/$slug" params={{ slug: d.slug }} className={cls}>{inner}</Link>
+              )}
             </li>
           );
         })}

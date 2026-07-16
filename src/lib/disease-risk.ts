@@ -207,6 +207,77 @@ export const RISK: Record<string, RiskProfile> = {
         { label: "Never", score: 0 }, { label: "Socially", score: 2 }, { label: "Weekly or more", score: 4 }] },
       activity, family("diabetes or fatty liver")],
   },
+  gout: {
+    note: "Uric acid rises quietly on sweet drinks, alcohol and dehydration — the first attack is preventable years out.",
+    factors: [family("gout or high uric acid"), hydration, sugarDiet, weight,
+      { id: "alcohol", question: "How often do you drink alcohol (esp. beer)?", options: [
+        { label: "Never", score: 0 }, { label: "Socially", score: 2 }, { label: "Weekly or more", score: 5 }] },
+      activity],
+  },
+  osteoporosis: {
+    note: "Bone density peaks by 35 and then defends. Strength work, calcium and vitamin D now decide your 70s.",
+    factors: [family("osteoporosis or early fractures"), activity, age40,
+      { id: "strength", question: "Do you do any strength/resistance exercise?", options: [
+        { label: "2+ times a week", score: 0 }, { label: "Occasionally", score: 2 }, { label: "Never", score: 4 }] },
+      { id: "calcium", question: "Dairy / ragi / til in your daily diet?", options: [
+        { label: "Daily", score: 0 }, { label: "Some days", score: 2 }, { label: "Rarely", score: 4 }] },
+      { id: "sun", question: "Morning sun on skin?", options: [
+        { label: "20 min most days", score: 0 }, { label: "Sometimes", score: 2 }, { label: "Almost never", score: 4 }] },
+      smoking],
+  },
+  "bones-joints": {
+    note: "Your frame follows one law — use it or lose it. This check reads how well you're loading and feeding it.",
+    factors: [activity, weight, age40,
+      { id: "strength", question: "Do you do any strength/resistance exercise?", options: [
+        { label: "2+ times a week", score: 0 }, { label: "Occasionally", score: 2 }, { label: "Never", score: 4 }] },
+      { id: "sitting", question: "Hours sitting per day?", options: [
+        { label: "Under 6", score: 0 }, { label: "6–9", score: 2 }, { label: "9+", score: 4 }] },
+      { id: "calcium", question: "Dairy / ragi / til in your daily diet?", options: [
+        { label: "Daily", score: 0 }, { label: "Some days", score: 2 }, { label: "Rarely", score: 4 }] }],
+  },
+  muscles: {
+    note: "After 30 you lose 3–8% of muscle per decade unless you actively keep it. This check reads your keep-rate.",
+    factors: [activity, age40,
+      { id: "strength", question: "Do you do any strength/resistance exercise?", options: [
+        { label: "2+ times a week", score: 0 }, { label: "Occasionally", score: 2 }, { label: "Never", score: 4 }] },
+      { id: "protein", question: "Protein at every meal (dal + paneer/curd/sprouts)?", options: [
+        { label: "Every meal", score: 0 }, { label: "Once a day", score: 2 }, { label: "Rarely counted", score: 4 }] },
+      { id: "chair", question: "Rising from a low chair without using arms is…", options: [
+        { label: "Easy", score: 0 }, { label: "Takes effort", score: 2 }, { label: "Need the arms", score: 4 }] }],
+  },
+  eyes: {
+    note: "Screens, sugar and sun decide how your eyes age. Most damage is silent — habits now protect decades of sight.",
+    factors: [screens, bpSugar, age40, hydration,
+      { id: "breaks", question: "Screen breaks during work?", options: [
+        { label: "Every 20–30 min", score: 0 }, { label: "Every few hours", score: 2 }, { label: "What breaks?", score: 4 }] },
+      { id: "checkup", question: "Last full eye exam?", options: [
+        { label: "Within a year", score: 0 }, { label: "1–3 years ago", score: 2 }, { label: "Can't remember", score: 4 }] }],
+  },
+  skin: {
+    note: "Skin reports the inside — sugar, water, sleep and stress show on the face before any report.",
+    factors: [sugarDiet, hydration, sleep, stress,
+      { id: "sun", question: "Daily sun exposure without any protection?", options: [
+        { label: "Minimal / covered", score: 0 }, { label: "Moderate", score: 2 }, { label: "Hours, unprotected", score: 4 }] }],
+  },
+  hair: {
+    note: "Hair is protein built with iron and calm. Crash diets, stress and thyroid swings show in the comb 2–3 months later.",
+    factors: [stress, sleep,
+      { id: "protein", question: "Protein at every meal?", options: [
+        { label: "Every meal", score: 0 }, { label: "Once a day", score: 2 }, { label: "Rarely counted", score: 4 }] },
+      { id: "crash", question: "Crash-dieted in the last 6 months?", options: [
+        { label: "No", score: 0 }, { label: "Mild cutting", score: 2 }, { label: "Yes, aggressive", score: 4 }] },
+      { id: "styling", question: "Heat styling / tight hairstyles / chemical treatments?", options: [
+        { label: "Rarely", score: 0 }, { label: "Weekly", score: 2 }, { label: "Most days", score: 4 }] },
+      family("early hair loss or thyroid issues")],
+  },
+  immunity: {
+    note: "Falling sick often is a pattern, not luck — sleep, sugar, gut and stress write it. All four are changeable.",
+    factors: [sleep, stress, sugarDiet, activity,
+      { id: "sick", question: "How often do you catch colds/infections?", options: [
+        { label: "1–2 a year", score: 0 }, { label: "Every 2–3 months", score: 2 }, { label: "Always catching something", score: 4 }] },
+      { id: "guthealth", question: "Curd / chaas / fermented food in daily diet?", options: [
+        { label: "Daily", score: 0 }, { label: "Some days", score: 2 }, { label: "Rarely", score: 4 }] }],
+  },
   liver: {
     note: "The liver regenerates like no other organ — but only if you stop the daily load and give it food-free hours.",
     factors: [weight, sugarDiet,
