@@ -126,84 +126,105 @@ function ChronicPage({ disease }: { disease: DiseaseInfo }) {
         </div>
       </div>
 
-      {/* Floating section nav — follows the scroll, no clicks to reveal content */}
+      {/* Floating step nav — the page is a 4-step story */}
       <SectionNav
         items={[
-          { id: "overview", label: "💡 Understand" },
-          { id: "dos-donts", label: "✅ Do & Don't" },
-          ...(track === "prevent" && RISK[disease.slug] ? [{ id: "risk", label: "🛡️ My risk" }] : []),
-          { id: "plans", label: "🗺️ Plans" },
-          { id: "learn", label: "🎓 Learn" },
+          { id: "what", label: "1 · What" },
+          { id: "why", label: "2 · Why" },
+          { id: "tackle", label: "3 · Tackle" },
+          ...(track === "prevent" && RISK[disease.slug] ? [{ id: "risk", label: "🛡️ Risk" }] : []),
+          { id: "tools", label: "4 · Tools" },
         ]}
       />
 
-      <div className="mx-auto -mt-2 max-w-xl px-4">
+      <div className="mx-auto -mt-2 max-w-xl px-5">
         {/* Plan state banner (State B entry) */}
         {plan && <ActivePlanCard plan={plan} />}
 
-        {/* Cross-links: organ ↔ conditions */}
-        <CrossLinks disease={disease} />
-
-        {/* ---- UNDERSTAND ---- */}
-        <section id="overview" className="mt-4 scroll-mt-16 rounded-3xl bg-card p-5 shadow-[var(--shadow-soft)] ring-1 ring-border/60 animate-float-up">
-          <SectionHead emoji="💡" title="Understand it" sub="What's actually happening inside" />
+        {/* ---- 01 · WHAT ---- */}
+        <section id="what" className="scroll-mt-16 pt-5 animate-float-up">
+          <NumberHead n="01" title="What is it?" />
           <Lead text={disease.basic.what} />
 
-          <p className="mt-5 text-[11px] font-bold uppercase tracking-wide text-foreground/60">Why it happens</p>
-          <ul className="mt-2 space-y-2">
-            {disease.basic.causes.map((c, i) => (
-              <li key={c} className="flex items-start gap-2.5 text-[13.5px] leading-snug text-foreground/85 animate-float-up" style={{ animationDelay: `${i * 80}ms` }}>
-                <span className="mt-0.5 shrink-0 text-saffron">◆</span> {c}
-              </li>
-            ))}
-          </ul>
-
-          <p className="mt-5 text-[11px] font-bold uppercase tracking-wide text-foreground/60">How it shows up</p>
+          <p className="mt-5 text-[11px] font-bold uppercase tracking-wide text-foreground/50">You might notice</p>
           <div className="mt-2 flex flex-wrap gap-1.5">
             {disease.basic.symptoms.map((s) => (
-              <span key={s} className="rounded-full bg-secondary/70 px-3 py-1.5 text-[12px] font-medium leading-snug text-foreground/85 ring-1 ring-border/50">
+              <span key={s} className="rounded-full bg-card px-3 py-1.5 text-[12px] font-medium leading-snug text-foreground/85 ring-1 ring-border/60">
                 {s}
               </span>
             ))}
           </div>
 
-          <RedFlags items={disease.basic.redFlags} />
+          <Collapse tone="alert" label="⚠️ When to see a doctor">
+            <ul className="space-y-2">
+              {disease.basic.redFlags.map((r) => (
+                <li key={r} className="flex items-start gap-2 text-[13px] leading-snug text-foreground/85">
+                  <AlertTriangle size={13} className="mt-0.5 shrink-0 text-rose-500" /> {r}
+                </li>
+              ))}
+            </ul>
+          </Collapse>
         </section>
 
-        {/* ---- DO & DON'T ---- */}
-        <section id="dos-donts" className="mt-4 scroll-mt-16 rounded-3xl bg-card p-5 shadow-[var(--shadow-soft)] ring-1 ring-border/60 animate-float-up" style={{ animationDelay: "60ms" }}>
-          <SectionHead emoji="✅" title="Do & Don't" sub="The guardrails, at a glance" />
-          <div className="mt-4 grid grid-cols-2 gap-2">
-            <DoCard tone="do" title="Do's" items={disease.dosDonts.dos} />
-            <DoCard tone="dont" title="Don'ts" items={disease.dosDonts.donts} />
-          </div>
+        {/* ---- 02 · WHY ---- */}
+        <section id="why" className="mt-8 scroll-mt-16 border-t border-border/50 pt-6 animate-float-up" style={{ animationDelay: "60ms" }}>
+          <NumberHead n="02" title="Why it happens" />
+          <ul className="mt-4 space-y-2.5">
+            {disease.basic.causes.map((c) => (
+              <li key={c} className="flex items-start gap-2.5 text-[13.5px] leading-snug text-foreground/85">
+                <span className="mt-0.5 shrink-0 text-saffron">◆</span> {c}
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        {/* ---- 03 · TACKLE ---- */}
+        <section id="tackle" className="mt-8 scroll-mt-16 border-t border-border/50 pt-6 animate-float-up" style={{ animationDelay: "120ms" }}>
+          <NumberHead n="03" title="How to tackle it" sub="The moves that matter most" />
+          <ul className="mt-4 space-y-2.5">
+            {disease.dosDonts.dos.map((d) => (
+              <li key={d} className="flex items-start gap-2.5 text-[13.5px] leading-snug text-foreground/90">
+                <span className="mt-0.5 flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300">
+                  <Check size={11} strokeWidth={3} />
+                </span>
+                {d}
+              </li>
+            ))}
+          </ul>
+          <Collapse label="✋ And what to avoid">
+            <ul className="space-y-2.5">
+              {disease.dosDonts.donts.map((d) => (
+                <li key={d} className="flex items-start gap-2.5 text-[13px] leading-snug text-foreground/80">
+                  <span className="mt-0.5 shrink-0 text-rose-400">✕</span> {d}
+                </li>
+              ))}
+            </ul>
+          </Collapse>
         </section>
 
         {/* ---- RISK CHECK (prevent track) ---- */}
         {track === "prevent" && RISK[disease.slug] && (
-          <section id="risk" className="scroll-mt-16">
+          <section id="risk" className="mt-6 scroll-mt-16">
             <RiskCheck slug={disease.slug} />
           </section>
         )}
 
-        {/* ---- PLANS ---- */}
-        <section id="plans" className="mt-4 scroll-mt-16 rounded-3xl bg-card p-5 shadow-[var(--shadow-soft)] ring-1 ring-border/60 animate-float-up" style={{ animationDelay: "120ms" }}>
-          <SectionHead
-            emoji="🗺️"
-            title={track === "prevent" ? "Prevention plans" : "Ready-made plans"}
-            sub={track === "prevent"
-              ? "Lighter tier, ranked by impact — built to keep this away."
-              : "Ranked by how much each moves the needle. Tap to open."}
+        {/* ---- 04 · TOOLS ---- */}
+        <section id="tools" className="mt-8 scroll-mt-16 border-t border-border/50 pb-2 pt-6 animate-float-up" style={{ animationDelay: "180ms" }}>
+          <NumberHead
+            n="04"
+            title={track === "prevent" ? "Best tools to keep it away" : "Best tools to tackle it"}
+            sub="Ranked by impact · tap one for its best practices"
           />
           <ul className="mt-4 space-y-2">
-            {tools.map((t, i) => {
+            {tools.map((t) => {
               const meta = TOOL_META[t];
               const ready = disease.readyPlans[t]!;
               return (
-                <li key={t} className="animate-float-up" style={{ animationDelay: `${i * 70}ms` }}>
+                <li key={t}>
                   <button
                     onClick={() => { setDownloadView(false); setOpenPlan({ tool: t, plan: ready }); }}
-                    className="flex w-full items-center gap-3 rounded-2xl bg-background/70 p-3 text-left ring-1 ring-border/50 transition-transform active:scale-[0.98]"
+                    className="flex w-full items-center gap-3 rounded-2xl bg-card p-3 text-left ring-1 ring-border/60 transition-transform active:scale-[0.98]"
                   >
                     <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent/60 text-lg">{meta.emoji}</span>
                     <span className="flex-1">
@@ -219,25 +240,20 @@ function ChronicPage({ disease }: { disease: DiseaseInfo }) {
               );
             })}
           </ul>
-        </section>
 
-        {/* ---- LEARN ---- */}
-        <section id="learn" className="mt-4 scroll-mt-16 rounded-3xl bg-card p-5 shadow-[var(--shadow-soft)] ring-1 ring-border/60 animate-float-up" style={{ animationDelay: "180ms" }}>
-          <SectionHead emoji="🎓" title="Learn it" sub="Two minutes now saves months later" />
-          <div className="mt-4 rounded-2xl bg-accent/40 p-3.5 ring-1 ring-border/60">
-            <div className="flex items-center gap-2 text-primary">
-              <BookOpen size={15} />
-              <p className="text-[13px] font-semibold text-foreground/90">The science, simply</p>
-            </div>
-            <p className="mt-1.5 text-[13px] leading-relaxed text-foreground/80">{disease.basic.what}</p>
-          </div>
-          <p className="mb-2 mt-4 px-0.5 text-[11px] font-bold uppercase tracking-wide text-foreground/60">Test your knowledge</p>
-          <QuizRunner quizId="disease" />
+          {/* Organ ↔ condition links, tucked at the end of the journey */}
+          <CrossLinks disease={disease} />
+
           <button
             onClick={() => setQuizOpen(true)}
-            className="mt-3 inline-flex items-center gap-2 rounded-full bg-secondary px-3.5 py-2 text-[12.5px] font-medium text-secondary-foreground"
+            className="mt-3 flex w-full items-center gap-3 rounded-2xl bg-card p-3.5 text-left ring-1 ring-border/60 transition-transform active:scale-[0.98]"
           >
-            <HelpCircle size={14} /> Open as a quick quiz
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent/60 text-lg">🎓</span>
+            <span className="flex-1">
+              <span className="text-[13px] font-semibold text-foreground/90">Know it in 2 minutes</span>
+              <span className="mt-0.5 block text-[12px] text-muted-foreground">A quick quiz that teaches as you tap</span>
+            </span>
+            <ChevronRight size={15} className="shrink-0 text-muted-foreground" />
           </button>
         </section>
       </div>
@@ -456,6 +472,41 @@ function SectionNav({ items }: { items: { id: string; label: string }[] }) {
           </button>
         ))}
       </div>
+    </div>
+  );
+}
+
+/** Ghost step number + title — orientation without card chrome. */
+function NumberHead({ n, title, sub }: { n: string; title: string; sub?: string }) {
+  return (
+    <div className="flex items-baseline gap-3">
+      <span className="font-display text-[28px] font-extrabold leading-none text-primary/25">{n}</span>
+      <div>
+        <h2 className="font-display text-[18px] font-bold leading-tight text-foreground">{title}</h2>
+        {sub && <p className="mt-0.5 text-[12px] leading-snug text-muted-foreground">{sub}</p>}
+      </div>
+    </div>
+  );
+}
+
+/** Light disclosure — keeps heavy-but-important content one tap away, not on screen. */
+function Collapse({ label, tone = "neutral", children }: { label: string; tone?: "neutral" | "alert"; children: React.ReactNode }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div
+      className={`mt-4 overflow-hidden rounded-2xl ring-1 ${
+        tone === "alert"
+          ? "bg-rose-50/60 ring-rose-200 dark:bg-rose-950/20 dark:ring-rose-900"
+          : "bg-card ring-border/60"
+      }`}
+    >
+      <button onClick={() => setOpen(!open)} className="flex w-full items-center justify-between px-4 py-3 text-left">
+        <span className={`text-[13px] font-semibold ${tone === "alert" ? "text-rose-700 dark:text-rose-300" : "text-foreground/85"}`}>
+          {label}
+        </span>
+        <ChevronRight size={15} className={`shrink-0 text-muted-foreground transition-transform ${open ? "rotate-90" : ""}`} />
+      </button>
+      {open && <div className="px-4 pb-4">{children}</div>}
     </div>
   );
 }
