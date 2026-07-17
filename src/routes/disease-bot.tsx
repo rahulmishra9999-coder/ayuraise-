@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { getAllSavedPlans } from "@/lib/savedPlans";
 import { BottomNav } from "@/components/BottomNav";
 import {
   DISEASES, SEASONAL_DISEASES, TOOL_META, getDisease,
@@ -35,7 +36,7 @@ type Msg = { role: "user" | "assistant"; content: string };
 
 const TOOL_KEYS = Object.keys(TOOL_META) as ToolKey[];
 
-function buildSystemPrompt(mode: BotMode, slug?: string, tool?: string) {
+function buildSystemPrompt(mode: BotMode, slug?: string, tool?: string, existing?: string) {
   const disease = slug ? getDisease(slug) : undefined;
   const chronicList = DISEASES.map((d) => `- ${d.slug}: ${d.name}`).join("\n");
   const seasonalList = SEASONAL_DISEASES.map((d) => `- ${d.slug}: ${d.name}`).join("\n");
@@ -84,9 +85,25 @@ If red flags were present, do NOT emit a plan directive — just the safety guid
     ? `The user opened this from the ${disease.name} page. FIRST verify they actually have it before building: ask if a doctor diagnosed it, roughly when, whether they're on medication, and any recent test values or current symptoms. If their answers suggest they do NOT have it, gently offer: build a PREVENTION plan instead, or switch to the real concern. Then continue.`
     : "";
 
+  const toolLabel = tool ? (TOOL_META[tool as ToolKey]?.label ?? tool) : "";
+  const scopeStep = tool
+    ? `SCOPE FIRST: they arrived from the "${toolLabel}" tool. Right after the greeting (and any verify question), ask ONE scope question: a plan for JUST ${toolLabel}, or an OVERALL ${disease?.short ?? "condition"} plan — which can include everything on the platform: yoga, meditation, exercise, diet, herbs, fasting? End that message with:
+[options: Just ${toolLabel} | Overall plan]
+If they choose "Just ${toolLabel}": keep the flow SHORT (4–5 questions max) and the final plan covers only that tool (tools=${tool}). If "Overall plan": run the full flow below.`
+    : "";
+
+  const existingBlock = existing
+    ? `EXISTING PLANS the user already has (from their saved data):
+${existing}
+Rule: if a tool the user chose already has a plan above, BEFORE the reflection ask one question per overlapping tool, e.g. "I can see you already have a ${toolLabel || "yoga"} plan — want me to update that one, or create a fresh plan?" with:
+[options: Update existing | Fresh plan]
+Acknowledge their choice and mention it in the final plan text ("updated your existing yoga plan" / "created a fresh one"). If nothing overlaps, never bring existing plans up.`
+    : "";
+
   return `You are AyuRaise's warm, concise Ayurvedic wellness coach — like a good doctor, not a form. You build a personalised plan to MANAGE or PREVENT a chronic condition. Takes about 2–3 minutes.
 
 ${verifyIntro}
+${scopeStep}
 
 Flow (skip anything already known):
 1. Warm intro + first question.
@@ -96,11 +113,13 @@ Flow (skip anything already known):
    - Triage the secondary: (a) if it's really just a SYMPTOM of the primary, say so and fold it in; (b) if the two CONFLICT (a good intervention for one would worsen the other), recommend PRIMARY-FIRST: "let's work on <primary> for a month, then add <secondary>" and set sequence=<secondary-slug@30>; (c) if compatible and both matter, build a COMBINED plan and list the secondary in secondary=.
 5. Age range + biological sex.
 6. Current medication or major restrictions.
-7. Which tools to include — present the options WITH their star ratings and steer toward the highest-starred. Mention any tool that's not advised for this condition.
+7. Tool selection — the user's call, guided by you. Present the tools WITH stars and tag the 4–5 star ones "⭐ Highly recommended" (e.g. diet for diabetes). Offer a pre-selected starter set of the top 3–4, but the FINAL CALL IS ALWAYS THE USER'S: accept whatever subset they pick. If they drop a 5-star tool, note once — gently — what they'd be missing, then respect the choice. Mention any tool that's not advised for this condition. Chips for this step: [options: Go with recommended | Let me pick]. If "Let me pick", list each tool as a chip and let them add one per message until they say done.
 8. Daily time they can commit (minutes).
 9. One open-ended "anything else I should know?" with a "Nothing else" chip.
 10. A reflection message that STARTS with the exact line "Here's what I learned about you" — 4–5 first-person bullets (goal, strengths, biggest opportunity, gentle risk note, tone). NO options line.
 11. The final plan message (see directive below).
+
+${existingBlock}
 
 ${chipRule}
 ${planDirective}
@@ -113,7 +132,7 @@ Available tools:
 ${toolList}
 
 ${starInfo}
-${tool ? `They're especially interested in the "${TOOL_META[tool as ToolKey]?.label ?? tool}" tool — emphasise it.` : ""}`;
+${tool ? `They're especially interested in the "${toolLabel}" tool — if they choose the overall plan, still emphasise it.` : ""}`;
 }
 
 /* ---------------- plan directive parsing ---------------- */
@@ -195,6 +214,25 @@ function DiseaseBot() {
 
   const disease = slug ? getDisease(slug) : undefined;
 
+  // Existing plans → bot context, so it can offer "update existing or create fresh".
+  const existingSummary = useMemo(() => {
+    try {
+      const cat2tool: Record<string, string> = {
+        Yoga: "yoga", Exercise: "exercise", Diet: "diet",
+        "Intermittent Fasting": "if", Fasting: "fasting", Detox: "detox",
+      };
+      return getAllSavedPlans()
+        .filter((p) => cat2tool[p.category] || p.category === "Disease")
+        .slice(0, 12)
+        .map((p) => {
+          const days = Math.max(0, Math.round((Date.now() - p.createdAt) / 86400000));
+          const kind = cat2tool[p.category] ? `tool=${cat2tool[p.category]}` : "disease-plan";
+          return `- ${kind}: "${p.title}" (created ${days === 0 ? "today" : `${days}d ago`})`;
+        })
+        .join("\n");
+    } catch { return ""; }
+  }, []);
+
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, assistantPartial]);
@@ -209,7 +247,9 @@ function DiseaseBot() {
     const intro = disease
       ? mode === "acute"
         ? `I'm not feeling well — I think it's ${disease.name}.`
-        : `I'd like to build a plan for ${disease.name}.`
+        : tool
+          ? `I was looking at the ${TOOL_META[tool as ToolKey]?.label ?? tool} tool for ${disease.name} — help me make a plan.`
+          : `I'd like to build a plan for ${disease.name}.`
       : "Hi! Help me build a plan.";
     void send(intro, { silent: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -233,7 +273,7 @@ function DiseaseBot() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          system: buildSystemPrompt(mode, slug, tool),
+          system: buildSystemPrompt(mode, slug, tool, existingSummary),
           messages: modelMessages,
         }),
       });

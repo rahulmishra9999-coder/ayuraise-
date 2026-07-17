@@ -262,7 +262,7 @@ function ChronicPage({ disease }: { disease: DiseaseInfo }) {
       <div className="fixed inset-x-0 bottom-[76px] z-30 px-4 pb-2">
         <Link
           to="/disease-bot"
-          search={{ slug: disease.slug, mode: "verify" as const }}
+          search={{ slug: disease.slug, tool: undefined, mode: "verify" as const }}
           className="mx-auto flex max-w-xl items-center justify-center gap-2 rounded-2xl bg-primary px-5 py-3.5 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-glow)]"
         >
           <Bot size={16} /> {plan ? `Rebuild my ${disease.short} plan` : `Build my personalized ${disease.short} plan`}
@@ -342,7 +342,7 @@ function SeasonalPage({ disease }: { disease: DiseaseInfo }) {
         {/* Talk to bot */}
         <Link
           to="/disease-bot"
-          search={{ slug: disease.slug, mode: "acute" as const }}
+          search={{ slug: disease.slug, tool: undefined, mode: "acute" as const }}
           className="mt-4 flex items-center gap-3 rounded-3xl bg-primary p-4 text-primary-foreground shadow-[var(--shadow-glow)]"
         >
           <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/15"><Bot size={22} /></span>
