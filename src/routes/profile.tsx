@@ -69,6 +69,22 @@ function ProfilePage() {
         </section>
 
         <Link
+          to="/my-data"
+          className="mt-4 flex w-full items-center gap-3 rounded-3xl bg-card px-5 py-4 text-left shadow-[var(--shadow-soft)] ring-1 ring-border/60"
+        >
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+            <span className="text-lg">📂</span>
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-foreground">My Data — reports & prescriptions</p>
+            <p className="text-[11px] text-muted-foreground">
+              Upload for you or family. Ayu reads them for personalised recommendations.
+            </p>
+          </div>
+          <ChevronRight size={16} className="text-muted-foreground" />
+        </Link>
+
+        <Link
           to="/prakriti-guest"
           className="mt-4 flex w-full items-center gap-3 rounded-3xl bg-card px-5 py-4 text-left shadow-[var(--shadow-soft)] ring-1 ring-border/60"
         >

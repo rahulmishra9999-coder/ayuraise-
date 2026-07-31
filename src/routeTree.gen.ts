@@ -14,6 +14,7 @@ import { Route as PrakritiGuestRouteImport } from './routes/prakriti-guest'
 import { Route as PlanRouteImport } from './routes/plan'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as MyPlansRouteImport } from './routes/my-plans'
+import { Route as MyDataRouteImport } from './routes/my-data'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as LearnRouteImport } from './routes/learn'
 import { Route as HomeRouteImport } from './routes/home'
@@ -25,6 +26,7 @@ import { Route as CoachRouteImport } from './routes/coach'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SectionYogaRouteImport } from './routes/section.yoga'
 import { Route as SectionWeightLossRouteImport } from './routes/section.weight-loss'
+import { Route as SectionMeditationRouteImport } from './routes/section.meditation'
 import { Route as SectionFastingRouteImport } from './routes/section.fasting'
 import { Route as SectionExerciseRouteImport } from './routes/section.exercise'
 import { Route as SectionDiseaseRouteImport } from './routes/section.disease'
@@ -60,6 +62,11 @@ const OnboardingRoute = OnboardingRouteImport.update({
 const MyPlansRoute = MyPlansRouteImport.update({
   id: '/my-plans',
   path: '/my-plans',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MyDataRoute = MyDataRouteImport.update({
+  id: '/my-data',
+  path: '/my-data',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -115,6 +122,11 @@ const SectionYogaRoute = SectionYogaRouteImport.update({
 const SectionWeightLossRoute = SectionWeightLossRouteImport.update({
   id: '/section/weight-loss',
   path: '/section/weight-loss',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SectionMeditationRoute = SectionMeditationRouteImport.update({
+  id: '/section/meditation',
+  path: '/section/meditation',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SectionFastingRoute = SectionFastingRouteImport.update({
@@ -183,6 +195,7 @@ export interface FileRoutesByFullPath {
   '/home': typeof HomeRoute
   '/learn': typeof LearnRoute
   '/login': typeof LoginRoute
+  '/my-data': typeof MyDataRoute
   '/my-plans': typeof MyPlansRoute
   '/onboarding': typeof OnboardingRoute
   '/plan': typeof PlanRoute
@@ -198,6 +211,7 @@ export interface FileRoutesByFullPath {
   '/section/disease': typeof SectionDiseaseRoute
   '/section/exercise': typeof SectionExerciseRoute
   '/section/fasting': typeof SectionFastingRoute
+  '/section/meditation': typeof SectionMeditationRoute
   '/section/weight-loss': typeof SectionWeightLossRoute
   '/section/yoga': typeof SectionYogaRoute
   '/diet/journey/$slug': typeof DietJourneySlugRoute
@@ -212,6 +226,7 @@ export interface FileRoutesByTo {
   '/home': typeof HomeRoute
   '/learn': typeof LearnRoute
   '/login': typeof LoginRoute
+  '/my-data': typeof MyDataRoute
   '/my-plans': typeof MyPlansRoute
   '/onboarding': typeof OnboardingRoute
   '/plan': typeof PlanRoute
@@ -227,6 +242,7 @@ export interface FileRoutesByTo {
   '/section/disease': typeof SectionDiseaseRoute
   '/section/exercise': typeof SectionExerciseRoute
   '/section/fasting': typeof SectionFastingRoute
+  '/section/meditation': typeof SectionMeditationRoute
   '/section/weight-loss': typeof SectionWeightLossRoute
   '/section/yoga': typeof SectionYogaRoute
   '/diet/journey/$slug': typeof DietJourneySlugRoute
@@ -242,6 +258,7 @@ export interface FileRoutesById {
   '/home': typeof HomeRoute
   '/learn': typeof LearnRoute
   '/login': typeof LoginRoute
+  '/my-data': typeof MyDataRoute
   '/my-plans': typeof MyPlansRoute
   '/onboarding': typeof OnboardingRoute
   '/plan': typeof PlanRoute
@@ -257,6 +274,7 @@ export interface FileRoutesById {
   '/section/disease': typeof SectionDiseaseRoute
   '/section/exercise': typeof SectionExerciseRoute
   '/section/fasting': typeof SectionFastingRoute
+  '/section/meditation': typeof SectionMeditationRoute
   '/section/weight-loss': typeof SectionWeightLossRoute
   '/section/yoga': typeof SectionYogaRoute
   '/diet/journey/$slug': typeof DietJourneySlugRoute
@@ -273,6 +291,7 @@ export interface FileRouteTypes {
     | '/home'
     | '/learn'
     | '/login'
+    | '/my-data'
     | '/my-plans'
     | '/onboarding'
     | '/plan'
@@ -288,6 +307,7 @@ export interface FileRouteTypes {
     | '/section/disease'
     | '/section/exercise'
     | '/section/fasting'
+    | '/section/meditation'
     | '/section/weight-loss'
     | '/section/yoga'
     | '/diet/journey/$slug'
@@ -302,6 +322,7 @@ export interface FileRouteTypes {
     | '/home'
     | '/learn'
     | '/login'
+    | '/my-data'
     | '/my-plans'
     | '/onboarding'
     | '/plan'
@@ -317,6 +338,7 @@ export interface FileRouteTypes {
     | '/section/disease'
     | '/section/exercise'
     | '/section/fasting'
+    | '/section/meditation'
     | '/section/weight-loss'
     | '/section/yoga'
     | '/diet/journey/$slug'
@@ -331,6 +353,7 @@ export interface FileRouteTypes {
     | '/home'
     | '/learn'
     | '/login'
+    | '/my-data'
     | '/my-plans'
     | '/onboarding'
     | '/plan'
@@ -346,6 +369,7 @@ export interface FileRouteTypes {
     | '/section/disease'
     | '/section/exercise'
     | '/section/fasting'
+    | '/section/meditation'
     | '/section/weight-loss'
     | '/section/yoga'
     | '/diet/journey/$slug'
@@ -361,6 +385,7 @@ export interface RootRouteChildren {
   HomeRoute: typeof HomeRoute
   LearnRoute: typeof LearnRoute
   LoginRoute: typeof LoginRoute
+  MyDataRoute: typeof MyDataRoute
   MyPlansRoute: typeof MyPlansRoute
   OnboardingRoute: typeof OnboardingRoute
   PlanRoute: typeof PlanRoute
@@ -375,6 +400,7 @@ export interface RootRouteChildren {
   SectionDiseaseRoute: typeof SectionDiseaseRoute
   SectionExerciseRoute: typeof SectionExerciseRoute
   SectionFastingRoute: typeof SectionFastingRoute
+  SectionMeditationRoute: typeof SectionMeditationRoute
   SectionWeightLossRoute: typeof SectionWeightLossRoute
   SectionYogaRoute: typeof SectionYogaRoute
   DietJourneySlugRoute: typeof DietJourneySlugRoute
@@ -415,6 +441,13 @@ declare module '@tanstack/react-router' {
       path: '/my-plans'
       fullPath: '/my-plans'
       preLoaderRoute: typeof MyPlansRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/my-data': {
+      id: '/my-data'
+      path: '/my-data'
+      fullPath: '/my-data'
+      preLoaderRoute: typeof MyDataRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -492,6 +525,13 @@ declare module '@tanstack/react-router' {
       path: '/section/weight-loss'
       fullPath: '/section/weight-loss'
       preLoaderRoute: typeof SectionWeightLossRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/section/meditation': {
+      id: '/section/meditation'
+      path: '/section/meditation'
+      fullPath: '/section/meditation'
+      preLoaderRoute: typeof SectionMeditationRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/section/fasting': {
@@ -594,6 +634,7 @@ const rootRouteChildren: RootRouteChildren = {
   HomeRoute: HomeRoute,
   LearnRoute: LearnRoute,
   LoginRoute: LoginRoute,
+  MyDataRoute: MyDataRoute,
   MyPlansRoute: MyPlansRoute,
   OnboardingRoute: OnboardingRoute,
   PlanRoute: PlanRoute,
@@ -608,6 +649,7 @@ const rootRouteChildren: RootRouteChildren = {
   SectionDiseaseRoute: SectionDiseaseRoute,
   SectionExerciseRoute: SectionExerciseRoute,
   SectionFastingRoute: SectionFastingRoute,
+  SectionMeditationRoute: SectionMeditationRoute,
   SectionWeightLossRoute: SectionWeightLossRoute,
   SectionYogaRoute: SectionYogaRoute,
   DietJourneySlugRoute: DietJourneySlugRoute,

@@ -1,947 +1,681 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  ArrowLeft, ArrowRight, Sparkles, Check, Send, Camera, CameraOff,
-  Volume2, VolumeX, Play, Pause, SkipForward, X, Mic, Salad, Hourglass, Droplets,
-  PlayCircle, BookOpen, Heart, ChevronDown, AlertCircle, Flame,
-} from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { toast } from "sonner";
 import {
-  DISEASES, GOALS, DURATIONS, generatePlan, savePlan, posesFor, speak, stopSpeaking,
-  type Disease, type Goal, type YogaPlan, type Pose,
+  ArrowLeft, Play, Pause, ChevronRight, ChevronLeft, X, Trash2, Volume2, VolumeX, History, Bot, Plus, Check,
+} from "lucide-react";
+import {
+  POSES, DURATIONS, GOALS, DISEASES, generatePlan, posesFor, speak, stopSpeaking,
+  type Goal, type Disease, type YogaPlan,
 } from "@/lib/yoga";
-import { YOGA_TYPES, YOGA_BENEFITS, YOGA_CATEGORIES } from "@/lib/yoga-basics";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { QuizRunner } from "@/components/QuizRunner";
-import { WLPipelineBanner, WLPipelineNext, useWLPipeline } from "@/components/WLPipeline";
-import { DiseasePipelineBanner, DiseasePipelineNext } from "@/components/DiseasePipeline";
-import { loadProfile, patchPlan, estimateBurn } from "@/lib/weight-loss";
+import {
+  GOAL_GROUPS, ASANAS, PRANAYAMAS, BANDHAS, TECH_INTRO,
+  sessionFor, techniqueSession, buildBundleSession, yogaKcal,
+  loadMyYogaPlans, saveMyYogaPlan, deleteMyYogaPlan, loadYogaHistory, addYogaHistory,
+  type LibItem, type SavedYogaPlan, type Technique,
+} from "@/lib/yoga-library";
+import { YOGA_LEARN_SECTIONS, type LearnSection } from "@/lib/yoga-learn";
+import { loadPlan as loadWLPlan } from "@/lib/weight-loss";
+import { addCalEntry } from "@/lib/trackers";
 
 export const Route = createFileRoute("/section/yoga")({
   head: () => ({
     meta: [
       { title: "Yoga & Pranayam · AyuRaise" },
-      { name: "description", content: "Personalized yoga plans with optional AI form feedback." },
+      { name: "description", content: "Practise yoga by technique or by goal, build a personalized plan, and learn the science behind it." },
     ],
   }),
-  component: YogaFlow,
+  component: YogaSection,
 });
 
-type Step =
-  | "intake"
-  | "generating"
-  | "plan"
-  | "chat"
-  | "saved"
-  | "feedback-choice"
-  | "practice"
-  | "complete";
+type Tab = "know" | "goal" | "plans" | "learn";
 
-function YogaFlow() {
-  const [tab, setTab] = useState<"practice" | "basics" | "quiz">("practice");
+function bodyWeight() { return loadWLPlan()?.currentWeight ?? 68; }
+
+/* Session shape passed to the player */
+type Session = { title: string; plan: YogaPlan; feedback: boolean };
+
+function YogaSection() {
+  const [tab, setTab] = useState<Tab>("goal");
+  const [session, setSession] = useState<Session | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [item, setItem] = useState<LibItem | null>(null);
+
   return (
     <div className="min-h-svh pb-28" style={{ background: "var(--gradient-hero)" }}>
-      <div className="mx-auto max-w-xl px-5 pt-[max(1rem,env(safe-area-inset-top))]">
-        <div className="flex items-center justify-between pt-1">
-          <Link
-            to="/home"
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-card shadow-[var(--shadow-soft)] ring-1 ring-border/60"
-            aria-label="Back to Health"
-          >
-            <ArrowLeft size={18} />
+      {/* hero */}
+      <div className="relative overflow-hidden px-5 pb-6 pt-[max(1rem,env(safe-area-inset-top))]" style={{ background: "var(--gradient-night)" }}>
+        <div className="absolute -right-16 -top-16 h-48 w-48 rounded-full bg-amber-400/20 blur-3xl" />
+        <div className="relative">
+          <Link to="/home" className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-primary-foreground">
+            <ArrowLeft size={16} />
           </Link>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-            Yoga & Pranayam
-          </p>
-          <div className="w-10" />
+          <div className="mt-4 flex items-center gap-3">
+            <SuryaIcon />
+            <div>
+              <h1 className="font-display text-[24px] font-extrabold leading-tight text-primary-foreground">Yoga &amp; Pranayam</h1>
+              <p className="text-[13px] text-primary-foreground/80">Move, breathe, heal — at your pace.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="mx-auto max-w-xl px-5">
+        {/* create personalized plan — the entry point */}
+        <button onClick={() => setCreateOpen(true)} className="group mt-4 w-full overflow-hidden rounded-3xl p-5 text-left text-primary-foreground shadow-[var(--shadow-glow)] transition active:scale-[0.985]" style={{ background: "var(--gradient-violet)" }}>
+          <div className="flex items-center gap-3">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/20 text-xl">✨</span>
+            <div className="min-w-0 flex-1">
+              <p className="font-display text-[16px] font-bold leading-tight">Create Your Personalized Yoga Plan</p>
+              <p className="mt-1.5 text-[12px] leading-relaxed opacity-90">A yoga journey tailored to your body, goals, and lifestyle — with optional real-time feedback from your AI Yoga Instructor.</p>
+            </div>
+          </div>
+          <span className="mt-3.5 inline-flex items-center gap-1.5 rounded-full bg-white px-4 py-2 text-[12.5px] font-bold text-violet-700 shadow-sm transition group-active:gap-2.5">
+            Get started <ChevronRight size={15} />
+          </span>
+        </button>
+
+        {/* main tabs */}
+        <div className="sticky top-0 z-30 -mx-5 mt-3 flex gap-1.5 overflow-x-auto bg-background/85 px-5 py-2.5 backdrop-blur-xl [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {([["goal", "🎯 Select a Goal & Practice"], ["know", "🧘 Select Poses & Practice"], ["plans", "📋 My Plans"], ["learn", "🎓 Learn"]] as const).map(([id, label]) => (
+            <button key={id} onClick={() => setTab(id)}
+              className={`shrink-0 rounded-full px-3.5 py-1.5 text-[12.5px] font-semibold transition ${tab === id ? "bg-primary text-primary-foreground shadow-[var(--shadow-glow)]" : "bg-card text-foreground/70 ring-1 ring-border/60"}`}>
+              {label}
+            </button>
+          ))}
         </div>
 
-        <Tabs value={tab} onValueChange={(v) => setTab(v as "practice" | "basics" | "quiz")} className="mt-4">
-          <TabsList className="grid w-full grid-cols-3 rounded-full bg-card p-1 ring-1 ring-border/60 h-auto">
-            <TabsTrigger value="practice" className="rounded-full data-[state=active]:bg-primary data-[state=active]:text-primary-foreground py-2 text-xs">
-              <Sparkles size={14} className="mr-1" /> Practice
-            </TabsTrigger>
-            <TabsTrigger value="basics" className="rounded-full data-[state=active]:bg-primary data-[state=active]:text-primary-foreground py-2 text-xs">
-              <BookOpen size={14} className="mr-1" /> Basics
-            </TabsTrigger>
-            <TabsTrigger value="quiz" className="rounded-full data-[state=active]:bg-primary data-[state=active]:text-primary-foreground py-2 text-xs">
-              🧠 Quiz
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="practice" className="mt-2">
-            <PracticeFlow />
-          </TabsContent>
-          <TabsContent value="basics" className="mt-2">
-            <BasicsTab />
-          </TabsContent>
-          <TabsContent value="quiz" className="mt-4">
-            <QuizRunner quizId="yoga" />
-          </TabsContent>
-        </Tabs>
+        {tab === "know" && <KnowTab onPractise={(title, plan) => setSession({ title, plan, feedback: true })} />}
+        {tab === "goal" && <GoalTab onPick={setItem} />}
+        {tab === "plans" && <PlansTab onPlay={(p) => setSession({ title: p.name, plan: p, feedback: p.withFeedback })} />}
+        {tab === "learn" && <LearnTab onPractise={(title, plan) => setSession({ title, plan, feedback: true })} />}
       </div>
+
+      {item && (
+        <DurationSheet item={item} onClose={() => setItem(null)}
+          onStart={(plan, feedback) => { setSession({ title: item.label, plan, feedback }); setItem(null); }} />
+      )}
+      {createOpen && (
+        <CreatePlanSheet onClose={() => setCreateOpen(false)}
+          onPlay={(title, plan, feedback) => { setSession({ title, plan, feedback }); setCreateOpen(false); }} />
+      )}
+      {session && (
+        <SessionPlayer title={session.title} plan={session.plan} feedback={session.feedback} onClose={() => setSession(null)} />
+      )}
+
       <BottomNav />
     </div>
   );
 }
 
-function PracticeFlow() {
-  const pipeline = useWLPipeline("yoga");
-  const [step, setStep] = useState<Step>("intake");
-  const [disease, setDisease] = useState<Disease>("none");
-  const [goal, setGoal] = useState<Goal>(pipeline.active ? "weight-loss" : "general-wellness");
-  const [duration, setDuration] = useState<number>(20);
-  const [plan, setPlan] = useState<YogaPlan | null>(null);
-  const [withFeedback, setWithFeedback] = useState(false);
+/* ================= Premium Surya Namaskar icon ================= */
 
-  // When saving plan in pipeline mode, compute calorie burn and patch wlPlan
-  const persistBurn = (p: YogaPlan) => {
-    if (!pipeline.active) return;
-    const prof = loadProfile();
-    const kg = prof?.weightKg ?? 65;
-    // ~3 MET hatha yoga * duration
-    const cal = estimateBurn(3 * p.duration, kg);
-    patchPlan({ yogaCalBurn: cal });
-  };
-
+function SuryaIcon() {
   return (
-    <div>
-      <WLPipelineBanner currentSlug="yoga" />
-      <DiseasePipelineBanner currentSlug="yoga" />
-      {step !== "intake" && (
-        <div className="mb-2 mt-2 flex items-center justify-between">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-            {labelFor(step)}
-          </p>
-          <button
-            onClick={() => setStep("intake")}
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-card shadow-[var(--shadow-soft)] ring-1 ring-border/60"
-            aria-label="Restart"
-          >
-            <X size={16} />
-          </button>
-        </div>
-      )}
+    <span className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl shadow-inner" style={{ background: "linear-gradient(180deg,#fde68a 0%,#fb923c 55%,#c2410c 100%)" }}>
+      <svg viewBox="0 0 64 64" className="h-full w-full">
+        {/* setting sun disc */}
+        <circle cx="32" cy="30" r="14" fill="#fffbeb" opacity="0.55" />
+        <circle cx="32" cy="30" r="10" fill="#fff7ed" opacity="0.8" />
+        {/* horizon ground */}
+        <path d="M0 52 h64 v12 H0 Z" fill="#7c2d12" opacity="0.9" />
+        {/* yoga figure — crescent lunge, arms sweeping overhead */}
+        <g fill="none" stroke="#5b1e0a" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+          {/* back leg extended, front leg bent (lunge) */}
+          <path d="M30 40 L18 52" />
+          <path d="M30 40 L37 46 L37 52" />
+          {/* torso leaning gently back */}
+          <path d="M30 40 L33 24" />
+          {/* arms reaching up together toward the sun */}
+          <path d="M33 26 L40 12" />
+          <path d="M33 26 L36 11" />
+        </g>
+        <circle cx="34.5" cy="20" r="3.1" fill="#5b1e0a" />
+      </svg>
+    </span>
+  );
+}
 
-      {step === "intake" && (
-        <IntakeStep
-          hideDisease={pipeline.active}
-          disease={disease} setDisease={setDisease}
-          goal={goal} setGoal={setGoal}
-          duration={duration} setDuration={setDuration}
-          onSubmit={() => {
-            setStep("generating");
-            setTimeout(() => {
-              const p = generatePlan(disease, goal, duration);
-              setPlan(p);
-              setStep("plan");
-            }, 1200);
-          }}
-        />
-      )}
-      {step === "generating" && <GeneratingStep />}
-      {step === "plan" && plan && (
-        <PlanStep plan={plan} onCustomize={() => setStep("chat")} onContinue={() => { savePlan(plan); persistBurn(plan); setStep("saved"); }} />
-      )}
-      {step === "chat" && plan && (
-        <ChatStep plan={plan} onUpdated={(p) => setPlan(p)} onDone={() => { if (plan) { savePlan(plan); persistBurn(plan); } setStep("saved"); }} />
-      )}
-      {step === "saved" && plan && (
-        <SavedStep plan={plan} onStart={() => setStep("feedback-choice")} />
-      )}
-      {step === "feedback-choice" && (
-        <FeedbackChoiceStep onChoose={(fb) => { setWithFeedback(fb); setStep("practice"); }} />
-      )}
-      {step === "practice" && plan && (
-        <PracticeStep plan={plan} withFeedback={withFeedback} onDone={() => setStep("complete")} />
-      )}
-      {step === "complete" && <CompleteStep onBack={() => setStep("intake")} />}
+/* ================= Floating sub-tabs (scroll-to-section) ================= */
+
+function SubTabs({ tabs }: { tabs: { id: string; label: string }[] }) {
+  const [active, setActive] = useState(tabs[0]?.id);
+  const key = tabs.map((t) => t.id).join(",");
+  useEffect(() => {
+    const onScroll = () => {
+      let cur = tabs[0]?.id;
+      for (const t of tabs) { const el = document.getElementById(t.id); if (el && el.getBoundingClientRect().top <= 150) cur = t.id; }
+      setActive(cur);
+    };
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
+  const go = (id: string) => {
+    const el = document.getElementById(id);
+    if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 96, behavior: "smooth" });
+  };
+  return (
+    <div className="sticky top-[46px] z-20 -mx-5 flex gap-1.5 overflow-x-auto bg-background/85 px-5 py-2 backdrop-blur-xl [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      {tabs.map((t) => (
+        <button key={t.id} onClick={() => { setActive(t.id); go(t.id); }}
+          className={`shrink-0 rounded-full px-3 py-1.5 text-[11.5px] font-semibold transition ${active === t.id ? "bg-primary text-primary-foreground" : "bg-card text-foreground/65 ring-1 ring-border/60"}`}>
+          {t.label}
+        </button>
+      ))}
     </div>
   );
 }
 
-
-
-function BasicsTab() {
-  const [openCat, setOpenCat] = useState<string | null>(null);
+function VideoCard({ label }: { label: string }) {
   return (
-    <div className="animate-float-up">
-      {/* Hero intro */}
-      <div className="mt-3 overflow-hidden rounded-3xl text-primary-foreground shadow-[var(--shadow-tile)]" style={{ background: "var(--gradient-leaf)" }}>
-        <div className="relative aspect-video w-full bg-foreground/20">
-          <iframe
-            className="absolute inset-0 h-full w-full"
-            src="https://www.youtube.com/embed/v7AYKMP6rOE"
-            title="Introduction to Yoga"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-          />
-        </div>
-        <div className="p-5">
-          <p className="text-[11px] font-semibold uppercase tracking-wider opacity-90">Introduction</p>
-          <h2 className="mt-1 font-display text-2xl font-semibold">What is yoga?</h2>
-          <p className="mt-2 text-sm leading-relaxed opacity-90">
-            Yoga is a 5,000-year-old practice from India that unites body, breath and mind.
-            Through asana (posture), pranayam (breath) and dhyana (meditation), it builds health,
-            calms the nervous system and awakens awareness.
-          </p>
-        </div>
-      </div>
+    <button onClick={() => toast("Intro video coming soon 🎬")} className="relative mt-2 flex h-28 w-full items-center justify-center overflow-hidden rounded-2xl ring-1 ring-border/60" style={{ background: "var(--gradient-night)" }}>
+      <span className="absolute inset-0 opacity-40" style={{ background: "radial-gradient(circle at 30% 30%, #ffffff33, transparent 60%)" }} />
+      <span className="relative flex h-12 w-12 items-center justify-center rounded-full bg-white/90 text-primary shadow-lg"><Play size={22} className="ml-0.5" /></span>
+      <span className="absolute bottom-2 left-3 text-[11px] font-semibold text-white/90">{label}</span>
+    </button>
+  );
+}
 
-      {/* Benefits */}
-      <section className="mt-6">
-        <div className="flex items-center gap-2">
-          <Heart size={16} className="text-primary" />
-          <h2 className="font-display text-lg font-semibold">Benefits of yoga</h2>
-        </div>
-        <div className="mt-3 grid grid-cols-2 gap-2.5">
-          {YOGA_BENEFITS.map((b) => (
-            <div key={b.title} className="rounded-2xl bg-card p-3 ring-1 ring-border/60 shadow-[var(--shadow-soft)]">
-              <p className="text-xl">{b.icon}</p>
-              <p className="mt-1 text-sm font-semibold">{b.title}</p>
-              <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">{b.text}</p>
-            </div>
-          ))}
-        </div>
-      </section>
+/* ================= Know Yoga Techniques & Practice ================= */
 
-      {/* Types of yoga */}
-      <section className="mt-6">
-        <div className="flex items-center gap-2">
-          <BookOpen size={16} className="text-primary" />
-          <h2 className="font-display text-lg font-semibold">Types of yoga</h2>
-        </div>
-        <p className="mt-1 text-xs text-muted-foreground">Six classical styles. Each suits a different temperament.</p>
-        <div className="mt-3 space-y-2.5">
-          {YOGA_TYPES.map((t) => (
-            <div key={t.id} className="rounded-2xl bg-card p-4 ring-1 ring-border/60 shadow-[var(--shadow-soft)]">
-              <div className="flex items-start gap-3">
-                <span className="text-2xl">{t.emoji}</span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold">{t.name}</p>
-                  <p className="text-[11px] text-muted-foreground">{t.origin}</p>
-                  <p className="mt-1.5 text-xs leading-relaxed text-foreground/80">{t.description}</p>
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    {t.bestFor.map((b) => (
-                      <span key={b} className="rounded-full bg-accent/30 px-2 py-0.5 text-[10px] font-medium text-primary">{b}</span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
+function KnowTab({ onPractise }: { onPractise: (title: string, plan: YogaPlan) => void }) {
+  const [bundle, setBundle] = useState<string[]>([]);
+  const [showAll, setShowAll] = useState<Record<string, boolean>>({});
+  const toggleBundle = (id: string) => setBundle((b) => b.includes(id) ? b.filter((x) => x !== id) : [...b, id]);
 
-      {/* Specialized categories */}
-      <section className="mt-7">
-        <div className="flex items-center gap-2">
-          <Sparkles size={16} className="text-primary" />
-          <h2 className="font-display text-lg font-semibold">Yoga we offer</h2>
-        </div>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Specialized practices with recorded poses for every body and condition.
-        </p>
-        <div className="mt-3 space-y-3">
-          {YOGA_CATEGORIES.map((c) => {
-            const open = openCat === c.id;
+  const group = (id: string, title: string, intro: string, list: Technique[], videoLabel: string) => {
+    const open = showAll[id];
+    const shown = open ? list : list.slice(0, 8);
+    return (
+      <section id={id} className="scroll-mt-28 pt-4">
+        <h2 className="px-1 font-display text-[16px] font-bold text-foreground">{title}</h2>
+        <p className="mt-0.5 px-1 text-[11.5px] leading-snug text-muted-foreground">{intro}</p>
+        <VideoCard label={videoLabel} />
+        <div className="mt-3 grid grid-cols-4 gap-2">
+          {shown.map((t) => {
+            const inBundle = bundle.includes(t.id);
+            const practisable = !!t.poseId;
             return (
-              <div key={c.id} className="overflow-hidden rounded-3xl bg-card ring-1 ring-border/60 shadow-[var(--shadow-soft)]">
+              <div key={t.id} className="relative">
                 <button
-                  onClick={() => setOpenCat(open ? null : c.id)}
-                  className="flex w-full items-center gap-3 p-4 text-left"
-                >
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-2xl text-primary-foreground" style={{ background: c.gradient }}>
-                    {c.emoji}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold">{c.name}</p>
-                    <p className="text-[11px] text-muted-foreground">{c.audience} · {c.poses.length} poses</p>
-                  </div>
-                  <ChevronDown size={18} className={`shrink-0 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} />
+                  onClick={() => practisable ? onPractise(t.name, techniqueSession(t)) : toast(t.note)}
+                  className="flex w-full flex-col items-center gap-1.5 rounded-2xl bg-card p-2.5 text-center ring-1 ring-border/60 active:scale-[0.97]">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/50 text-xl">{t.emoji}</span>
+                  <span className="text-[9.5px] font-medium leading-tight text-foreground/85">{t.name}</span>
                 </button>
-
-                {open && (
-                  <div className="border-t border-border/60 p-4 animate-float-up">
-                    <p className="text-xs leading-relaxed text-foreground/80">{c.description}</p>
-
-                    {c.precautions.length > 0 && (
-                      <div className="mt-3 rounded-2xl bg-destructive/10 p-3">
-                        <div className="flex items-center gap-1.5">
-                          <AlertCircle size={13} className="text-destructive" />
-                          <p className="text-[11px] font-semibold uppercase tracking-wider text-destructive">Precautions</p>
-                        </div>
-                        <ul className="mt-1.5 list-disc space-y-0.5 pl-5 text-[11px] text-foreground/80">
-                          {c.precautions.map((p) => <li key={p}>{p}</li>)}
-                        </ul>
-                      </div>
-                    )}
-
-                    <p className="mt-4 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                      Recorded poses
-                    </p>
-                    <div className="mt-2 space-y-2">
-                      {c.poses.map((p, i) => (
-                        <div key={i} className="flex items-start gap-3 rounded-2xl bg-secondary/60 p-3">
-                          <span className="text-xl">{p.emoji}</span>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-baseline justify-between gap-2">
-                              <p className="truncate text-xs font-semibold">{p.name}</p>
-                              <p className="shrink-0 text-[10px] font-medium text-muted-foreground">{p.duration}</p>
-                            </div>
-                            <p className="truncate text-[10px] italic text-muted-foreground">{p.sanskrit}</p>
-                            <p className="mt-1 text-[11px] leading-snug text-foreground/75">{p.cue}</p>
-                          </div>
-                          <button
-                            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-[var(--shadow-soft)]"
-                            aria-label={`Play ${p.name}`}
-                            onClick={() => speak(`${p.name}. ${p.cue}`)}
-                          >
-                            <PlayCircle size={18} />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+                {practisable && (
+                  <button onClick={() => toggleBundle(t.id)} title="Add to bundle"
+                    className={`absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full text-white shadow ${inBundle ? "bg-emerald-500" : "bg-primary/80"}`}>
+                    {inBundle ? <Check size={11} strokeWidth={3} /> : <Plus size={11} strokeWidth={3} />}
+                  </button>
                 )}
               </div>
             );
           })}
         </div>
+        {list.length > 8 && (
+          <button onClick={() => setShowAll((s) => ({ ...s, [id]: !open }))} className="mt-2 w-full rounded-full bg-secondary px-3 py-1.5 text-[11.5px] font-semibold text-foreground/70">
+            {open ? "Show less" : `Show all ${list.length}`}
+          </button>
+        )}
       </section>
+    );
+  };
 
-      <p className="mt-6 text-center text-[11px] text-muted-foreground">
-        Ready to start? Switch to the <span className="font-semibold text-primary">Practice</span> tab.
-      </p>
-    </div>
-  );
-}
+  const allTech = [...ASANAS, ...PRANAYAMAS, ...BANDHAS];
+  const bundleItems = bundle.map((id) => allTech.find((t) => t.id === id)).filter(Boolean) as Technique[];
 
-
-function TopBar({ step, onBack }: { step: Step; onBack: () => void }) {
   return (
-    <div className="flex items-center justify-between pt-1">
-      <Link
-        to="/home"
-        className="flex h-10 w-10 items-center justify-center rounded-full bg-card shadow-[var(--shadow-soft)] ring-1 ring-border/60"
-        aria-label="Back to Health"
-      >
-        <ArrowLeft size={18} />
-      </Link>
-      <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-        Yoga · {labelFor(step)}
-      </p>
-      {step !== "intake" ? (
-        <button
-          onClick={onBack}
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-card shadow-[var(--shadow-soft)] ring-1 ring-border/60"
-          aria-label="Restart"
-        >
-          <X size={18} />
-        </button>
-      ) : <div className="w-10" />}
-    </div>
-  );
-}
-
-function labelFor(s: Step) {
-  return {
-    intake: "Setup",
-    generating: "Building",
-    plan: "Your plan",
-    chat: "Customize",
-    saved: "Saved",
-    "feedback-choice": "Practice",
-    practice: "In session",
-    complete: "Done",
-  }[s];
-}
-
-// ---------- Intake ----------
-function IntakeStep({
-  hideDisease = false, disease, setDisease, goal, setGoal, duration, setDuration, onSubmit,
-}: {
-  hideDisease?: boolean;
-  disease: Disease; setDisease: (d: Disease) => void;
-  goal: Goal; setGoal: (g: Goal) => void;
-  duration: number; setDuration: (d: number) => void;
-  onSubmit: () => void;
-}) {
-  return (
-    <div className="mt-6 animate-float-up">
-      <h1 className="font-display text-3xl font-semibold">Let's craft your yoga plan</h1>
-      <p className="mt-1 text-sm text-muted-foreground">{hideDisease ? "2 quick questions" : "3 quick questions"} — fully personalized.</p>
-
-      {!hideDisease && (
-        <Section title="1. Are you suffering from any condition?" sub="We'll avoid poses that aren't safe for it.">
-          <div className="flex flex-wrap gap-2">
-            {DISEASES.map((d) => (
-              <Chip key={d.id} active={disease === d.id} onClick={() => setDisease(d.id)}>{d.label}</Chip>
-            ))}
+    <div className="pb-24">
+      {/* build-your-own-bundle bucket at the top */}
+      <div className="mt-3 rounded-3xl bg-card p-4 ring-1 ring-border/60">
+        <p className="text-[12.5px] font-semibold leading-snug text-foreground">🧺 Build your own bundle</p>
+        <p className="mt-0.5 text-[11.5px] leading-snug text-muted-foreground">Tap ➕ on any asana or pranayam below and it drops in here — then practise them together.</p>
+        {bundleItems.length === 0 ? (
+          <div className="mt-3 flex min-h-[52px] items-center justify-center rounded-2xl border border-dashed border-border/70 bg-secondary/30 px-3 text-center text-[11px] text-muted-foreground">
+            Your picked poses will appear here
           </div>
-        </Section>
-      )}
-
-      <Section title="2. What's your goal with yoga?" sub="Even if you have a condition, you can still pick flexibility, strength, etc.">
-        <div className="grid grid-cols-1 gap-2">
-          {GOALS.map((g) => (
-            <button
-              key={g.id}
-              onClick={() => setGoal(g.id)}
-              className={`flex items-center justify-between rounded-2xl px-4 py-3 text-left ring-1 transition-all ${
-                goal === g.id ? "bg-primary text-primary-foreground ring-primary shadow-[var(--shadow-glow)]" : "bg-card ring-border/60"
-              }`}
-            >
-              <div>
-                <p className="text-sm font-semibold">{g.label}</p>
-                <p className={`text-xs ${goal === g.id ? "opacity-90" : "text-muted-foreground"}`}>{g.desc}</p>
-              </div>
-              {goal === g.id && <Check size={18} />}
-            </button>
-          ))}
-        </div>
-      </Section>
-
-      <Section title="3. How long do you want to practice?" sub="You can change this anytime.">
-        <div className="flex flex-wrap gap-2">
-          {DURATIONS.map((d) => (
-            <Chip key={d} active={duration === d} onClick={() => setDuration(d)}>{d} min</Chip>
-          ))}
-        </div>
-      </Section>
-
-      <button
-        onClick={onSubmit}
-        className="mt-7 flex w-full items-center justify-center gap-2 rounded-2xl bg-primary py-4 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-glow)] transition-transform active:scale-[0.98]"
-      >
-        <Sparkles size={16} /> Build my yoga plan
-      </button>
-    </div>
-  );
-}
-
-function Section({ title, sub, children }: { title: string; sub?: string; children: React.ReactNode }) {
-  return (
-    <section className="mt-6">
-      <h2 className="font-display text-base font-semibold">{title}</h2>
-      {sub && <p className="mt-0.5 text-xs text-muted-foreground">{sub}</p>}
-      <div className="mt-3">{children}</div>
-    </section>
-  );
-}
-
-function Chip({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
-  return (
-    <button
-      onClick={onClick}
-      className={`rounded-full px-4 py-2 text-sm font-medium ring-1 transition-all ${
-        active ? "bg-primary text-primary-foreground ring-primary shadow-[var(--shadow-soft)]" : "bg-card text-foreground/80 ring-border/60"
-      }`}
-    >
-      {children}
-    </button>
-  );
-}
-
-// ---------- Generating ----------
-function GeneratingStep() {
-  return (
-    <div className="mt-24 flex flex-col items-center text-center animate-float-up">
-      <div className="flex h-24 w-24 items-center justify-center rounded-full text-primary-foreground animate-breathe" style={{ background: "var(--gradient-leaf)" }}>
-        <Sparkles size={32} />
-      </div>
-      <h2 className="mt-6 font-display text-2xl font-semibold">Crafting your sequence…</h2>
-      <p className="mt-2 max-w-xs text-sm text-muted-foreground">
-        Matching poses to your dosha, condition and goal.
-      </p>
-    </div>
-  );
-}
-
-// ---------- Plan review ----------
-function PlanStep({ plan, onCustomize, onContinue }: { plan: YogaPlan; onCustomize: () => void; onContinue: () => void }) {
-  const poses = useMemo(() => posesFor(plan), [plan]);
-  const total = poses.reduce((a, p) => a + p.durationSec, 0);
-  return (
-    <div className="mt-6 animate-float-up">
-      <div className="rounded-3xl p-5 text-primary-foreground shadow-[var(--shadow-tile)]" style={{ background: "var(--gradient-leaf)" }}>
-        <p className="text-xs font-semibold uppercase tracking-wider opacity-90">Your yoga plan</p>
-        <h1 className="mt-1 font-display text-2xl font-semibold">
-          {poses.length} poses · {Math.round(total / 60)} min
-        </h1>
-        <p className="mt-1 text-sm opacity-90">
-          Tailored for {GOALS.find((g) => g.id === plan.goal)?.label.toLowerCase()}
-          {plan.disease !== "none" ? ` · safe for ${DISEASES.find((d) => d.id === plan.disease)?.label.toLowerCase()}` : ""}.
-        </p>
-      </div>
-
-      <div className="mt-5 space-y-3">
-        {poses.map((p, i) => <PoseCard key={p.id} pose={p} index={i + 1} />)}
-      </div>
-
-      <div className="mt-6 rounded-3xl bg-card p-5 ring-1 ring-border/60 shadow-[var(--shadow-soft)]">
-        <p className="font-display text-lg font-semibold">🎉 Plan ready!</p>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Continue with this plan, or chat with Ayu to tweak it.
-        </p>
-        <div className="mt-4 grid grid-cols-2 gap-3">
-          <button
-            onClick={onCustomize}
-            className="rounded-2xl bg-secondary py-3 text-sm font-semibold text-foreground"
-          >
-            Customize
-          </button>
-          <button
-            onClick={onContinue}
-            className="rounded-2xl bg-primary py-3 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-glow)]"
-          >
-            Continue
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function PoseCard({ pose, index }: { pose: Pose; index: number }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div className="rounded-2xl bg-card p-4 ring-1 ring-border/60 shadow-[var(--shadow-soft)]">
-      <button onClick={() => setOpen((o) => !o)} className="flex w-full items-center gap-3 text-left">
-        <span className="text-2xl">{pose.emoji}</span>
-        <div className="flex-1 min-w-0">
-          <p className="truncate text-sm font-semibold">{index}. {pose.name}</p>
-          <p className="truncate text-xs text-muted-foreground">{pose.sanskrit} · {pose.durationSec}s</p>
-        </div>
-        <ArrowRight size={16} className={`transition-transform ${open ? "rotate-90" : ""} text-muted-foreground`} />
-      </button>
-      {open && (
-        <div className="mt-3 border-t border-border/60 pt-3 animate-float-up">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Benefits</p>
-          <div className="mt-1 flex flex-wrap gap-1.5">
-            {pose.benefits.map((b) => (
-              <span key={b} className="rounded-full bg-accent/30 px-2.5 py-1 text-[11px] font-medium text-primary">{b}</span>
-            ))}
-          </div>
-          <p className="mt-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">How to</p>
-          <ol className="mt-1 list-decimal space-y-1 pl-5 text-xs text-foreground/80">
-            {pose.steps.map((s, i) => <li key={i}>{s}</li>)}
-          </ol>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ---------- Chat customize ----------
-type Msg = { role: "user" | "ai"; text: string };
-
-function ChatStep({ plan, onUpdated, onDone }: { plan: YogaPlan; onUpdated: (p: YogaPlan) => void; onDone: () => void }) {
-  const [messages, setMessages] = useState<Msg[]>([
-    { role: "ai", text: "I've crafted your plan. Want it shorter, more relaxing, or focused on a body part? Tell me what to tweak." },
-  ]);
-  const [input, setInput] = useState("");
-
-  function send() {
-    const t = input.trim();
-    if (!t) return;
-    const next: Msg[] = [...messages, { role: "user", text: t }];
-    setMessages(next);
-    setInput("");
-
-    setTimeout(() => {
-      const lower = t.toLowerCase();
-      let reply = "Got it — I've adjusted your plan.";
-      let updated = plan;
-      if (/(short|less|trim|reduce|quick)/.test(lower) && plan.duration > 10) {
-        updated = { ...plan, duration: Math.max(10, plan.duration - 10), poseIds: plan.poseIds.slice(0, Math.max(4, plan.poseIds.length - 2)) };
-        reply = `Trimmed to ~${updated.duration} min, ${updated.poseIds.length} poses.`;
-      } else if (/(long|more|extend|add)/.test(lower)) {
-        updated = { ...plan, duration: plan.duration + 10 };
-        reply = `Extended to ~${updated.duration} min. I'll add a couple more poses on next save.`;
-      } else if (/(relax|calm|stress|sleep)/.test(lower)) {
-        reply = "Shifted toward calming pranayam and forward folds.";
-      } else if (/(strength|stronger|tone)/.test(lower)) {
-        reply = "Added more standing poses to build strength.";
-      } else {
-        reply = "Noted. Your plan now reflects that preference.";
-      }
-      onUpdated(updated);
-      setMessages((m) => [...m, { role: "ai", text: reply }]);
-    }, 600);
-  }
-
-  return (
-    <div className="mt-6 animate-float-up">
-      <div className="rounded-3xl bg-card p-5 ring-1 ring-border/60 shadow-[var(--shadow-soft)]">
-        <p className="font-display text-lg font-semibold">Chat with Ayu</p>
-        <p className="mt-1 text-xs text-muted-foreground">Tell me how to tweak your plan.</p>
-        <div className="mt-4 max-h-[40svh] space-y-2 overflow-y-auto pr-1">
-          {messages.map((m, i) => (
-            <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-              <div className={`max-w-[80%] rounded-2xl px-3.5 py-2 text-sm ${
-                m.role === "user" ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"
-              }`}>
-                {m.text}
-              </div>
+        ) : (
+          <>
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {bundleItems.map((t) => (
+                <button key={t.id} onClick={() => toggleBundle(t.id)} title="Remove"
+                  className="flex items-center gap-1 rounded-full bg-accent/60 px-2.5 py-1.5 text-[11.5px] font-semibold text-foreground ring-1 ring-border/50">
+                  <span>{t.emoji}</span> {t.name} <X size={11} className="opacity-60" />
+                </button>
+              ))}
             </div>
-          ))}
-        </div>
-        <div className="mt-3 flex items-center gap-2">
-          <input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && send()}
-            placeholder="Make it shorter, focus on back…"
-            className="flex-1 rounded-full bg-secondary px-4 py-2.5 text-sm outline-none ring-1 ring-border/60 focus:ring-primary"
-          />
-          <button onClick={send} className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground">
-            <Send size={16} />
-          </button>
-        </div>
-      </div>
-      <button
-        onClick={onDone}
-        className="mt-4 w-full rounded-2xl bg-primary py-3 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-glow)]"
-      >
-        Save plan & continue
-      </button>
-    </div>
-  );
-}
-
-// ---------- Saved ----------
-function SavedStep({ plan, onStart }: { plan: YogaPlan; onStart: () => void }) {
-  const navigate = useNavigate();
-  const pipeline = useWLPipeline("yoga");
-  const prof = loadProfile();
-  const burn = estimateBurn(3 * plan.duration, prof?.weightKg ?? 65);
-  const suggestions: { slug: string; label: string; icon: React.ElementType; gradient: string }[] = [
-    { slug: "diet", label: "Diet plan for this", icon: Salad, gradient: "var(--gradient-sage)" },
-    { slug: "fasting", label: "Add a fasting window", icon: Hourglass, gradient: "var(--gradient-dawn)" },
-    { slug: "detox", label: "Pair with a detox", icon: Droplets, gradient: "var(--gradient-water)" },
-  ];
-
-
-  return (
-    <div className="mt-6 animate-float-up">
-      <div className="rounded-3xl p-6 text-primary-foreground shadow-[var(--shadow-tile)]" style={{ background: "var(--gradient-leaf)" }}>
-        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-card/25 backdrop-blur-sm">
-          <Check size={24} />
-        </div>
-        <h1 className="mt-4 font-display text-2xl font-semibold">Saved to your dashboard</h1>
-        <p className="mt-1 text-sm opacity-90">
-          {plan.poseIds.length} poses · {plan.duration} min. Find it any time under "Today".
-        </p>
-        {pipeline.active && (
-          <div className="mt-4 flex items-center gap-2 rounded-2xl bg-white/15 px-3 py-2.5 text-xs ring-1 ring-white/25">
-            <Flame size={14} /> With this practice you'll burn ~<b>{burn} kcal/day</b> — we'll factor it into your diet plan.
-          </div>
+            <div className="mt-3 flex items-center gap-2">
+              <button onClick={() => setBundle([])} className="rounded-full bg-secondary px-3 py-2 text-[11.5px] font-semibold text-foreground/70">Clear</button>
+              <button onClick={() => onPractise("My bundle", buildBundleSession(bundle))} className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-primary px-3 py-2 text-[12.5px] font-bold text-primary-foreground"><Play size={13} /> Practise {bundleItems.length} together</button>
+            </div>
+          </>
         )}
       </div>
 
-      <WLPipelineNext currentSlug="yoga" />
-      <DiseasePipelineNext currentSlug="yoga" />
+      <SubTabs tabs={[{ id: "asanas", label: "🧘 Asanas" }, { id: "pranayam", label: "🌬️ Pranayam" }, { id: "bandh", label: "🔒 Bandh" }]} />
+      {group("asanas", "Yoga Asanas", TECH_INTRO.asana, ASANAS, "About yoga — 2 min")}
+      {group("pranayam", "Pranayam", TECH_INTRO.pranayama, PRANAYAMAS, "About pranayam — 2 min")}
+      {group("bandh", "Bandh", TECH_INTRO.bandha, BANDHAS, "About bandh — 2 min")}
 
-
-      <div className="mt-5 grid grid-cols-2 gap-3">
-        <button
-          onClick={() => navigate({ to: "/dashboard" })}
-          className="rounded-2xl bg-card py-3 text-sm font-semibold text-foreground ring-1 ring-border/60"
-        >
-          Open dashboard
-        </button>
-        <button
-          onClick={onStart}
-          className="rounded-2xl bg-primary py-3 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-glow)]"
-        >
-          Start practice
-        </button>
-      </div>
-
-      <div className="mt-6 rounded-3xl bg-card p-5 ring-1 ring-border/60 shadow-[var(--shadow-soft)]">
-        <p className="font-display text-base font-semibold">Boost your results</p>
-        <p className="mt-1 text-xs text-muted-foreground">
-          For {plan.disease !== "none" ? DISEASES.find((d) => d.id === plan.disease)?.label.toLowerCase() : "your goals"}, pair yoga with:
-        </p>
-        <div className="mt-3 space-y-2.5">
-          {suggestions.map((s) => {
-            const I = s.icon;
-            return (
-              <Link
-                key={s.slug}
-                to="/section/$slug"
-                params={{ slug: s.slug }}
-                className="flex items-center gap-3 rounded-2xl bg-secondary px-3 py-3"
-              >
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl text-primary-foreground" style={{ background: s.gradient }}>
-                  <I size={18} />
-                </div>
-                <span className="flex-1 text-sm font-semibold">{s.label}</span>
-                <ArrowRight size={16} className="text-muted-foreground" />
-              </Link>
-            );
-          })}
+      {/* floating bundle bar — quick access while scrolling */}
+      {bundle.length > 0 && (
+        <div className="fixed inset-x-0 bottom-[84px] z-30 px-5">
+          <div className="mx-auto flex max-w-xl items-center gap-3 rounded-2xl bg-primary px-4 py-3 text-primary-foreground shadow-[var(--shadow-glow)]">
+            <span className="flex-1 text-[13px] font-semibold">{bundle.length} in your bundle</span>
+            <button onClick={() => setBundle([])} className="rounded-full bg-white/20 px-2.5 py-1 text-[11px] font-semibold">Clear</button>
+            <button onClick={() => onPractise("My bundle", buildBundleSession(bundle))} className="flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-[12px] font-bold text-primary"><Play size={12} /> Practise</button>
+          </div>
         </div>
-        <p className="mt-3 text-[11px] text-muted-foreground">
-          Or park it for later and just hit Start above.
-        </p>
-      </div>
+      )}
     </div>
   );
 }
 
-// ---------- Feedback choice ----------
-function FeedbackChoiceStep({ onChoose }: { onChoose: (withFeedback: boolean) => void }) {
+/* ================= Choose your Goal & Practice ================= */
+
+function GoalTab({ onPick }: { onPick: (i: LibItem) => void }) {
   return (
-    <div className="mt-6 animate-float-up">
-      <h1 className="font-display text-2xl font-semibold">How would you like to practice?</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
-        With AI feedback, your camera helps Ayu cue your form by voice. Camera footage stays on device.
-      </p>
-      <div className="mt-5 space-y-3">
-        <button
-          onClick={() => onChoose(true)}
-          className="flex w-full items-center gap-4 rounded-3xl p-5 text-left text-primary-foreground shadow-[var(--shadow-tile)]"
-          style={{ background: "var(--gradient-violet)" }}
-        >
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-card/25">
-            <Camera size={22} />
+    <div className="pb-4">
+      <SubTabs tabs={GOAL_GROUPS.map((g) => ({ id: g.id, label: g.title }))} />
+      {GOAL_GROUPS.map((cat) => (
+        <section key={cat.id} id={cat.id} className="scroll-mt-28 pt-4">
+          <h2 className="px-1 font-display text-[15px] font-bold text-foreground">{cat.title}</h2>
+          <div className="mt-2 grid grid-cols-4 gap-2">
+            {cat.items.map((it) => (
+              <button key={it.id} onClick={() => onPick(it)} className="flex flex-col items-center gap-1.5 rounded-2xl bg-card p-2.5 text-center ring-1 ring-border/60 active:scale-[0.97]">
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/50 text-xl">{it.emoji}</span>
+                <span className="text-[10px] font-medium leading-tight text-foreground/85">{it.label}</span>
+              </button>
+            ))}
           </div>
-          <div>
-            <p className="font-display text-lg font-semibold">With AI form feedback</p>
-            <p className="text-xs opacity-90">Voice cues from Ayu while you practice.</p>
-          </div>
-        </button>
-        <button
-          onClick={() => onChoose(false)}
-          className="flex w-full items-center gap-4 rounded-3xl bg-card p-5 text-left ring-1 ring-border/60 shadow-[var(--shadow-soft)]"
-        >
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-secondary">
-            <CameraOff size={22} />
-          </div>
-          <div>
-            <p className="font-display text-lg font-semibold">Without feedback</p>
-            <p className="text-xs text-muted-foreground">Just guided voice cues — no camera.</p>
-          </div>
-        </button>
-      </div>
+        </section>
+      ))}
     </div>
   );
 }
 
-// ---------- Practice ----------
-function PracticeStep({ plan, withFeedback, onDone }: { plan: YogaPlan; withFeedback: boolean; onDone: () => void }) {
-  const poses = useMemo(() => posesFor(plan), [plan]);
-  const [idx, setIdx] = useState(0);
-  const [secsLeft, setSecsLeft] = useState(poses[0]?.durationSec ?? 30);
-  const [paused, setPaused] = useState(false);
-  const [muted, setMuted] = useState(false);
-  const [breakMode, setBreakMode] = useState(false);
-  const [camOk, setCamOk] = useState<boolean | null>(null);
-  const [camError, setCamError] = useState<string | null>(null);
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const cueIdxRef = useRef(0);
+/* ================= My Plans ================= */
 
+function PlansTab({ onPlay }: { onPlay: (p: SavedYogaPlan) => void }) {
+  const [plans, setPlans] = useState<SavedYogaPlan[]>([]);
+  const [histOpen, setHistOpen] = useState(false);
+  useEffect(() => { setPlans(loadMyYogaPlans()); }, []);
+
+  return (
+    <div className="py-4">
+      <div className="flex items-center justify-between px-1">
+        <h2 className="font-display text-[15px] font-semibold">My saved plans</h2>
+        <button onClick={() => setHistOpen(true)} className="flex items-center gap-1 rounded-full bg-secondary px-2.5 py-1.5 text-[11px] font-semibold text-foreground/75">
+          <History size={11} /> History
+        </button>
+      </div>
+
+      {plans.length === 0 ? (
+        <div className="mt-3 rounded-3xl bg-card p-6 text-center ring-1 ring-border/60">
+          <p className="text-[13.5px] font-semibold text-foreground">No saved plans yet</p>
+          <p className="mt-1 text-[12px] text-muted-foreground">Create a personalized plan and save it here to practise anytime.</p>
+        </div>
+      ) : (
+        <div className="mt-3 space-y-2">
+          {plans.map((p) => (
+            <div key={p.id} className="flex items-center gap-3 rounded-2xl bg-card p-3.5 ring-1 ring-border/60">
+              <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-accent/50 text-xl">🧘</span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[13.5px] font-semibold text-foreground">{p.name}</p>
+                <p className="text-[11px] text-muted-foreground">{p.duration} min · {p.poseIds.length} poses · {p.withFeedback ? "with feedback" : "no feedback"}</p>
+              </div>
+              <button onClick={() => onPlay(p)} className="flex items-center gap-1 rounded-full bg-primary px-3 py-2 text-[12px] font-bold text-primary-foreground"><Play size={12} /> Play</button>
+              <button onClick={() => setPlans(deleteMyYogaPlan(p.id))} className="rounded-full p-1.5 text-muted-foreground hover:text-rose-500"><Trash2 size={14} /></button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <Dialog open={histOpen} onOpenChange={setHistOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="font-display">Practice history</DialogTitle>
+            <DialogDescription>Every session you've practised, and the energy burnt.</DialogDescription>
+          </DialogHeader>
+          <YogaHistoryList />
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function YogaHistoryList() {
+  const hist = useMemo(() => [...loadYogaHistory()].reverse(), []);
+  if (hist.length === 0) return <p className="rounded-2xl bg-secondary/50 p-4 text-center text-[12px] text-muted-foreground">No sessions yet — practise one to see it here.</p>;
+  const totalKcal = hist.reduce((a, h) => a + h.kcal, 0);
+  const totalMin = hist.reduce((a, h) => a + h.minutes, 0);
+  return (
+    <>
+      <div className="flex gap-2 text-[11.5px] font-semibold">
+        <span className="rounded-full bg-secondary px-2.5 py-1 text-foreground/70">{hist.length} sessions</span>
+        <span className="rounded-full bg-secondary px-2.5 py-1 text-foreground/70">{totalMin} min</span>
+        <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">{totalKcal} kcal</span>
+      </div>
+      <div className="mt-2 max-h-64 space-y-1 overflow-y-auto">
+        {hist.map((h, i) => (
+          <div key={i} className={`flex items-center justify-between rounded-xl px-3 py-2 text-[12px] ${i % 2 === 0 ? "bg-secondary/40" : "bg-card"}`}>
+            <span className="text-muted-foreground">{new Date(h.date).toLocaleDateString(undefined, { day: "numeric", month: "short" })}</span>
+            <span className="flex-1 truncate px-2 font-semibold text-foreground">{h.label}</span>
+            <span className="text-[11px] font-semibold text-primary">{h.minutes}m · {h.kcal} kcal</span>
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}
+
+/* ================= Learn (About Yoga + Learn, merged) ================= */
+
+function LearnTab({ onPractise }: { onPractise: (title: string, plan: YogaPlan) => void }) {
+  const start = YOGA_LEARN_SECTIONS.filter((s) => s.group === "start");
+  const master = YOGA_LEARN_SECTIONS.filter((s) => s.group === "master");
+  return (
+    <div className="pb-6">
+      <SubTabs tabs={[{ id: "start", label: "🌱 Getting Started" }, { id: "master", label: "🎓 Master the Practice" }]} />
+
+      <section id="start" className="scroll-mt-28 pt-4">
+        <h2 className="px-1 font-display text-[16px] font-bold text-foreground">Getting Started</h2>
+        <div className="mt-2 space-y-2">{start.map((s) => <LearnBlock key={s.id} s={s} onPractise={onPractise} />)}</div>
+      </section>
+
+      <section id="master" className="scroll-mt-28 pt-6">
+        <h2 className="px-1 font-display text-[16px] font-bold text-foreground">Master the Practice</h2>
+        <div className="mt-2 space-y-2">{master.map((s) => <LearnBlock key={s.id} s={s} onPractise={onPractise} />)}</div>
+      </section>
+    </div>
+  );
+}
+
+function LearnBlock({ s, onPractise }: { s: LearnSection; onPractise: (title: string, plan: YogaPlan) => void }) {
+  const [open, setOpen] = useState(false);
+  const [showAll, setShowAll] = useState(false);
+  const list = s.showAll === "asana" ? ASANAS : s.showAll === "pranayama" ? PRANAYAMAS : s.showAll === "bandha" ? BANDHAS : [];
+  const shown = showAll ? list : list.slice(0, 4);
+  return (
+    <div className="overflow-hidden rounded-3xl bg-card ring-1 ring-border/60">
+      <button onClick={() => setOpen(!open)} className="flex w-full items-center gap-3 p-4 text-left">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-accent/50 text-xl">{s.emoji}</span>
+        <span className="flex-1 font-display text-[14.5px] font-bold text-foreground">{s.title}</span>
+        <ChevronRight size={16} className={`text-muted-foreground transition-transform ${open ? "rotate-90" : ""}`} />
+      </button>
+      {open && (
+        <div className="border-t border-border/60 p-3">
+          {s.intro && <p className="mb-2 px-1 text-[12px] italic text-muted-foreground">{s.intro}</p>}
+
+          {/* full technique list for guide sections */}
+          {s.showAll && (
+            <>
+              <div className="grid grid-cols-4 gap-2">
+                {shown.map((t) => (
+                  <button key={t.id} onClick={() => t.poseId ? onPractise(t.name, techniqueSession(t)) : toast(t.note)}
+                    className="flex flex-col items-center gap-1 rounded-2xl bg-secondary/40 p-2 text-center ring-1 ring-border/50">
+                    <span className="text-lg">{t.emoji}</span>
+                    <span className="text-[9px] font-medium leading-tight text-foreground/80">{t.name}</span>
+                  </button>
+                ))}
+              </div>
+              {list.length > 4 && (
+                <button onClick={() => setShowAll(!showAll)} className="mt-2 w-full rounded-full bg-secondary px-3 py-1.5 text-[11px] font-semibold text-foreground/70">
+                  {showAll ? "Show less" : `Show all ${list.length}`}
+                </button>
+              )}
+            </>
+          )}
+
+          <div className="mt-2 space-y-2">
+            {s.articles.map((a) => (
+              <div key={a.title} className="rounded-2xl bg-secondary/40 p-3">
+                <p className="text-[12.5px] font-bold text-foreground">{a.title}</p>
+                <p className="mt-1 text-[12px] leading-relaxed text-foreground/80">{a.body}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ================= Duration sheet ================= */
+
+function DurationSheet({ item, onClose, onStart }: { item: LibItem; onClose: () => void; onStart: (plan: YogaPlan, feedback: boolean) => void }) {
+  const options = item.durations ?? DURATIONS;
+  const [dur, setDur] = useState(options.includes(20) ? 20 : options[0]);
+  const [feedback, setFeedback] = useState(true);
+  return (
+    <Dialog open onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle className="font-display flex items-center gap-2"><span className="text-2xl">{item.emoji}</span> {item.label}</DialogTitle>
+          <DialogDescription>Pick a duration and we'll build the session.</DialogDescription>
+        </DialogHeader>
+        <p className="text-[11px] font-bold uppercase tracking-wide text-foreground/50">Duration</p>
+        <div className="flex flex-wrap gap-1.5">
+          {options.map((d) => (
+            <button key={d} onClick={() => setDur(d)} className={`rounded-full px-3.5 py-1.5 text-[12.5px] font-semibold ${dur === d ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground/75"}`}>{d} min</button>
+          ))}
+        </div>
+        <button onClick={() => setFeedback(!feedback)} className="flex items-center justify-between rounded-2xl bg-secondary/50 p-3 ring-1 ring-border/50">
+          <span className="text-[12.5px] font-semibold text-foreground">🔊 AI instructor voice cues</span>
+          <span className={`flex h-5 w-9 items-center rounded-full p-0.5 transition ${feedback ? "justify-end bg-primary" : "justify-start bg-border"}`}><span className="h-4 w-4 rounded-full bg-white shadow" /></span>
+        </button>
+        <button onClick={() => onStart(sessionFor(item, dur), feedback)} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground">
+          <Play size={16} /> Start practising
+        </button>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ================= Create personalized plan (single page) ================= */
+
+const ORTHO: { id: Disease; label: string; emoji: string }[] = [
+  { id: "none", label: "None", emoji: "✅" },
+  { id: "knee-pain", label: "Knee pain", emoji: "🦵" },
+  { id: "back-pain", label: "Back pain", emoji: "🦴" },
+];
+
+function CreatePlanSheet({ onClose, onPlay }: { onClose: () => void; onPlay: (title: string, plan: YogaPlan, feedback: boolean) => void }) {
+  const [primary, setPrimary] = useState<Goal | null>(null);
+  const [condition, setCondition] = useState<Disease>("none");
+  const [ortho, setOrtho] = useState<Disease>("none");
+  const [dur, setDur] = useState(20);
+  const [feedback, setFeedback] = useState(true);
+
+  const isDisease = primary === "disease-management";
+  const disease: Disease = isDisease ? condition : ortho;
+
+  const build = (play: boolean) => {
+    if (!primary) { toast.error("Pick a goal first"); return; }
+    const plan = generatePlan(disease, primary, dur);
+    const dLabel = DISEASES.find((d) => d.id === disease)?.label;
+    const gLabel = GOALS.find((g) => g.id === primary)?.label;
+    const name = isDisease ? `${dLabel} yoga` : `${gLabel}${ortho !== "none" ? ` (safe for ${dLabel?.toLowerCase()})` : ""}`;
+    if (play) { onPlay(name, plan, feedback); return; }
+    saveMyYogaPlan({ ...plan, id: `yp_${Date.now().toString(36)}`, name, withFeedback: feedback });
+    toast.success("Saved to My Plans 🧘");
+    onClose();
+  };
+
+  return (
+    <Dialog open onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle className="font-display">✨ Personalized yoga plan</DialogTitle>
+          <DialogDescription>Answer a few things — Ayu builds it around you.</DialogDescription>
+        </DialogHeader>
+
+        <div className="max-h-[60svh] space-y-4 overflow-y-auto pr-1">
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-wide text-foreground/50">1 · What's your goal?</p>
+            <div className="mt-1.5 grid grid-cols-2 gap-2">
+              {GOALS.map((g) => (
+                <button key={g.id} onClick={() => setPrimary(g.id)}
+                  className={`rounded-2xl p-3 text-left ring-1 ${primary === g.id ? "bg-primary text-primary-foreground ring-primary" : "bg-secondary/60 text-foreground/80 ring-border/50"}`}>
+                  <span className="block text-[12.5px] font-bold">{g.label}</span>
+                  <span className={`block text-[10.5px] ${primary === g.id ? "opacity-90" : "text-muted-foreground"}`}>{g.desc}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {isDisease && (
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-wide text-foreground/50">2 · Which condition to manage?</p>
+              <div className="mt-1.5 grid grid-cols-2 gap-1.5">
+                {DISEASES.filter((d) => d.id !== "none").map((d) => (
+                  <button key={d.id} onClick={() => setCondition(d.id)} className={`rounded-xl px-3 py-2 text-[12px] font-semibold ${condition === d.id ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground/75"}`}>{d.label}</button>
+                ))}
+              </div>
+              <Link to="/coach" className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-semibold text-primary"><Bot size={12} /> Other condition? Tell Ayu →</Link>
+            </div>
+          )}
+          {primary && !isDisease && (
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-wide text-foreground/50">2 · Any joint/ortho issue to avoid aggravating?</p>
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                {ORTHO.map((o) => (
+                  <button key={o.id} onClick={() => setOrtho(o.id)} className={`rounded-full px-3 py-1.5 text-[12px] font-semibold ${ortho === o.id ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground/75"}`}>{o.emoji} {o.label}</button>
+                ))}
+              </div>
+              <Link to="/coach" className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-semibold text-primary"><Bot size={12} /> Neck/shoulder or something else? Tell Ayu →</Link>
+            </div>
+          )}
+
+          {primary && (
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-wide text-foreground/50">3 · Duration</p>
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                {DURATIONS.map((d) => (
+                  <button key={d} onClick={() => setDur(d)} className={`rounded-full px-3.5 py-1.5 text-[12.5px] font-semibold ${dur === d ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground/75"}`}>{d} min</button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {primary && (
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-wide text-foreground/50">4 · AI instructor</p>
+              <button onClick={() => setFeedback(!feedback)} className="mt-1.5 flex w-full items-center justify-between rounded-2xl bg-secondary/50 p-3 ring-1 ring-border/50">
+                <span className="min-w-0 text-left"><span className="block text-[12.5px] font-semibold text-foreground">🔊 {feedback ? "With" : "Without"} live feedback</span><span className="block text-[10.5px] text-muted-foreground">{feedback ? "Spoken cues guide each pose." : "Silent self-practice, your own pace."}</span></span>
+                <span className={`flex h-5 w-9 shrink-0 items-center rounded-full p-0.5 transition ${feedback ? "justify-end bg-primary" : "justify-start bg-border"}`}><span className="h-4 w-4 rounded-full bg-white shadow" /></span>
+              </button>
+            </div>
+          )}
+        </div>
+
+        {primary && (
+          <div className="flex gap-2">
+            <button onClick={() => build(false)} className="flex-1 rounded-2xl bg-secondary px-3 py-2.5 text-[12.5px] font-semibold text-foreground ring-1 ring-border/60">Save for later</button>
+            <button onClick={() => build(true)} className="flex-1 rounded-2xl bg-primary px-3 py-2.5 text-[12.5px] font-semibold text-primary-foreground">▶ Play now</button>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ================= Session player ================= */
+
+function SessionPlayer({ title, plan, feedback, onClose }: { title: string; plan: YogaPlan; feedback: boolean; onClose: () => void }) {
+  const poses = useMemo(() => { const p = posesFor(plan); return p.length ? p : POSES.slice(0, 5); }, [plan]);
+  const [idx, setIdx] = useState(0);
+  const [secs, setSecs] = useState(poses[0]?.durationSec ?? 40);
+  const [playing, setPlaying] = useState(true);
+  const [voice, setVoice] = useState(feedback);
+  const [done, setDone] = useState(false);
+  const startRef = useRef(Date.now());
   const pose = poses[idx];
 
-  // Camera
   useEffect(() => {
-    if (!withFeedback) return;
-    let mounted = true;
-    (async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false });
-        if (!mounted) { stream.getTracks().forEach((t) => t.stop()); return; }
-        streamRef.current = stream;
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          await videoRef.current.play().catch(() => {});
-        }
-        setCamOk(true);
-      } catch (e) {
-        setCamOk(false);
-        setCamError(e instanceof Error ? e.message : "Camera unavailable");
-      }
-    })();
-    return () => {
-      mounted = false;
-      streamRef.current?.getTracks().forEach((t) => t.stop());
-      streamRef.current = null;
-    };
-  }, [withFeedback]);
+    if (!playing || done) return;
+    if (secs <= 0) { next(); return; }
+    const t = setTimeout(() => setSecs((s) => s - 1), 1000);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [secs, playing, done]);
 
-  // Speak on pose change
   useEffect(() => {
-    if (!pose || breakMode) return;
-    cueIdxRef.current = 0;
-    setSecsLeft(pose.durationSec);
-    if (!muted) speak(`Next pose: ${pose.name}. ${pose.steps[0] ?? ""}`);
+    if (done) return;
+    if (voice && pose) speak(`${pose.name}. ${pose.steps[0]}`);
+    else stopSpeaking();
     return () => stopSpeaking();
-  }, [idx, breakMode, pose, muted]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [idx, voice, done]);
 
-  // Timer
-  useEffect(() => {
-    if (paused || breakMode || !pose) return;
-    const t = setInterval(() => {
-      setSecsLeft((s) => {
-        if (s <= 1) {
-          // advance
-          if (idx + 1 >= poses.length) {
-            clearInterval(t);
-            stopSpeaking();
-            setTimeout(onDone, 200);
-            return 0;
-          }
-          setIdx((i) => i + 1);
-          return poses[idx + 1]?.durationSec ?? 30;
-        }
-        // periodic voice cues
-        const elapsed = pose.durationSec - s;
-        if (withFeedback && !muted && elapsed > 0 && elapsed % 10 === 0) {
-          const nextCue = pose.steps[(cueIdxRef.current + 1) % pose.steps.length];
-          cueIdxRef.current++;
-          const formCue = withFeedback && camOk ? " I see your form — keep shoulders relaxed." : "";
-          speak(`${nextCue}${formCue}`);
-        }
-        return s - 1;
-      });
-    }, 1000);
-    return () => clearInterval(t);
-  }, [paused, breakMode, idx, pose, poses, onDone, withFeedback, muted, camOk]);
+  function next() { stopSpeaking(); if (idx >= poses.length - 1) { finish(); return; } const n = idx + 1; setIdx(n); setSecs(poses[n].durationSec); }
+  function prev() { stopSpeaking(); if (idx === 0) return; const n = idx - 1; setIdx(n); setSecs(poses[n].durationSec); }
+  function finish() { stopSpeaking(); setPlaying(false); setDone(true); }
 
-  if (!pose) return null;
+  const minutes = Math.max(1, Math.round((Date.now() - startRef.current) / 60000));
+  const kcal = yogaKcal(minutes, bodyWeight());
 
-  const progress = ((pose.durationSec - secsLeft) / pose.durationSec) * 100;
-  const overallProgress = ((idx + (pose.durationSec - secsLeft) / pose.durationSec) / poses.length) * 100;
+  const punch = () => {
+    addCalEntry({ kind: "out", label: `Yoga · ${title} (${minutes}m)`, kcal });
+    addYogaHistory({ date: new Date().toISOString().slice(0, 10), label: title, minutes, kcal });
+    toast.success(`${kcal} kcal added to your cal-out 🔥`);
+    onClose();
+  };
+  const skipPunch = () => { addYogaHistory({ date: new Date().toISOString().slice(0, 10), label: title, minutes, kcal }); onClose(); };
 
-  return (
-    <div className="mt-4 animate-float-up">
-      {/* Overall */}
-      <div className="rounded-full bg-secondary p-1 ring-1 ring-border/60">
-        <div className="h-1.5 rounded-full bg-primary transition-all" style={{ width: `${overallProgress}%` }} />
-      </div>
-      <p className="mt-2 text-center text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-        Pose {idx + 1} of {poses.length}
-      </p>
-
-      {/* Camera */}
-      {withFeedback && (
-        <div className="mt-3 overflow-hidden rounded-3xl bg-foreground/95 shadow-[var(--shadow-tile)]">
-          <div className="relative aspect-[4/3] w-full">
-            <video ref={videoRef} playsInline muted className="h-full w-full object-cover" style={{ transform: "scaleX(-1)" }} />
-            {camOk === null && (
-              <div className="absolute inset-0 grid place-items-center bg-foreground/80 text-card text-sm">Requesting camera…</div>
-            )}
-            {camOk === false && (
-              <div className="absolute inset-0 grid place-items-center bg-foreground/80 px-6 text-center text-sm text-card">
-                Camera unavailable. {camError}
-              </div>
-            )}
-            {camOk && (
-              <div className="absolute left-3 top-3 flex items-center gap-1.5 rounded-full bg-foreground/60 px-2.5 py-1 text-[10px] font-semibold text-card backdrop-blur">
-                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-destructive" /> AI watching
-              </div>
-            )}
-            {camOk && !muted && (
-              <div className="absolute right-3 top-3 flex items-center gap-1.5 rounded-full bg-foreground/60 px-2.5 py-1 text-[10px] font-semibold text-card backdrop-blur">
-                <Mic size={11} /> Voice on
-              </div>
-            )}
+  if (done) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-6 backdrop-blur-sm">
+        <div className="w-full max-w-sm rounded-[32px] bg-card p-6 text-center shadow-xl animate-pop-in">
+          <span className="text-5xl">🎉</span>
+          <h3 className="mt-3 font-display text-xl font-bold text-foreground">Beautiful practice!</h3>
+          <p className="mt-1 text-[13px] text-muted-foreground">{title} · {minutes} min · {poses.length} poses</p>
+          <div className="mt-4 rounded-2xl bg-accent/40 p-4 ring-1 ring-border/60">
+            <p className="text-[13px] font-semibold text-foreground">You burnt about <b className="text-primary">{kcal} kcal</b> 🔥</p>
+            <p className="mt-0.5 text-[11.5px] text-muted-foreground">Add it to today's cal-out on your dashboard?</p>
           </div>
-        </div>
-      )}
-
-      {/* Pose card */}
-      <div className="mt-4 rounded-3xl p-6 text-center text-primary-foreground shadow-[var(--shadow-tile)]" style={{ background: "var(--gradient-leaf)" }}>
-        <p className="text-5xl">{pose.emoji}</p>
-        <h2 className="mt-3 font-display text-2xl font-semibold">{pose.name}</h2>
-        <p className="text-xs opacity-85">{pose.sanskrit}</p>
-        <div className="mx-auto mt-4 flex h-24 w-24 items-center justify-center rounded-full bg-card/20 text-3xl font-semibold backdrop-blur-sm">
-          {secsLeft}
-        </div>
-        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-card/25">
-          <div className="h-full bg-card/90 transition-all" style={{ width: `${progress}%` }} />
+          <button onClick={punch} className="mt-3 w-full rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground">➕ Punch {kcal} kcal to cal-out</button>
+          <button onClick={skipPunch} className="mt-2 w-full rounded-2xl bg-secondary px-4 py-2.5 text-[13px] font-semibold text-foreground">Just save the session</button>
         </div>
       </div>
+    );
+  }
 
-      {/* Cue */}
-      <div className="mt-4 rounded-2xl bg-card p-4 text-sm text-foreground/85 ring-1 ring-border/60">
-        {pose.steps[Math.min(cueIdxRef.current, pose.steps.length - 1)]}
-      </div>
-
-      {/* Controls */}
-      <div className="mt-4 flex items-center justify-center gap-3">
-        <button
-          onClick={() => setMuted((m) => { const n = !m; if (n) stopSpeaking(); return n; })}
-          className="flex h-12 w-12 items-center justify-center rounded-full bg-card ring-1 ring-border/60"
-          aria-label={muted ? "Unmute" : "Mute"}
-        >
-          {muted ? <VolumeX size={20} /> : <Volume2 size={20} />}
-        </button>
-        <button
-          onClick={() => { setBreakMode((b) => !b); stopSpeaking(); }}
-          className="rounded-full bg-secondary px-4 py-3 text-xs font-semibold"
-        >
-          {breakMode ? "Resume" : "Take break"}
-        </button>
-        <button
-          onClick={() => setPaused((p) => !p)}
-          className="flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-[var(--shadow-glow)]"
-          aria-label={paused ? "Play" : "Pause"}
-        >
-          {paused ? <Play size={22} /> : <Pause size={22} />}
-        </button>
-        <button
-          onClick={() => {
-            stopSpeaking();
-            if (idx + 1 >= poses.length) onDone();
-            else { setIdx((i) => i + 1); }
-          }}
-          className="flex h-12 w-12 items-center justify-center rounded-full bg-card ring-1 ring-border/60"
-          aria-label="Skip"
-        >
-          <SkipForward size={20} />
-        </button>
-      </div>
-
-      {breakMode && (
-        <div className="mt-4 rounded-2xl bg-accent/30 p-4 text-center text-sm font-medium text-primary">
-          Break mode — breathe and resume when ready.
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ---------- Complete ----------
-function CompleteStep({ onBack }: { onBack: () => void }) {
-  const navigate = useNavigate();
-  useEffect(() => { speak("Good job. You completed your practice."); return () => stopSpeaking(); }, []);
   return (
-    <div className="mt-16 flex flex-col items-center text-center animate-float-up">
-      <div className="flex h-28 w-28 items-center justify-center rounded-full text-primary-foreground animate-breathe" style={{ background: "var(--gradient-gold)" }}>
-        <Sparkles size={36} />
+    <div className="fixed inset-0 z-50 flex flex-col bg-[#0f1419] text-white">
+      <div className="flex items-center justify-between px-5 pt-[max(1rem,env(safe-area-inset-top))]">
+        <button onClick={() => { stopSpeaking(); onClose(); }} className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10"><X size={16} /></button>
+        <p className="text-[12px] font-semibold opacity-80">{idx + 1} / {poses.length} · {title}</p>
+        <button onClick={() => setVoice(!voice)} className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10">{voice ? <Volume2 size={16} /> : <VolumeX size={16} />}</button>
       </div>
-      <h1 className="mt-6 font-display text-3xl font-semibold">Good job! 🙏</h1>
-      <p className="mt-2 max-w-xs text-sm text-muted-foreground">
-        You showed up for yourself. Notice how your body and breath feel right now.
-      </p>
-      <div className="mt-7 grid w-full grid-cols-2 gap-3">
-        <button
-          onClick={onBack}
-          className="rounded-2xl bg-card py-3 text-sm font-semibold ring-1 ring-border/60"
-        >
-          New plan
-        </button>
-        <button
-          onClick={() => navigate({ to: "/dashboard" })}
-          className="rounded-2xl bg-primary py-3 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-glow)]"
-        >
-          Back to today
-        </button>
+
+      <div className="mt-3 flex gap-1 px-5">
+        {poses.map((_, i) => (
+          <div key={i} className="h-1 flex-1 overflow-hidden rounded-full bg-white/15">
+            <div className="h-full bg-teal-400 transition-all" style={{ width: i < idx ? "100%" : i === idx ? `${100 - (secs / (pose.durationSec || 1)) * 100}%` : "0%" }} />
+          </div>
+        ))}
       </div>
+
+      <div className="flex flex-1 flex-col items-center justify-center px-8 text-center">
+        <span className="animate-breathe text-[92px] leading-none">{pose.emoji}</span>
+        <h2 className="mt-5 font-display text-2xl font-bold">{pose.name}</h2>
+        <p className="text-[13px] italic opacity-70">{pose.sanskrit}</p>
+        <p className="mt-4 max-w-xs text-[14px] leading-relaxed opacity-90">{pose.steps[0]}</p>
+        <p className="mt-6 font-display text-5xl font-bold tabular-nums">{Math.floor(secs / 60)}:{String(secs % 60).padStart(2, "0")}</p>
+      </div>
+
+      <div className="flex items-center justify-center gap-6 px-5">
+        <button onClick={prev} disabled={idx === 0} className="flex h-12 w-12 items-center justify-center rounded-full bg-white/10 disabled:opacity-30"><ChevronLeft size={22} /></button>
+        <button onClick={() => setPlaying(!playing)} className="flex h-16 w-16 items-center justify-center rounded-full bg-teal-500 shadow-lg">{playing ? <Pause size={26} /> : <Play size={26} />}</button>
+        <button onClick={next} className="flex h-12 w-12 items-center justify-center rounded-full bg-white/10"><ChevronRight size={22} /></button>
+      </div>
+      <button onClick={finish} className="mx-auto mb-[max(1.5rem,env(safe-area-inset-bottom))] mt-4 text-[12px] font-semibold opacity-70">Finish session</button>
     </div>
   );
 }

@@ -63,6 +63,16 @@ export function addPunch(entry: PunchEntry) {
   try { window.localStorage.setItem(PUNCH_KEY, JSON.stringify(all)); } catch {}
 }
 
+/** Delete a punch; if it was the latest, current weight rolls back to the previous punch. */
+export function removePunch(date: string): PunchEntry[] {
+  if (typeof window === "undefined") return [];
+  const all = loadPunches().filter((e) => e.date !== date);
+  try { window.localStorage.setItem(PUNCH_KEY, JSON.stringify(all)); } catch {}
+  const latest = all[all.length - 1];
+  if (latest) patchPlan({ currentWeight: latest.weight });
+  return all;
+}
+
 /* ---------------- math ---------------- */
 export const ACTIVITY_FACTOR: Record<ActivityLevel, number> = {
   sedentary: 1.2, light: 1.375, moderate: 1.55, active: 1.725, very_active: 1.9,

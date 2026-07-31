@@ -4,6 +4,7 @@ import { SECTIONS } from "@/lib/sections";
 import { BottomNav } from "@/components/BottomNav";
 import { ProfileSwitcher } from "@/components/ProfileSwitcher";
 import { Sparkles, ChevronRight, ClipboardList, FolderOpen, Flower2, Bot } from "lucide-react";
+import { loadDay, patchDay } from "@/lib/trackers";
 
 export const Route = createFileRoute("/home")({
   head: () => ({
@@ -23,6 +24,67 @@ interface Profile {
 interface PlanData {
   pillars?: string[];
   focus?: string;
+}
+
+/** Once-a-day mood check-in that greets the user on arrival, then answers with a matching line. */
+const MOOD_FLASH = [
+  { id: "great", emoji: "🤩", label: "Great", quote: "Ride that wave — do one hard thing today, it'll feel easy. 🌊" },
+  { id: "good", emoji: "🙂", label: "Good", quote: "Good energy compounds. Keep it gentle and steady. 🌿" },
+  { id: "okay", emoji: "😐", label: "Okay", quote: "Okay is a fine place to start. Small steps count double today. 🪷" },
+  { id: "low", emoji: "😔", label: "Low", quote: "Be soft with yourself today. One glass of water, one deep breath. 🤍" },
+];
+
+function MoodFlash({ name }: { name?: string }) {
+  const [stage, setStage] = useState<"hidden" | "ask" | "quote">("hidden");
+  const [picked, setPicked] = useState<typeof MOOD_FLASH[number] | null>(null);
+
+  useEffect(() => {
+    if (!loadDay().mood) {
+      const t = setTimeout(() => setStage("ask"), 600);
+      return () => clearTimeout(t);
+    }
+  }, []);
+
+  const pick = (m: typeof MOOD_FLASH[number]) => {
+    patchDay({ mood: m.id });
+    setPicked(m);
+    setStage("quote");
+    setTimeout(() => setStage("hidden"), 2600);
+  };
+
+  if (stage === "hidden") return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-6 backdrop-blur-sm" onClick={() => setStage("hidden")}>
+      <div className="w-full max-w-sm rounded-[32px] bg-card p-6 text-center shadow-xl animate-pop-in" onClick={(e) => e.stopPropagation()}>
+        {stage === "ask" ? (
+          <>
+            <p className="font-display text-[20px] font-bold text-foreground">How are you feeling{name ? `, ${name}` : ""}?</p>
+            <div className="mt-4 grid grid-cols-4 gap-2">
+              {MOOD_FLASH.map((m) => (
+                <button
+                  key={m.id}
+                  onClick={() => pick(m)}
+                  className="flex flex-col items-center gap-1.5 rounded-2xl bg-secondary py-3 text-[11.5px] font-semibold text-foreground/80 transition-transform active:scale-95"
+                >
+                  <span className="text-2xl">{m.emoji}</span>
+                  {m.label}
+                </button>
+              ))}
+            </div>
+            <button onClick={() => setStage("hidden")} className="mt-3 text-[11.5px] font-medium text-muted-foreground">
+              Skip for now
+            </button>
+          </>
+        ) : (
+          <>
+            <span className="text-5xl">{picked?.emoji}</span>
+            <p className="mt-3 text-[15px] font-semibold leading-relaxed text-foreground">{picked?.quote}</p>
+          </>
+        )}
+      </div>
+    </div>
+  );
 }
 
 function HomePage() {
@@ -46,6 +108,7 @@ function HomePage() {
 
   return (
     <div className="min-h-svh pb-32" style={{ background: "var(--gradient-hero)" }}>
+      <MoodFlash name={firstName} />
       <div className="mx-auto max-w-xl px-5 pt-[max(1.5rem,env(safe-area-inset-top))]">
 
         {/* Editorial header */}
