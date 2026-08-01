@@ -218,7 +218,52 @@ export const EXERCISES: Exercise[] = [
   e("so-hip", "Hip Rocking", "🦴", "main", ["butt", "legs"], 40, 2.5, "none", "somatic", "Sway the hips gently, let the lower back release."),
   e("so-neck", "Neck Melt", "🫧", "main", ["back"], 40, 2.3, "none", "somatic", "Tiny slow head movements, tension leaving with each exhale."),
   e("so-rest", "Constructive Rest", "🛌", "cooldown", ["full-body"], 60, 1.8, "none", "somatic", "Knees up, feet down, let gravity do the work."),
+
+  // ---- classics (bodyweight staples) ----
+  e("cl-sapate", "Sapate (Burpees)", "💥", "main", ["full-body"], 40, 8, "none", "classic", "Squat, hands down, hop back, chest to floor, spring up."),
+  e("cl-halfdand", "Half Dand (Half-Burpees)", "🔽", "main", ["full-body"], 40, 6.5, "none", "classic", "A burpee without the push-up — squat, step or hop back, stand."),
+  e("cl-hindu", "Hindu Push-ups", "🪷", "main", ["chest", "shoulders", "back"], 45, 7.5, "none", "classic", "Dive down and sweep the chest through, hips lift at the end."),
+  e("cl-military", "Military Push-ups", "🎖️", "main", ["chest", "arms"], 40, 7, "none", "classic", "Elbows tucked close to the ribs, body one rigid line."),
+  e("cl-jack", "Jumping Jacks", "⭐", "main", ["full-body"], 40, 6, "none", "classic", "Land soft, arms all the way overhead."),
+  e("cl-squat", "Squats", "🪑", "main", ["legs", "butt"], 40, 5.5, "none", "classic", "Chest up, knees track the toes, hips back and down."),
+  e("cl-jumpsquat", "Jumping Squats", "⬆️", "main", ["legs", "full-body"], 40, 8, "none", "classic", "Squat then explode up, land soft and low."),
+  e("cl-lunge", "Lunges", "🚶", "main", ["legs", "butt"], 40, 6, "none", "classic", "Long step, back knee towards the floor, torso tall."),
+  e("cl-plank", "Plank", "🧱", "main", ["abs"], 40, 4.5, "none", "classic", "Straight line head to heels, squeeze the glutes."),
+  e("cl-situp", "Sit-ups & Crunches", "🔼", "main", ["abs"], 40, 5.5, "none", "classic", "Curl all the way up, roll down slow, chin off the chest."),
+  e("cl-skip", "Skipping Rope", "🪢", "main", ["full-body", "legs"], 40, 9, "none", "classic", "Small bounces, wrists turn the rope, stay light."),
+
+  // ---- cycling (indoor bike) ----
+  e("cy-easy", "Easy Spin", "🚲", "main", ["legs", "full-body"], 60, 5, "none", "cycling", "Light resistance, spin the legs to warm the joints."),
+  e("cy-steady", "Steady Ride", "🚴", "main", ["legs", "full-body"], 90, 7, "none", "cycling", "Moderate resistance you can hold a sentence at."),
+  e("cy-tempo", "Tempo Ride", "💨", "main", ["legs", "full-body"], 75, 8.5, "none", "cycling", "Comfortably hard — breathing deep but controlled."),
+  e("cy-sprint", "Sprint Intervals", "⚡", "main", ["legs", "full-body"], 30, 11, "none", "cycling", "All-out for the interval, then spin easy to recover."),
+  e("cy-hill", "Hill Climb", "⛰️", "main", ["legs", "butt"], 90, 9, "none", "cycling", "Heavy resistance, stay seated, drive through the heels."),
+  e("cy-stand", "Standing Climb", "🧗", "main", ["legs", "butt"], 45, 9.5, "none", "cycling", "Out of the saddle, sway the bike gently, hips back."),
+  e("cy-cadence", "Cadence Pushes", "🔁", "main", ["legs"], 45, 8, "none", "cycling", "Light gear, spin the legs as fast as stays smooth."),
+  e("cy-recover", "Recovery Spin", "🌿", "cooldown", ["legs"], 60, 3.5, "none", "cycling", "Very light resistance, let the heart rate come down."),
+
+  // ---- running (treadmill) ----
+  e("rn-jog", "Easy Jog", "🏃", "main", ["legs", "full-body"], 90, 7, "none", "running", "Conversational pace, land under the hips, relax the shoulders."),
+  e("rn-steady", "Steady Run", "🏃‍♂️", "main", ["legs", "full-body"], 90, 9, "none", "running", "A pace you could hold for a few km, breathing rhythmic."),
+  e("rn-tempo", "Tempo Run", "💨", "main", ["legs", "full-body"], 75, 10.5, "none", "running", "Comfortably hard, smooth turnover, quiet feet."),
+  e("rn-sprint", "Sprint Intervals", "⚡", "main", ["legs", "full-body"], 30, 13, "none", "running", "Fast for the interval, then walk or jog to recover."),
+  e("rn-incline", "Incline Push", "📈", "main", ["legs", "butt"], 90, 9.5, "none", "running", "Raise the incline, shorten the stride, drive the arms."),
+  e("rn-hill", "Hill Repeats", "⛰️", "main", ["legs", "butt"], 60, 11, "none", "running", "Hard up the hill, easy recovery between efforts."),
+  e("rn-stride", "Stride Outs", "👟", "main", ["legs"], 30, 10, "none", "running", "Build to near-sprint over the interval, tall and relaxed."),
+  e("rn-walk", "Recovery Walk", "🚶", "cooldown", ["legs"], 60, 3.5, "none", "running", "Slow the belt right down, breathe and reset."),
+
+  // ---- walking (indoor walking) ----
+  e("wk-warm", "Warm-up Walk", "🚶", "main", ["legs", "full-body"], 60, 3.3, "none", "walking", "Easy pace, let the joints loosen and the breath settle."),
+  e("wk-brisk", "Brisk Walk", "🚶‍♀️", "main", ["legs", "full-body"], 120, 4.3, "none", "walking", "Purposeful pace, arms swinging, you could just about chat."),
+  e("wk-power", "Power Walk", "💪", "main", ["legs", "butt"], 90, 5, "none", "walking", "Fast steps, squeeze the glutes, pump the arms."),
+  e("wk-incline", "Incline Walk", "📈", "main", ["legs", "butt"], 90, 6, "none", "walking", "Raise the incline, lean slightly forward from the ankles."),
+  e("wk-interval", "Interval Walk", "⏱️", "main", ["legs", "full-body"], 60, 5.5, "none", "walking", "Alternate fast and easy — great for building fitness."),
+  e("wk-march", "High-Knee March", "🦵", "main", ["legs", "abs"], 45, 5, "none", "walking", "Drive the knees up as you walk, engage the core."),
+  e("wk-stroll", "Recovery Stroll", "🌿", "cooldown", ["legs"], 60, 2.8, "none", "walking", "Gentle pace to bring the heart rate down."),
 ];
+
+/** The 11 classic bodyweight staples, in order, for the Classics tab. */
+export const CLASSICS: Exercise[] = EXERCISES.filter((x) => x.tag === "classic");
 
 export function getExercise(id: string): Exercise | undefined { return EXERCISES.find((x) => x.id === id); }
 
@@ -276,10 +321,11 @@ export const BUCKETS: Bucket[] = [
   { id: "calisthenics", label: "Calisthenics", emoji: "🤸", blurb: "Master your own bodyweight.", group: "styles" },
   { id: "pilates", label: "Pilates", emoji: "🩰", blurb: "Control, posture and long, lean strength.", group: "styles", tag: "pilates" },
   { id: "hiit", label: "HIIT", emoji: "⚡", blurb: "Short, intense bursts for maximum burn.", group: "styles", minMet: 6.5 },
-  { id: "cardio", label: "Cardio", emoji: "🏃", blurb: "Get the heart pumping and burn calories.", group: "styles" },
+  { id: "cycling", label: "Cycling / Indoor Bike", emoji: "🚴", blurb: "Spin, sprint and climb on the bike.", group: "styles", tag: "cycling" },
+  { id: "running", label: "Running / Treadmill", emoji: "🏃", blurb: "Jog, run and interval on the treadmill.", group: "styles", tag: "running" },
+  { id: "walking", label: "Walking / Indoor Walking", emoji: "🚶", blurb: "Low-impact walking workouts, indoors.", group: "styles", tag: "walking" },
   { id: "zumba", label: "Zumba", emoji: "🕺", blurb: "Latin-inspired cardio dance party.", group: "styles", tag: "dance", music: true },
   { id: "dance", label: "Dancing Workouts", emoji: "💃", blurb: "Sweat without noticing you're working out.", group: "styles", tag: "dance", music: true },
-  { id: "strength-yoga", label: "Strength Yoga", emoji: "🧘", blurb: "Power yoga that builds real strength.", group: "styles", tag: "yoga" },
   { id: "somatic", label: "Somatic", emoji: "🌀", blurb: "Slow, gentle movement to calm the nervous system.", group: "styles", tag: "somatic", maxMet: 3 },
 
   // ---- Goal ----
@@ -296,6 +342,7 @@ export const BUCKETS: Bucket[] = [
   { id: "senior", label: "Senior Fitness", emoji: "🧓", blurb: "Gentle, safe and joint-friendly.", group: "programs", maxMet: 5 },
   { id: "stretching", label: "Stretching", emoji: "🧘", blurb: "Loosen up, wind down, recover.", group: "programs", mainKind: "cooldown" },
   { id: "abs-program", label: "Abs Program", emoji: "🔥", blurb: "Carve a strong, stable core.", group: "programs" },
+  { id: "cardio", label: "Cardio", emoji: "🫀", blurb: "Get the heart pumping and burn calories.", group: "programs" },
 ];
 
 export const GROUPS: { id: Group; label: string; sub: string }[] = [
@@ -503,15 +550,32 @@ const SPECS: Record<string, Spec[]> = {
     ["lower-body", "Dance & Tone", 25, "medium"],
     ["full-body", "Hip-Hop Sweat", 25, "advanced"],
   ],
-  "strength-yoga": [
-    ["full-body", "Beginner Strength Yoga", 15, "beginner"],
-    ["core", "Core & Balance Yoga", 16, "beginner"],
-    ["full-body", "Power Yoga Flow", 20, "medium"],
-    ["lower-body", "Warrior Strength", 18, "medium"],
-    ["lower-body", "Strong Legs Flow", 20, "medium"],
-    ["full-body", "Full Body Vinyasa", 25, "medium"],
-    ["arms", "Arm Balance Builder", 20, "advanced"],
-    ["full-body", "Advanced Power Sequence", 30, "advanced"],
+  cycling: [
+    ["endurance", "Beginner Spin", 15, "beginner"],
+    ["endurance", "Steady Ride", 25, "beginner"],
+    ["endurance", "Interval Ride", 20, "medium"],
+    ["endurance", "Hill Climb Ride", 30, "medium"],
+    ["endurance", "Fat-Burn Cycle", 25, "medium"],
+    ["legs", "Sprint Cycle HIIT", 15, "advanced"],
+    ["endurance", "Endurance Ride", 40, "medium"],
+  ],
+  running: [
+    ["endurance", "Beginner Treadmill", 15, "beginner"],
+    ["endurance", "Walk-Run Intervals", 20, "beginner"],
+    ["endurance", "Steady Run", 25, "medium"],
+    ["endurance", "Tempo Run", 25, "medium"],
+    ["endurance", "Incline Endurance", 30, "medium"],
+    ["legs", "Sprint Intervals", 15, "advanced"],
+    ["endurance", "5K Builder", 30, "medium"],
+  ],
+  walking: [
+    ["endurance", "Gentle Indoor Walk", 15, "beginner"],
+    ["endurance", "Brisk Walk Workout", 20, "beginner"],
+    ["endurance", "Interval Walk", 20, "beginner"],
+    ["endurance", "Power Walk", 25, "medium"],
+    ["endurance", "Incline Walk", 20, "medium"],
+    ["endurance", "Fat-Burn Walk", 30, "medium"],
+    ["endurance", "Long Steady Walk", 40, "beginner"],
   ],
   somatic: [
     ["full-body", "Morning Somatic Flow", 12, "beginner"],

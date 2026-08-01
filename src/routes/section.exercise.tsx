@@ -16,13 +16,13 @@ import {
   GROUPS, bucketsInGroup, bucketOf, sessionsIn, getSession, getExercise,
   buildBlocks, stepsOf, exerciseCount, stepKcal, sessionKcal, kcalFor,
   applyFilters, EMPTY_FILTERS, LEVELS, EQUIP_FILTERS, EQUIP_ALL, INTENSITIES,
-  FOCUS_LIST, focusLabel, levelLabel, equipLabel, bundlePool, buildExercisePlan,
+  FOCUS_LIST, focusLabel, levelLabel, equipLabel, CLASSICS, buildExercisePlan,
   PLAN_BUCKETS, bundleSteps, bundleSeconds, bundleKcal, SET_OPTIONS, SEC_OPTIONS,
   BREAK_SEC, MUSIC_LINKS,
   loadFavs, toggleFav, loadBundles, saveBundle, deleteBundle,
   loadMyExPlans, saveMyExPlan, deleteMyExPlan, loadExHistory, addExHistory, addFeedback,
   type Bucket, type Session, type Step, type Exercise, type ExFilters, type Level,
-  type Intensity, type Equip, type Focus, type Group, type Bundle, type BundleItem,
+  type Intensity, type Equip, type Focus, type Bundle, type BundleItem,
   type SavedExPlan,
 } from "@/lib/exercise";
 
@@ -40,7 +40,7 @@ function bodyWeight() { return loadProfile()?.weightKg ?? 65; }
 function fmt(sec: number) { return `${Math.floor(sec / 60)}:${String(Math.round(sec) % 60).padStart(2, "0")}`; }
 function toMin(sec: number) { return Math.max(1, Math.round(sec / 60)); }
 
-type Tab = "practice" | "plans" | "learn";
+type Tab = "practice" | "classics" | "plans" | "learn";
 type PlaySource = { title: string; steps: Step[]; startIndex: number; preview?: boolean };
 
 function WorkoutsPage() {
@@ -88,8 +88,8 @@ function WorkoutsPage() {
           </span>
         </button>
 
-        <div className="sticky top-0 z-30 -mx-5 mt-3 flex gap-1.5 bg-background/85 px-5 py-2.5 backdrop-blur-xl">
-          {([["practice", "🎯 Practice"], ["plans", "📋 My Plans"], ["learn", "🎓 Learn"]] as const).map(([id, label]) => (
+        <div className="sticky top-0 z-30 -mx-5 mt-3 flex gap-1.5 overflow-x-auto bg-background/85 px-5 py-2.5 backdrop-blur-xl [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {([["practice", "🎯 Practice"], ["classics", "🥋 Classics"], ["plans", "📋 My Plans"], ["learn", "🎓 Learn"]] as const).map(([id, label]) => (
             <button key={id} onClick={() => setTab(id)}
               className={`rounded-full px-3.5 py-1.5 text-[12.5px] font-semibold transition ${tab === id ? "bg-primary text-primary-foreground shadow-[var(--shadow-glow)]" : "bg-card text-foreground/70 ring-1 ring-border/60"}`}>
               {label}
@@ -98,6 +98,10 @@ function WorkoutsPage() {
         </div>
 
         {tab === "practice" && <PracticeTab onPick={setBucket} />}
+        {tab === "classics" && (
+          <ClassicsTab onPreviewPlay={previewPlay}
+            onPlayBundle={(name, items) => setPlayer({ title: name, steps: bundleSteps(items), startIndex: 0 })} />
+        )}
         {tab === "plans" && (
           <PlansTab favs={favs} onFav={onFav} onOpenSession={setDetail}
             onPlayBundle={(b) => setPlayer({ title: b.name, steps: bundleSteps(b.items), startIndex: 0 })}
@@ -116,9 +120,7 @@ function WorkoutsPage() {
       </div>
 
       {bucket && (
-        <BucketView bucket={bucket} favs={favs} onFav={onFav} onClose={() => setBucket(null)}
-          onOpenSession={setDetail} onPreviewPlay={previewPlay}
-          onPlayBundle={(name, items) => setPlayer({ title: name, steps: bundleSteps(items), startIndex: 0 })} />
+        <BucketView bucket={bucket} favs={favs} onFav={onFav} onClose={() => setBucket(null)} onOpenSession={setDetail} />
       )}
       {detail && (
         <SessionDetail s={detail} fav={favs.includes(detail.id)} onFav={() => onFav(detail.id)}
@@ -155,48 +157,14 @@ function DumbbellIcon() {
   );
 }
 
-/* ================= Practice — Style / Goal / Program floating sub-tabs ================= */
-
-const GROUP_TABS: Record<Group, string> = { styles: "Choose a Style", goal: "Choose a Goal", programs: "Choose a Program" };
+/* ================= Practice — Styles / Goal / Programs stacked ================= */
 
 function PracticeTab({ onPick }: { onPick: (b: Bucket) => void }) {
-  const [active, setActive] = useState<Group>("styles");
-
-  useEffect(() => {
-    const onScroll = () => {
-      let cur: Group = "styles";
-      for (const gr of GROUPS) {
-        const el = document.getElementById(`grp-${gr.id}`);
-        if (el && el.getBoundingClientRect().top <= 150) cur = gr.id;
-      }
-      setActive(cur);
-    };
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
-  const go = (id: Group) => {
-    const el = document.getElementById(`grp-${id}`);
-    if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 92, behavior: "smooth" });
-  };
-
   return (
     <div className="pb-2">
-      {/* floating jump-to nav */}
-      <div className="sticky top-[46px] z-20 -mx-5 flex gap-1.5 overflow-x-auto bg-background/85 px-5 py-2 backdrop-blur-xl [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {GROUPS.map((gr) => (
-          <button key={gr.id} onClick={() => { setActive(gr.id); go(gr.id); }}
-            className={`shrink-0 rounded-full px-3.5 py-1.5 text-[12px] font-semibold transition ${active === gr.id ? "bg-primary text-primary-foreground" : "bg-card text-foreground/65 ring-1 ring-border/60"}`}>
-            {GROUP_TABS[gr.id]}
-          </button>
-        ))}
-      </div>
-
-      {/* all groups stacked on one page */}
       {GROUPS.map((gr) => (
-        <section key={gr.id} id={`grp-${gr.id}`} className="scroll-mt-24 pt-5">
-          <h2 className="px-1 font-display text-[16px] font-bold text-foreground">{GROUP_TABS[gr.id]}</h2>
+        <section key={gr.id} className="pt-5">
+          <h2 className="px-1 font-display text-[16px] font-bold text-foreground">{gr.label}</h2>
           <p className="mt-0.5 px-1 text-[11.5px] leading-snug text-muted-foreground">{gr.sub}</p>
           <div className="mt-2.5 grid grid-cols-4 gap-2">
             {bucketsInGroup(gr.id).map((b) => (
@@ -247,31 +215,13 @@ function MusicBar() {
   );
 }
 
-function BucketView({ bucket, favs, onFav, onClose, onOpenSession, onPreviewPlay, onPlayBundle }: {
+function BucketView({ bucket, favs, onFav, onClose, onOpenSession }: {
   bucket: Bucket; favs: string[]; onFav: (id: string) => void; onClose: () => void;
-  onOpenSession: (s: Session) => void; onPreviewPlay: (ex: Exercise) => void;
-  onPlayBundle: (name: string, items: BundleItem[]) => void;
+  onOpenSession: (s: Session) => void;
 }) {
   const kg = bodyWeight();
   const [filters, setFilters] = useState<ExFilters>(EMPTY_FILTERS);
-  const [items, setItems] = useState<BundleItem[]>([]);
-  const [adding, setAdding] = useState<Exercise | null>(null);
-  const [preview, setPreview] = useState<Exercise | null>(null);
-  const [saveOpen, setSaveOpen] = useState(false);
-  const [name, setName] = useState(`My ${bucket.label} bundle`);
-
   const sessions = useMemo(() => applyFilters(sessionsIn(bucket.id), filters), [bucket.id, filters]);
-  const pool = useMemo(() => bundlePool(bucket, filters), [bucket, filters]);
-  const totalSec = bundleSeconds(items);
-  const totalKcal = bundleKcal(items, kg);
-
-  const doSave = () => {
-    if (!items.length) { toast.error("Add at least one exercise"); return; }
-    saveBundle(name.trim() || "My bundle", items);
-    toast.success("Bundle saved to My Plans 🧺");
-    setSaveOpen(false);
-    setItems([]);
-  };
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col" style={{ background: "var(--gradient-hero)" }}>
@@ -288,9 +238,8 @@ function BucketView({ bucket, favs, onFav, onClose, onOpenSession, onPreviewPlay
 
       <FilterRow filters={filters} setFilters={setFilters} />
 
-      <div className={`flex-1 overflow-y-auto px-5 pt-3 ${items.length ? "pb-28" : "pb-[max(1.5rem,env(safe-area-inset-bottom))]"}`}>
+      <div className="flex-1 overflow-y-auto px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-3">
         {bucket.music && <MusicBar />}
-
         <p className="px-1 text-[11.5px] font-bold uppercase tracking-wide text-muted-foreground">{sessions.length} sessions</p>
         {sessions.length === 0 ? (
           <div className="mt-2 rounded-3xl bg-card p-6 text-center ring-1 ring-border/60">
@@ -304,67 +253,109 @@ function BucketView({ bucket, favs, onFav, onClose, onOpenSession, onPreviewPlay
             ))}
           </div>
         )}
+      </div>
+    </div>
+  );
+}
 
-        {/* build your own bundle */}
-        <section className="pt-6">
-          <h3 className="px-1 font-display text-[15px] font-bold text-foreground">🧺 Create your own bundle</h3>
-          <p className="mt-0.5 px-1 text-[11.5px] leading-snug text-muted-foreground">
-            Tap an exercise to preview it first, then add it with your sets and time. The filters above narrow this list too.
-          </p>
+/* ================= Classics tab — preview + build a bundle ================= */
 
-          <div className="mt-2.5 rounded-3xl bg-card p-4 ring-1 ring-border/60">
-            {items.length === 0 ? (
-              <div className="flex min-h-[52px] items-center justify-center rounded-2xl border border-dashed border-border/70 bg-secondary/30 px-3 text-center text-[11px] text-muted-foreground">
-                Your picked exercises will appear here
-              </div>
-            ) : (
-              <>
-                <div className="space-y-1.5">
-                  {items.map((it, i) => {
-                    const ex = getExercise(it.exId)!;
-                    return (
-                      <div key={i} className="flex items-center gap-2.5 rounded-2xl bg-secondary/40 p-2.5">
-                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent/50 text-base">{ex.emoji}</span>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-[12.5px] font-semibold text-foreground">{ex.name}</p>
-                          <p className="text-[11px] text-muted-foreground">{it.sets} × {fmt(it.sec)} · 🔥 {kcalFor(ex.met, it.sets * it.sec, kg)} kcal</p>
-                        </div>
-                        <button onClick={() => setItems((c) => c.filter((_, x) => x !== i))} className="p-1 text-muted-foreground hover:text-rose-500"><X size={14} /></button>
-                      </div>
-                    );
-                  })}
-                </div>
-                <p className="mt-2 text-[11.5px] font-semibold text-foreground/70">{items.length} exercises · {fmt(totalSec)} · 🔥 {totalKcal} kcal</p>
-              </>
-            )}
+function ClassicsTab({ onPreviewPlay, onPlayBundle }: {
+  onPreviewPlay: (ex: Exercise) => void; onPlayBundle: (name: string, items: BundleItem[]) => void;
+}) {
+  return (
+    <div className="pb-2">
+      <section className="pt-4">
+        <h2 className="px-1 font-display text-[16px] font-bold text-foreground">🥋 Classics</h2>
+        <p className="mt-0.5 px-1 text-[11.5px] leading-snug text-muted-foreground">
+          The timeless staples. Tap any to preview it, then ➕ to build your own bundle and practise it.
+        </p>
+      </section>
+      <BundleSection pool={CLASSICS} defaultName="My classics bundle" onPreviewPlay={onPreviewPlay} onPlayBundle={onPlayBundle} />
+    </div>
+  );
+}
+
+/* ================= Reusable bundle builder ================= */
+
+function BundleSection({ pool, defaultName, onPreviewPlay, onPlayBundle }: {
+  pool: Exercise[]; defaultName: string;
+  onPreviewPlay: (ex: Exercise) => void; onPlayBundle: (name: string, items: BundleItem[]) => void;
+}) {
+  const kg = bodyWeight();
+  const [items, setItems] = useState<BundleItem[]>([]);
+  const [adding, setAdding] = useState<Exercise | null>(null);
+  const [preview, setPreview] = useState<Exercise | null>(null);
+  const [saveOpen, setSaveOpen] = useState(false);
+  const [name, setName] = useState(defaultName);
+  const totalSec = bundleSeconds(items);
+  const totalKcal = bundleKcal(items, kg);
+
+  const doSave = () => {
+    if (!items.length) { toast.error("Add at least one exercise"); return; }
+    saveBundle(name.trim() || "My bundle", items);
+    toast.success("Bundle saved to My Plans 🧺");
+    setSaveOpen(false);
+    setItems([]);
+  };
+
+  return (
+    <section className={`pt-4 ${items.length ? "pb-24" : ""}`}>
+      {/* basket */}
+      <div className="rounded-3xl bg-card p-4 ring-1 ring-border/60">
+        <p className="text-[12.5px] font-semibold text-foreground">🧺 Your bundle</p>
+        {items.length === 0 ? (
+          <div className="mt-2 flex min-h-[52px] items-center justify-center rounded-2xl border border-dashed border-border/70 bg-secondary/30 px-3 text-center text-[11px] text-muted-foreground">
+            Your picked exercises will appear here
           </div>
-
-          <p className="mt-4 px-1 text-[11px] font-bold uppercase tracking-wide text-foreground/50">{pool.length} exercises available</p>
-          <div className="mt-2 grid grid-cols-4 gap-2">
-            {pool.map((ex) => {
-              const inBasket = items.some((it) => it.exId === ex.id);
-              return (
-                <div key={ex.id} className="relative">
-                  <button onClick={() => setPreview(ex)}
-                    className="flex w-full flex-col items-center gap-1 rounded-2xl bg-card p-2.5 text-center ring-1 ring-border/60 active:scale-[0.97]">
-                    <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/50 text-xl">{ex.emoji}</span>
-                    <span className="text-[9px] font-medium leading-tight text-foreground/85">{ex.name}</span>
-                    <span className="text-[8.5px] text-muted-foreground">{fmt(ex.sec)}</span>
-                  </button>
-                  <button onClick={() => setAdding(ex)} title="Add to bundle"
-                    className={`absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full text-white shadow ${inBasket ? "bg-emerald-500" : "bg-primary/85"}`}>
-                    {inBasket ? <Check size={11} strokeWidth={3} /> : <Plus size={11} strokeWidth={3} />}
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        </section>
+        ) : (
+          <>
+            <div className="mt-2 space-y-1.5">
+              {items.map((it, i) => {
+                const ex = getExercise(it.exId)!;
+                return (
+                  <div key={i} className="flex items-center gap-2.5 rounded-2xl bg-secondary/40 p-2.5">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent/50 text-base">{ex.emoji}</span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[12.5px] font-semibold text-foreground">{ex.name}</p>
+                      <p className="text-[11px] text-muted-foreground">{it.sets} × {fmt(it.sec)} · 🔥 {kcalFor(ex.met, it.sets * it.sec, kg)} kcal</p>
+                    </div>
+                    <button onClick={() => setItems((c) => c.filter((_, x) => x !== i))} className="p-1 text-muted-foreground hover:text-rose-500"><X size={14} /></button>
+                  </div>
+                );
+              })}
+            </div>
+            <p className="mt-2 text-[11.5px] font-semibold text-foreground/70">{items.length} exercises · {fmt(totalSec)} · 🔥 {totalKcal} kcal</p>
+          </>
+        )}
       </div>
 
+      {/* pool grid */}
+      <p className="mt-4 px-1 text-[11px] font-bold uppercase tracking-wide text-foreground/50">{pool.length} exercises</p>
+      <div className="mt-2 grid grid-cols-4 gap-2">
+        {pool.map((ex) => {
+          const inBasket = items.some((it) => it.exId === ex.id);
+          return (
+            <div key={ex.id} className="relative">
+              <button onClick={() => setPreview(ex)}
+                className="flex w-full flex-col items-center gap-1 rounded-2xl bg-card p-2.5 text-center ring-1 ring-border/60 active:scale-[0.97]">
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/50 text-xl">{ex.emoji}</span>
+                <span className="text-[9px] font-medium leading-tight text-foreground/85">{ex.name}</span>
+                <span className="text-[8.5px] text-muted-foreground">{fmt(ex.sec)}</span>
+              </button>
+              <button onClick={() => setAdding(ex)} title="Add to bundle"
+                className={`absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full text-white shadow ${inBasket ? "bg-emerald-500" : "bg-primary/85"}`}>
+                {inBasket ? <Check size={11} strokeWidth={3} /> : <Plus size={11} strokeWidth={3} />}
+              </button>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* floating bar */}
       {items.length > 0 && (
-        <div className="absolute inset-x-0 bottom-0 px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4" style={{ background: "linear-gradient(to top, var(--background) 65%, transparent)" }}>
-          <div className="flex items-center gap-2 rounded-2xl bg-primary px-3 py-2.5 text-primary-foreground shadow-[var(--shadow-glow)]">
+        <div className="fixed inset-x-0 bottom-[92px] z-30 px-5">
+          <div className="mx-auto flex max-w-xl items-center gap-2 rounded-2xl bg-primary px-3 py-2.5 text-primary-foreground shadow-[var(--shadow-glow)]">
             <span className="flex-1 text-[12.5px] font-semibold">{items.length} in bundle · {fmt(totalSec)}</span>
             <button onClick={() => setItems([])} className="rounded-full bg-white/20 px-2.5 py-1 text-[11px] font-semibold">Clear</button>
             <button onClick={() => setSaveOpen(true)} className="flex items-center gap-1 rounded-full bg-white/20 px-2.5 py-1.5 text-[11.5px] font-semibold"><Save size={11} /> Save</button>
@@ -393,7 +384,7 @@ function BucketView({ bucket, favs, onFav, onClose, onOpenSession, onPreviewPlay
           <button onClick={doSave} className="w-full rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground">Save bundle</button>
         </DialogContent>
       </Dialog>
-    </div>
+    </section>
   );
 }
 
