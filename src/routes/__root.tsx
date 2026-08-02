@@ -11,6 +11,7 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { initNativeApp } from "../lib/capacitor";
 
 function NotFoundComponent() {
   return (
@@ -114,6 +115,11 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+
+  // Initialize native (Capacitor) behaviors — no-op on the web build.
+  useEffect(() => {
+    void initNativeApp();
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
