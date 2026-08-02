@@ -150,7 +150,11 @@
   overflow: hidden;
   transition: transform 280ms cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 280ms ease;
   &:active { transform: scale(0.95); }
-  &:hover { transform: translateY(-3px) scale(1.015); }
+  /* Hover lift only on devices that actually hover — on touch it would
+     "stick" after a tap. The :active press feedback above covers touch. */
+  @media (hover: hover) {
+    &:hover { transform: translateY(-3px) scale(1.015); }
+  }
 }
 
 /* Sunrise gradient headline accent */
@@ -204,3 +208,59 @@
 }
 @utility animate-pop-in { animation: pop-in 500ms cubic-bezier(0.34, 1.56, 0.64, 1) both; }
 @utility animate-wiggle { animation: wiggle 600ms ease-in-out; }
+
+/* ============================================================
+   Native (Capacitor) shell adjustments
+   Applied only when running inside the iOS/Android WebView,
+   where document.documentElement carries the `capacitor-native`
+   class (set in src/lib/capacitor.ts). The web build is untouched.
+   ============================================================ */
+
+/* Expose safe-area insets as variables for use in layout (headers,
+   bottom nav/tab bars, floating buttons). On web these resolve to 0. */
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+}
+
+/* Convenience utilities: pad by the device safe areas. */
+@utility safe-top { padding-top: var(--safe-top); }
+@utility safe-bottom { padding-bottom: var(--safe-bottom); }
+@utility safe-x { padding-left: var(--safe-left); padding-right: var(--safe-right); }
+@utility safe-area {
+  padding-top: var(--safe-top);
+  padding-bottom: var(--safe-bottom);
+  padding-left: var(--safe-left);
+  padding-right: var(--safe-right);
+}
+
+.capacitor-native {
+  /* The status bar overlays the WebView (see StatusBar.setOverlaysWebView),
+     so keep top-level content clear of the notch / Dynamic Island. */
+  body {
+    padding-top: var(--safe-top);
+    padding-bottom: var(--safe-bottom);
+  }
+
+  /* Native touch feel: kill the tap flash, disable long-press callouts and
+     accidental text selection on interactive chrome, keep momentum scroll. */
+  * {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+  }
+  body {
+    -webkit-user-select: none;
+    user-select: none;
+    overscroll-behavior-y: none;
+  }
+  /* ...but real content people read/copy stays selectable. */
+  input,
+  textarea,
+  [contenteditable="true"],
+  p, li, h1, h2, h3, h4, h5, h6 {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+}

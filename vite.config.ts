@@ -6,10 +6,22 @@
 // You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
+// Capacitor (native app) build: `CAP_BUILD=1 vite build`.
+// Produces a static, client-only SPA (no Nitro/SSR server) into dist/ for
+// bundling inside the iOS/Android WebView. The normal Lovable/web build
+// (plain `vite build`) is unaffected.
+const isCapacitorBuild = process.env.CAP_BUILD === "1";
+
 export default defineConfig({
+  // Drop the Cloudflare/Nitro server build for the native bundle — the app
+  // ships as static assets and talks to Supabase directly from the client.
+  ...(isCapacitorBuild ? { nitro: false } : {}),
   tanstackStart: {
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
     // nitro/vite builds from this
     server: { entry: "server" },
+    // Client-only SPA shell for the native build: no per-route SSR, the shell
+    // is prerendered once and the client router takes over.
+    ...(isCapacitorBuild ? { spa: { enabled: true } } : {}),
   },
 });
