@@ -13,7 +13,7 @@ export type Focus =
   | "arms" | "legs" | "chest" | "shoulders" | "abs" | "core";
 export type Level = "beginner" | "medium" | "advanced";
 export type Intensity = "low" | "medium" | "high";
-export type Equip = "none" | "dumbbells" | "gym";
+export type Equip = "none" | "dumbbells" | "gym" | "desi";
 export type Kind = "warmup" | "main" | "cooldown";
 
 export interface Exercise {
@@ -260,6 +260,84 @@ export const EXERCISES: Exercise[] = [
   e("wk-interval", "Interval Walk", "⏱️", "main", ["legs", "full-body"], 60, 5.5, "none", "walking", "Alternate fast and easy — great for building fitness."),
   e("wk-march", "High-Knee March", "🦵", "main", ["legs", "abs"], 45, 5, "none", "walking", "Drive the knees up as you walk, engage the core."),
   e("wk-stroll", "Recovery Stroll", "🌿", "cooldown", ["legs"], 60, 2.8, "none", "walking", "Gentle pace to bring the heart rate down."),
+
+  // ---- Desi Kasrat (curated akhara catalogue) ----
+  // dands (push variations)
+  e("dz-basicdand", "Basic Dand", "🪷", "main", ["chest", "shoulders", "back"], 45, 7.5, "none", "desi", "Classic dand — dive through, sweep the chest, hips rise at the end."),
+  e("dz-halfdand", "Half Dand", "🔽", "main", ["chest", "arms"], 40, 5.5, "none", "desi", "Half-range dand — builds the strength to go full depth."),
+  e("dz-hindupush", "Hindu Push-up", "🐍", "main", ["chest", "shoulders", "back"], 45, 7.5, "none", "desi", "Flow down and forward, cobra at the top, hips back to start."),
+  e("dz-mishradand", "Mishra Dand", "🔀", "main", ["chest", "shoulders"], 45, 8, "none", "desi", "Mixed-tempo dand blending straight and circular motion."),
+  e("dz-rammurti", "Ram Murti Dand", "💪", "main", ["chest", "back"], 45, 8.5, "none", "desi", "Wide, deep wrestler's dand — full range and powerful."),
+  e("dz-hanuman", "Hanuman Dand", "🦿", "main", ["chest", "legs"], 45, 8.5, "none", "desi", "Long lunging dand — big stretch through the hips and chest."),
+  e("dz-dandflow", "Dand Flow", "🌊", "main", ["chest", "full-body"], 45, 6.5, "none", "desi", "Continuous flowing dands, breath linked to movement."),
+  e("dz-highrepdand", "High-Rep Dands", "🔥", "main", ["chest", "shoulders"], 45, 8, "none", "desi", "Keep the count high — endurance for the shoulders and chest."),
+  // baithaks (squat variations)
+  e("dz-baithak", "Baithak", "🤼", "main", ["legs", "butt"], 45, 7, "none", "desi", "Hindu squat — heels lift, arms swing, breathe with the rhythm."),
+  e("dz-jumpbaithak", "Jump Baithak", "⬆️", "main", ["legs", "full-body"], 40, 8, "none", "desi", "Explosive baithak — drive up off the floor each rep."),
+  e("dz-deepbaithak", "Deep Baithaks", "🪑", "main", ["legs", "butt"], 45, 7, "none", "desi", "Full depth, slow and controlled, chest tall."),
+  e("dz-highrepbaithak", "High-Rep Baithaks", "🔥", "main", ["legs"], 45, 7.5, "none", "desi", "Wrestler's endurance — high reps, steady breath."),
+  // holds & legs
+  e("dz-deepsquat", "Deep Squat Hold", "🧘", "main", ["legs"], 45, 4.5, "none", "desi", "Sit into a full squat and hold, heels down, chest open."),
+  e("dz-split", "Split Squats", "🚶", "main", ["legs", "butt"], 40, 6, "none", "desi", "Long stance, drop the back knee straight down."),
+  e("dz-wallsit", "Wall Sit", "🧱", "main", ["legs"], 40, 5, "none", "desi", "Thighs parallel, back flat on the wall, breathe."),
+  e("dz-calf", "Calf Raises", "🦶", "main", ["legs"], 30, 3.5, "none", "desi", "Rise to the toes, pause, lower slow."),
+  e("dz-singleleg", "Single-Leg Balance", "🦩", "main", ["legs"], 40, 3, "none", "desi", "Stand tall on one leg, fix the gaze, breathe."),
+  // carries & implements
+  e("dz-farmerwalk", "Farmer Walk", "🧳", "main", ["full-body", "back"], 45, 6, "none", "desi", "Heavy in both hands, tall posture, walk with control."),
+  e("dz-farmercarry", "Farmer Carry", "🧳", "main", ["full-body", "back"], 45, 6, "none", "desi", "Loaded carry — grip hard, brace the core, stay tall."),
+  e("dz-sandbag", "Sandbag Carry", "🛢️", "main", ["full-body", "back", "legs"], 45, 6.5, "none", "desi", "Hug or shoulder the bag, brace, walk steady."),
+  e("dz-ropepull", "Rope Pull", "🪢", "main", ["back", "arms"], 45, 6.5, "none", "desi", "Hand over hand, drive the elbows, engage the lats."),
+  e("dz-gada", "Gada Swings", "🏵️", "main", ["shoulders", "back"], 45, 6.5, "none", "desi", "Mace swings behind the head — start light, control the arc."),
+  e("dz-gada360", "360° Gada Swing", "🔄", "main", ["shoulders", "back"], 45, 7, "none", "desi", "Full circle behind the head — smooth, no jerks."),
+  e("dz-halo", "Gada Halos", "🌀", "main", ["shoulders"], 40, 4.5, "none", "desi", "Circle the mace around the head — great shoulder prep."),
+  e("dz-rotswing", "Rotational Swings", "🌪️", "main", ["abs", "shoulders"], 45, 6, "none", "desi", "Swing across the body, rotate from the waist."),
+  e("dz-gadaflow", "Gada Flow", "💫", "main", ["shoulders", "full-body"], 45, 6.5, "none", "desi", "Link swings and halos into one continuous flow."),
+  e("dz-mudgar", "Mudgar Swings", "🪀", "main", ["shoulders", "arms"], 45, 6.5, "none", "desi", "Club swings — control the arc, brace the core."),
+  // crawls & animal
+  e("dz-bear", "Bear Crawl", "🐻", "main", ["full-body", "abs"], 40, 6.5, "none", "desi", "Knees hover, move opposite hand and foot, hips low."),
+  e("dz-crab", "Crab Walk", "🦀", "main", ["full-body", "arms"], 40, 6, "none", "desi", "Hips up, walk on hands and feet facing the ceiling."),
+  e("dz-duck", "Duck Walk", "🦆", "main", ["legs"], 40, 6.5, "none", "desi", "Stay in a deep squat and walk — brutal on the quads."),
+  e("dz-monkey", "Monkey Walk", "🐒", "main", ["full-body"], 40, 6, "none", "desi", "Wide, low side-to-side hops on the hands and feet."),
+  e("dz-leopard", "Leopard Crawl", "🐆", "main", ["full-body", "abs"], 40, 7, "none", "desi", "Low crawl, chest close to the floor, controlled."),
+  e("dz-frogjump", "Frog Jumps", "🐸", "main", ["legs", "full-body"], 40, 8, "none", "desi", "Deep squat then jump forward, land soft."),
+  // conditioning
+  e("dz-fastmarch", "Fast March", "🥾", "main", ["legs", "full-body"], 40, 5, "none", "desi", "Quick high-tempo march on the spot, pump the arms."),
+  e("dz-sidestep", "Side Steps", "↔️", "main", ["legs"], 40, 5, "none", "desi", "Step side to side low and quick, stay light."),
+  e("dz-highknee", "High Knees", "🏃", "main", ["legs", "full-body"], 40, 8, "none", "desi", "Knees to hip height, fast, on the balls of the feet."),
+  e("dz-lateral", "Lateral Shuffle", "🔀", "main", ["legs", "full-body"], 40, 6.5, "none", "desi", "Stay low, shuffle side to side, don't cross the feet."),
+  e("dz-burpee", "Burpees", "💥", "main", ["full-body"], 40, 8, "none", "desi", "Squat, hands down, hop back, chest down, spring up."),
+  e("dz-jumpsquat", "Jump Squats", "⬆️", "main", ["legs", "full-body"], 40, 8, "none", "desi", "Squat then explode up, land soft and low."),
+  e("dz-sprint", "Sprint Finishers", "⚡", "main", ["full-body", "legs"], 30, 12, "none", "desi", "All-out sprint — empty the tank to finish."),
+  e("dz-skip", "Rope Skipping", "🪢", "main", ["full-body", "legs"], 45, 9, "none", "desi", "Light bounce, wrists turn the rope."),
+  // core & planks
+  e("dz-plank", "Plank", "🧱", "main", ["abs"], 40, 4.5, "none", "desi", "One straight line head to heels, squeeze the glutes."),
+  e("dz-hinduplank", "Hindu Plank", "🐍", "main", ["abs", "shoulders"], 40, 5, "none", "desi", "Hold the bottom of a dand — chest forward, hips low."),
+  e("dz-sideplank", "Side Plank", "📏", "main", ["abs"], 30, 4.5, "none", "desi", "Stack the shoulders and hips, lift tall, hold."),
+  e("dz-birddog", "Bird Dog", "🐦", "main", ["back", "abs"], 40, 4, "none", "desi", "Opposite arm and leg reach, hips steady."),
+  e("dz-shouldertap", "Shoulder Taps", "👆", "main", ["shoulders", "abs"], 40, 5.5, "none", "desi", "Plank steady, tap opposite shoulder without rocking."),
+  // warm-ups
+  e("dz-wrist", "Wrist Conditioning", "🙌", "warmup", ["arms"], 30, 3, "none", "desi", "Circle and load the wrists gently — vital before dands."),
+  e("dz-neck", "Neck Rotation", "🙆", "warmup", ["back"], 30, 2.5, "none", "desi", "Slow half-circles, ear to chest to ear. Never force."),
+  e("dz-ankle", "Ankle Mobility", "🦶", "warmup", ["legs"], 30, 2.8, "none", "desi", "Circle the ankles and rock the feet to prep the baithaks."),
+  e("dz-arm", "Arm Circles", "🔄", "warmup", ["shoulders", "arms"], 30, 3, "none", "desi", "Small circles forward, then backward. Shoulders relaxed."),
+  e("dz-shrug", "Shoulder Rolls", "🤷", "warmup", ["shoulders"], 30, 2.5, "none", "desi", "Roll the shoulders back and down, slow and full."),
+  e("dz-hipopen", "Hip Openers", "🔁", "warmup", ["legs", "butt"], 30, 3, "none", "desi", "Lift a knee and open the hip in a slow circle."),
+  e("dz-wallangel", "Wall Angels", "😇", "warmup", ["shoulders", "back"], 40, 3, "none", "desi", "Back to the wall, slide the arms up and down, ribs down."),
+  e("dz-catcow", "Cat-Cow", "🐈", "warmup", ["back"], 30, 2.5, "none", "desi", "On all fours, arch and round with the breath."),
+  // stretches & breath
+  e("dz-cobra", "Cobra Stretch", "🐍", "cooldown", ["back"], 30, 3, "none", "desi", "Elbows soft, lift the chest, shoulders away from ears."),
+  e("dz-child", "Child's Pose", "🧎", "cooldown", ["back"], 40, 2, "none", "desi", "Knees wide, hips to heels, arms long."),
+  e("dz-frogstretch", "Frog Stretch", "🐸", "cooldown", ["legs"], 40, 2.3, "none", "desi", "Knees wide, rock back gently, open the hips."),
+  e("dz-butterfly", "Butterfly Stretch", "🦋", "cooldown", ["legs"], 40, 2.2, "none", "desi", "Soles together, knees heavy, spine tall."),
+  e("dz-breath", "Deep Breathing", "🌬️", "cooldown", ["full-body"], 40, 1.8, "none", "desi", "Long slow breaths — settle the heart rate and mind."),
+  // additions
+  e("dz-namaskardand", "Namaskar Dand", "🙏", "main", ["chest", "full-body"], 45, 7, "none", "desi", "Dand flowing into a namaskar — chest sweeps, palms meet at the heart."),
+  e("dz-paltidand", "Palti Dand", "🔄", "main", ["chest", "back", "full-body"], 45, 8, "none", "desi", "Rolling dand — flow down, roll through the spine, come back up."),
+  e("dz-scorpiondand", "Scorpion Dand", "🦂", "main", ["back", "chest"], 45, 8.5, "none", "desi", "Deep backbend dand — lift one leg high like a scorpion's tail."),
+  e("dz-ektangi", "Ek-tangi Baithak", "🦵", "main", ["legs", "butt"], 45, 8, "none", "desi", "Single-leg baithak, pistol-style — control all the way down and up."),
+  e("dz-namaskarbaithak", "Namaskar Baithak", "🙏", "main", ["legs", "full-body"], 45, 6.5, "none", "desi", "Squat deep, palms together, elbows press the knees open."),
+  e("dz-closebaithak", "Close Leg Baithak", "🦵", "main", ["legs", "butt"], 45, 6.5, "none", "desi", "Feet together, squat straight down — extra load on the quads and balance."),
+  e("dz-bridge", "Wrestler's Bridge", "🌉", "main", ["back", "shoulders"], 40, 5, "none", "desi", "Karela — bridge gently onto the crown to build a strong neck and spine."),
 ];
 
 /** The 11 classic bodyweight staples, in order, for the Classics tab. */
@@ -312,11 +390,13 @@ export interface Bucket {
   minMet?: number;       // HIIT-style: only spicy moves
   maxMet?: number;       // senior / diabetic: keep it gentle
   music?: boolean;       // dance / zumba show the music launcher
+  curated?: boolean;     // sessions are hand-authored, shown grouped
+  groups?: readonly string[]; // ordered sub-group labels for a curated bucket
 }
 
 export const BUCKETS: Bucket[] = [
   // ---- Styles ----
-  { id: "desi-kasrat", label: "Desi Kasrat", emoji: "🪷", blurb: "Dand, baithak and surya namaskar — the akhara way.", group: "styles", tag: "desi" },
+  { id: "desi-kasrat", label: "Desi Kasrat", emoji: "🪷", blurb: "Dand, baithak, gada — the akhara way.", group: "styles", tag: "desi", curated: true, groups: ["Foundations", "Strength", "Conditioning", "Mobility & Control", "Full-Body"] },
   { id: "gym", label: "Gym", emoji: "🏋️", blurb: "Dumbbell and machine routines for the gym floor.", group: "styles" },
   { id: "calisthenics", label: "Calisthenics", emoji: "🤸", blurb: "Master your own bodyweight.", group: "styles" },
   { id: "pilates", label: "Pilates", emoji: "🩰", blurb: "Control, posture and long, lean strength.", group: "styles", tag: "pilates" },
@@ -359,23 +439,13 @@ export function bucketOf(id: string): Bucket | undefined { return BUCKETS.find((
 export interface Session {
   id: string; bucket: string; title: string; focus: Focus;
   minutes: number; level: Level; equip: Equip;
+  exIds?: string[];   // curated sessions play this exact list (in order)
+  group?: string;     // curated sub-group label (e.g. "Foundations")
 }
 
 type Spec = [focus: Focus, title: string, minutes: number, level: Level, equip?: Equip];
 
 const SPECS: Record<string, Spec[]> = {
-  "desi-kasrat": [
-    ["full-body", "Surya Namaskar Flow", 15, "beginner"],
-    ["full-body", "Morning Vyayam", 10, "beginner"],
-    ["full-body", "Dand-Baithak Circuit", 20, "medium"],
-    ["upper-body", "Dand Progression", 18, "medium"],
-    ["lower-body", "Baithak Leg Builder", 18, "medium"],
-    ["core", "Akhara Core", 12, "medium"],
-    ["endurance", "Rope & Kasrat Combo", 20, "medium"],
-    ["arms", "Mudgar Arm Work", 15, "medium", "dumbbells"],
-    ["shoulders", "Gada Shoulder Strength", 18, "advanced", "dumbbells"],
-    ["full-body", "Pehelwan Conditioning", 30, "advanced"],
-  ],
   gym: [
     ["full-body", "Full-Body Dumbbell", 25, "beginner", "dumbbells"],
     ["upper-body", "Push Day — Chest & Arms", 30, "medium", "dumbbells"],
@@ -600,11 +670,60 @@ const SPECS: Record<string, Spec[]> = {
   ],
 };
 
-export const SESSIONS: Session[] = Object.entries(SPECS).flatMap(([bucket, specs]) =>
+const GENERATED_SESSIONS: Session[] = Object.entries(SPECS).flatMap(([bucket, specs]) =>
   specs.map<Session>(([focus, title, minutes, level, equip], i) => ({
     id: `${bucket}-${i + 1}`, bucket, title, focus, minutes, level, equip: equip ?? "none",
   })),
 );
+
+/* ---- Desi Kasrat: curated programs (exact exercise lists, grouped) ---- */
+
+export const DESI_GROUPS = ["Foundations", "Strength", "Conditioning", "Mobility & Control", "Full-Body"] as const;
+
+type DesiSpec = [group: string, title: string, level: Level, minutes: number, focus: Focus, exIds: string[], equip?: Equip];
+
+const DESI_SPECS: DesiSpec[] = [
+  // Foundations
+  ["Foundations", "Kasrat Basics", "beginner", 20, "full-body", ["dz-deepsquat", "dz-baithak", "dz-halfdand", "dz-wrist", "dz-neck", "dz-ankle", "dz-breath"]],
+  ["Foundations", "Dand & Baithak Basics", "beginner", 20, "full-body", ["dz-basicdand", "dz-baithak", "dz-cobra", "dz-child", "dz-deepsquat"]],
+  ["Foundations", "Namaskar Flow", "beginner", 20, "full-body", ["dz-namaskarbaithak", "dz-namaskardand", "dz-deepsquat", "dz-cobra", "dz-breath"]],
+  ["Foundations", "Daily Desi Fitness", "beginner", 25, "full-body", ["dz-basicdand", "dz-baithak", "dz-farmerwalk", "dz-bear", "dz-plank", "dz-deepsquat"]],
+  ["Foundations", "Traditional Conditioning", "medium", 30, "full-body", ["dz-basicdand", "dz-mishradand", "dz-baithak", "dz-frogjump", "dz-bear", "dz-crab"]],
+  // Strength
+  ["Strength", "Dand Strength", "beginner", 20, "upper-body", ["dz-basicdand", "dz-halfdand", "dz-hindupush", "dz-shouldertap", "dz-cobra"]],
+  ["Strength", "Baithak Strength", "medium", 25, "lower-body", ["dz-baithak", "dz-jumpbaithak", "dz-split", "dz-wallsit", "dz-calf"]],
+  ["Strength", "Single-Leg Power", "advanced", 30, "lower-body", ["dz-ektangi", "dz-jumpbaithak", "dz-split", "dz-wallsit", "dz-singleleg"]],
+  ["Strength", "Gada Strength", "medium", 30, "shoulders", ["dz-gada", "dz-halo", "dz-gada360", "dz-rotswing", "dz-farmercarry"], "desi"],
+  ["Strength", "Advanced Dand Mastery", "advanced", 35, "upper-body", ["dz-rammurti", "dz-paltidand", "dz-scorpiondand", "dz-hindupush", "dz-cobra"]],
+  ["Strength", "Traditional Power", "advanced", 35, "full-body", ["dz-mishradand", "dz-rammurti", "dz-baithak", "dz-jumpbaithak", "dz-gada", "dz-sandbag"], "desi"],
+  ["Strength", "Akhada Strength", "advanced", 40, "full-body", ["dz-rammurti", "dz-hanuman", "dz-deepbaithak", "dz-gadaflow", "dz-mudgar", "dz-ropepull", "dz-farmercarry"], "desi"],
+  // Conditioning
+  ["Conditioning", "Desi Cardio", "beginner", 20, "endurance", ["dz-baithak", "dz-fastmarch", "dz-farmerwalk", "dz-sidestep", "dz-highknee"]],
+  ["Conditioning", "Functional Kasrat", "medium", 25, "full-body", ["dz-bear", "dz-crab", "dz-duck", "dz-monkey", "dz-lateral"]],
+  ["Conditioning", "Warrior Conditioning", "medium", 30, "endurance", ["dz-basicdand", "dz-baithak", "dz-bear", "dz-burpee", "dz-jumpsquat", "dz-farmercarry"]],
+  ["Conditioning", "Akhada Challenge", "advanced", 40, "full-body", ["dz-mishradand", "dz-rammurti", "dz-baithak", "dz-gada", "dz-sandbag", "dz-sprint"], "desi"],
+  ["Conditioning", "Desi Endurance", "advanced", 40, "endurance", ["dz-highrepbaithak", "dz-highrepdand", "dz-farmerwalk", "dz-bear", "dz-skip"]],
+  // Mobility & Control
+  ["Mobility & Control", "Shoulder Mobility", "beginner", 15, "shoulders", ["dz-halo", "dz-arm", "dz-shrug", "dz-wallangel"], "desi"],
+  ["Mobility & Control", "Hip Mobility", "beginner", 15, "lower-body", ["dz-deepsquat", "dz-frogstretch", "dz-hipopen", "dz-butterfly"]],
+  ["Mobility & Control", "Spine & Core Flow", "medium", 20, "core", ["dz-catcow", "dz-cobra", "dz-dandflow", "dz-birddog", "dz-hinduplank"]],
+  ["Mobility & Control", "Neck & Bridge Strength", "medium", 20, "core", ["dz-bridge", "dz-cobra", "dz-catcow", "dz-birddog", "dz-breath"]],
+  ["Mobility & Control", "Balance & Stability", "medium", 20, "core", ["dz-singleleg", "dz-deepsquat", "dz-bear", "dz-sideplank"]],
+  ["Mobility & Control", "Animal Movement Flow", "advanced", 30, "full-body", ["dz-bear", "dz-monkey", "dz-crab", "dz-leopard", "dz-frogjump"]],
+  // Full-Body
+  ["Full-Body", "Full-Body Kasrat", "beginner", 20, "full-body", ["dz-basicdand", "dz-baithak", "dz-farmerwalk", "dz-plank", "dz-cobra"]],
+  ["Full-Body", "Total Body Flow", "medium", 30, "full-body", ["dz-mishradand", "dz-baithak", "dz-gada", "dz-bear", "dz-jumpsquat"], "desi"],
+  ["Full-Body", "Traditional Full Body", "medium", 30, "full-body", ["dz-rammurti", "dz-baithak", "dz-duck", "dz-monkey", "dz-sandbag"], "desi"],
+  ["Full-Body", "Warrior Workout", "advanced", 35, "full-body", ["dz-hanuman", "dz-gadaflow", "dz-baithak", "dz-burpee", "dz-farmercarry", "dz-bear"], "desi"],
+  ["Full-Body", "Akhara Mastery", "advanced", 40, "full-body", ["dz-scorpiondand", "dz-paltidand", "dz-ektangi", "dz-gadaflow", "dz-bridge", "dz-sandbag", "dz-sprint"], "desi"],
+  ["Full-Body", "Ultimate Akhada", "advanced", 45, "full-body", ["dz-rammurti", "dz-hanuman", "dz-baithak", "dz-gada", "dz-mudgar", "dz-sandbag", "dz-ropepull", "dz-bear", "dz-sprint"], "desi"],
+];
+
+const DESI_SESSIONS: Session[] = DESI_SPECS.map(([group, title, level, minutes, focus, exIds, equip], i) => ({
+  id: `desi-kasrat-${i + 1}`, bucket: "desi-kasrat", title, focus, minutes, level, equip: equip ?? "none", exIds, group,
+}));
+
+export const SESSIONS: Session[] = [...GENERATED_SESSIONS, ...DESI_SESSIONS];
 
 export function sessionsIn(bucket: string): Session[] { return SESSIONS.filter((s) => s.bucket === bucket); }
 export function getSession(id: string): Session | undefined { return SESSIONS.find((s) => s.id === id); }
@@ -615,6 +734,7 @@ export function intensityOf(level: Level): Intensity { return level === "beginne
 export interface Step {
   exId: string; name: string; emoji: string; sec: number;
   kind: Kind | "break"; round?: number; setLabel?: string;
+  met?: number;   // for ad-hoc steps (e.g. Programs) not in the catalogue
 }
 export interface Block { label: string; note?: string; steps: Step[] }
 
@@ -657,7 +777,40 @@ function breakStep(round: number): Step {
   return { exId: "break", name: "Break", emoji: "⏸️", sec: BREAK_SEC, kind: "break", round };
 }
 
+/** Curated sessions: play the given exercise list. Leading warm-ups and trailing
+ *  cool-downs run once; the main moves repeat over rounds to fill the stated time. */
+function buildCuratedBlocks(s: Session): Block[] {
+  const all = (s.exIds ?? []).map(getExercise).filter(Boolean) as Exercise[];
+  if (!all.length) return [];
+  let lead = 0;
+  while (lead < all.length && all[lead].kind === "warmup") lead++;
+  let tail = all.length;
+  while (tail > lead && all[tail - 1].kind === "cooldown") tail--;
+  const warm = all.slice(0, lead);
+  const cool = all.slice(tail);
+  const mains = all.slice(lead, tail);
+  const useMains = mains.length ? mains : all;
+
+  const blocks: Block[] = [];
+  if (warm.length) blocks.push({ label: "Warm Up", note: `${warm.length} exercises`, steps: warm.map((x) => step(x, "warmup")) });
+
+  const warmSec = warm.reduce((a, x) => a + x.sec, 0);
+  const coolSec = cool.reduce((a, x) => a + x.sec, 0);
+  const roundSec = useMains.reduce((a, x) => a + x.sec, 0) + (useMains.length - 1) * BREAK_SEC + BREAK_SEC;
+  const budget = Math.max(60, s.minutes * 60 - warmSec - coolSec);
+  const rounds = Math.max(1, Math.min(6, Math.round(budget / Math.max(60, roundSec))));
+
+  for (let r = 0; r < rounds; r++) {
+    const steps = useMains.map((x) => step(x, "main", r + 1));
+    if (r < rounds - 1) steps.push(breakStep(r + 1));
+    blocks.push({ label: rounds > 1 ? `Round ${r + 1}` : "Workout", note: `${useMains.length} exercises`, steps });
+  }
+  if (cool.length) blocks.push({ label: "Cool Down", note: `${cool.length} exercises`, steps: cool.map((x) => step(x, "cooldown")) });
+  return blocks;
+}
+
 export function buildBlocks(s: Session): Block[] {
+  if (s.exIds && s.exIds.length) return buildCuratedBlocks(s);
   const b = bucketOf(s.bucket)!;
   const seed = hash(s.id);
   const warmPool = poolFor(b, "warmup", undefined, s.equip);
@@ -708,7 +861,7 @@ export function kcalFor(met: number, sec: number, weightKg: number): number {
 }
 export function stepKcal(st: Step, weightKg: number): number {
   if (st.kind === "break") return 0;
-  return kcalFor(getExercise(st.exId)?.met ?? 4, st.sec, weightKg);
+  return kcalFor(st.met ?? getExercise(st.exId)?.met ?? 4, st.sec, weightKg);
 }
 export function sessionKcal(s: Session, weightKg: number): number {
   return stepsOf(s).reduce((a, st) => a + stepKcal(st, weightKg), 0);
@@ -728,16 +881,18 @@ export const LEVELS: { id: Level; label: string }[] = [
   { id: "medium", label: "Medium" },
   { id: "advanced", label: "Advance" },
 ];
-// row filter only offers these two equipment options
+// row filter options
 export const EQUIP_FILTERS: { id: Equip; label: string }[] = [
   { id: "none", label: "No equipment" },
   { id: "dumbbells", label: "Only dumbbells" },
+  { id: "desi", label: "Desi implements" },
 ];
 // plan sheet needs the full set incl. gym machines
 export const EQUIP_ALL: { id: Equip; label: string }[] = [
   { id: "none", label: "No equipment" },
   { id: "dumbbells", label: "Only dumbbells" },
   { id: "gym", label: "Gym machines" },
+  { id: "desi", label: "Desi implements" },
 ];
 export const INTENSITIES: { id: Intensity; label: string }[] = [
   { id: "low", label: "Low" }, { id: "medium", label: "Medium" }, { id: "high", label: "High" },

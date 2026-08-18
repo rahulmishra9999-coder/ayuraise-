@@ -19,6 +19,11 @@ import {
 import { YOGA_LEARN_SECTIONS, type LearnSection } from "@/lib/yoga-learn";
 import { loadPlan as loadWLPlan } from "@/lib/weight-loss";
 import { addCalEntry } from "@/lib/trackers";
+import {
+  STYLES, styleOf, programsOf, getStyleProgram, programMinutes, styleKcal,
+  BALANCED_WEEKS, weeklyPlansFor, completedDays, setDayDone,
+  type StyleId, type StyleProgram, type WeeklyPlan,
+} from "@/lib/yoga-styles";
 
 export const Route = createFileRoute("/section/yoga")({
   head: () => ({
@@ -30,7 +35,7 @@ export const Route = createFileRoute("/section/yoga")({
   component: YogaSection,
 });
 
-type Tab = "know" | "goal" | "plans" | "learn";
+type Tab = "goal" | "styles" | "know" | "plans" | "learn";
 
 function bodyWeight() { return loadWLPlan()?.currentWeight ?? 68; }
 
@@ -42,22 +47,24 @@ function YogaSection() {
   const [session, setSession] = useState<Session | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [item, setItem] = useState<LibItem | null>(null);
+  const [styleId, setStyleId] = useState<StyleId | null>(null);
+  const [prog, setProg] = useState<StyleProgram | null>(null);
+  const [week, setWeek] = useState<WeeklyPlan | null>(null);
+  const [stylePlay, setStylePlay] = useState<StyleProgram | null>(null);
 
   return (
     <div className="min-h-svh pb-28" style={{ background: "var(--gradient-hero)" }}>
       {/* hero */}
-      <div className="relative overflow-hidden px-5 pb-6 pt-[max(1rem,env(safe-area-inset-top))]" style={{ background: "var(--gradient-night)" }}>
-        <div className="absolute -right-16 -top-16 h-48 w-48 rounded-full bg-amber-400/20 blur-3xl" />
-        <div className="relative">
-          <Link to="/home" className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-primary-foreground">
-            <ArrowLeft size={16} />
+      <div className="relative overflow-hidden px-4 pb-4 pt-[max(0.85rem,env(safe-area-inset-top))]" style={{ background: "var(--gradient-night)" }}>
+        <div className="absolute -right-16 -top-16 h-40 w-40 rounded-full bg-amber-400/20 blur-3xl" />
+        <div className="relative flex items-center gap-2.5">
+          <Link to="/home" className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/15 text-primary-foreground">
+            <ArrowLeft size={15} />
           </Link>
-          <div className="mt-4 flex items-center gap-3">
-            <SuryaIcon />
-            <div>
-              <h1 className="font-display text-[24px] font-extrabold leading-tight text-primary-foreground">Yoga &amp; Pranayam</h1>
-              <p className="text-[13px] text-primary-foreground/80">Move, breathe, heal — at your pace.</p>
-            </div>
+          <SuryaIcon />
+          <div className="min-w-0">
+            <h1 className="truncate font-display text-[18px] font-extrabold leading-tight text-primary-foreground">Yoga &amp; Pranayam</h1>
+            <p className="text-[11.5px] text-primary-foreground/80">Move, breathe, heal — at your pace.</p>
           </div>
         </div>
       </div>
@@ -79,7 +86,7 @@ function YogaSection() {
 
         {/* main tabs */}
         <div className="sticky top-0 z-30 -mx-5 mt-3 flex gap-1.5 overflow-x-auto bg-background/85 px-5 py-2.5 backdrop-blur-xl [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {([["goal", "🎯 Select a Goal & Practice"], ["know", "🧘 Select Poses & Practice"], ["plans", "📋 My Plans"], ["learn", "🎓 Learn"]] as const).map(([id, label]) => (
+          {([["goal", "🎯 Select a Goal & Practice"], ["styles", "🧘‍♀️ Yoga Styles"], ["know", "🧘 Select Poses & Practice"], ["plans", "📋 My Plans"], ["learn", "🎓 Learn"]] as const).map(([id, label]) => (
             <button key={id} onClick={() => setTab(id)}
               className={`shrink-0 rounded-full px-3.5 py-1.5 text-[12.5px] font-semibold transition ${tab === id ? "bg-primary text-primary-foreground shadow-[var(--shadow-glow)]" : "bg-card text-foreground/70 ring-1 ring-border/60"}`}>
               {label}
@@ -87,6 +94,7 @@ function YogaSection() {
           ))}
         </div>
 
+        {tab === "styles" && <StylesTab onOpenStyle={setStyleId} onOpenWeek={setWeek} />}
         {tab === "know" && <KnowTab onPractise={(title, plan) => setSession({ title, plan, feedback: true })} />}
         {tab === "goal" && <GoalTab onPick={setItem} />}
         {tab === "plans" && <PlansTab onPlay={(p) => setSession({ title: p.name, plan: p, feedback: p.withFeedback })} />}
@@ -105,6 +113,19 @@ function YogaSection() {
         <SessionPlayer title={session.title} plan={session.plan} feedback={session.feedback} onClose={() => setSession(null)} />
       )}
 
+      {styleId && (
+        <StyleView styleId={styleId} onClose={() => setStyleId(null)} onOpenProgram={setProg} onOpenWeek={setWeek} />
+      )}
+      {week && (
+        <WeeklyPlanView plan={week} onClose={() => setWeek(null)} onOpenProgram={setProg} />
+      )}
+      {prog && (
+        <StyleProgramDetail prog={prog} onClose={() => setProg(null)} onStart={() => { setStylePlay(prog); setProg(null); }} />
+      )}
+      {stylePlay && (
+        <StylePlayer prog={stylePlay} onClose={() => setStylePlay(null)} />
+      )}
+
       <BottomNav />
     </div>
   );
@@ -114,7 +135,7 @@ function YogaSection() {
 
 function SuryaIcon() {
   return (
-    <span className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl shadow-inner" style={{ background: "linear-gradient(180deg,#fde68a 0%,#fb923c 55%,#c2410c 100%)" }}>
+    <span className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl shadow-inner" style={{ background: "linear-gradient(180deg,#fde68a 0%,#fb923c 55%,#c2410c 100%)" }}>
       <svg viewBox="0 0 64 64" className="h-full w-full">
         {/* setting sun disc */}
         <circle cx="32" cy="30" r="14" fill="#fffbeb" opacity="0.55" />
@@ -668,6 +689,288 @@ function SessionPlayer({ title, plan, feedback, onClose }: { title: string; plan
         <p className="text-[13px] italic opacity-70">{pose.sanskrit}</p>
         <p className="mt-4 max-w-xs text-[14px] leading-relaxed opacity-90">{pose.steps[0]}</p>
         <p className="mt-6 font-display text-5xl font-bold tabular-nums">{Math.floor(secs / 60)}:{String(secs % 60).padStart(2, "0")}</p>
+      </div>
+
+      <div className="flex items-center justify-center gap-6 px-5">
+        <button onClick={prev} disabled={idx === 0} className="flex h-12 w-12 items-center justify-center rounded-full bg-white/10 disabled:opacity-30"><ChevronLeft size={22} /></button>
+        <button onClick={() => setPlaying(!playing)} className="flex h-16 w-16 items-center justify-center rounded-full bg-teal-500 shadow-lg">{playing ? <Pause size={26} /> : <Play size={26} />}</button>
+        <button onClick={next} className="flex h-12 w-12 items-center justify-center rounded-full bg-white/10"><ChevronRight size={22} /></button>
+      </div>
+      <button onClick={finish} className="mx-auto mb-[max(1.5rem,env(safe-area-inset-bottom))] mt-4 text-[12px] font-semibold opacity-70">Finish session</button>
+    </div>
+  );
+}
+
+/* ================= Yoga Styles ================= */
+
+function levelIdx(l: StyleProgram["level"]) { return l === "beginner" ? 0 : l === "medium" ? 1 : 2; }
+function fmtS(sec: number) { return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, "0")}`; }
+
+function StylesTab({ onOpenStyle, onOpenWeek }: { onOpenStyle: (s: StyleId) => void; onOpenWeek: (w: WeeklyPlan) => void }) {
+  return (
+    <div className="pb-6">
+      <section className="pt-4">
+        <h2 className="px-1 font-display text-[15px] font-bold text-foreground">🗓️ Weekly Journeys</h2>
+        <p className="mt-0.5 px-1 text-[11.5px] leading-snug text-muted-foreground">Follow a guided week — one session a day.</p>
+        <div className="mt-2 space-y-2">
+          {BALANCED_WEEKS.map((w) => <WeekRow key={w.id} w={w} onOpen={onOpenWeek} />)}
+        </div>
+      </section>
+
+      <section className="pt-5">
+        <h2 className="px-1 font-display text-[15px] font-bold text-foreground">Yoga Styles</h2>
+        <p className="mt-0.5 px-1 text-[11.5px] leading-snug text-muted-foreground">Each style has beginner → advanced sessions and its own 7-day plan.</p>
+        <div className="mt-2.5 grid grid-cols-4 gap-2">
+          {STYLES.map((s) => (
+            <button key={s.id} onClick={() => onOpenStyle(s.id)}
+              className="flex flex-col items-center gap-1.5 rounded-2xl bg-card p-2.5 text-center ring-1 ring-border/60 active:scale-[0.97]">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/50 text-xl">{s.emoji}</span>
+              <span className="text-[9.5px] font-medium leading-tight text-foreground/85">{s.label}</span>
+            </button>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function WeekRow({ w, onOpen }: { w: WeeklyPlan; onOpen: (w: WeeklyPlan) => void }) {
+  const done = completedDays(w.id).length;
+  return (
+    <button onClick={() => onOpen(w)} className="flex w-full items-center gap-3 rounded-2xl bg-card p-3 text-left ring-1 ring-border/60 active:scale-[0.99]">
+      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-accent/50 text-xl">{w.emoji}</span>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-[13.5px] font-semibold text-foreground">{w.name}</p>
+        <p className="truncate text-[11.5px] text-muted-foreground">{w.blurb}</p>
+        <p className="text-[10.5px] font-semibold text-primary">7 days · {done}/7 done</p>
+      </div>
+      <ChevronRight size={17} className="shrink-0 text-muted-foreground" />
+    </button>
+  );
+}
+
+function StyleRow({ prog, kg, onOpen }: { prog: StyleProgram; kg: number; onOpen: (p: StyleProgram) => void }) {
+  const st = styleOf(prog.styleId);
+  return (
+    <button onClick={() => onOpen(prog)} className="flex w-full items-center gap-3 rounded-2xl bg-card p-3 text-left ring-1 ring-border/60 active:scale-[0.99]">
+      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-accent/50 text-xl">{st.emoji}</span>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-[13.5px] font-semibold text-foreground">{prog.title}</p>
+        <p className="text-[11px] text-muted-foreground">{st.levelLabels[levelIdx(prog.level)]} · {programMinutes(prog)} min · 🔥 {styleKcal(prog, kg)} kcal</p>
+      </div>
+      <ChevronRight size={16} className="shrink-0 text-muted-foreground" />
+    </button>
+  );
+}
+
+function StyleView({ styleId, onClose, onOpenProgram, onOpenWeek }: {
+  styleId: StyleId; onClose: () => void; onOpenProgram: (p: StyleProgram) => void; onOpenWeek: (w: WeeklyPlan) => void;
+}) {
+  const st = styleOf(styleId);
+  const progs = programsOf(styleId);
+  const weeks = weeklyPlansFor(styleId);
+  const kg = bodyWeight();
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col" style={{ background: "var(--gradient-hero)" }}>
+      <div className="px-5 pb-3 pt-[max(1rem,env(safe-area-inset-top))]" style={{ background: "var(--gradient-night)" }}>
+        <div className="flex items-center gap-3">
+          <button onClick={onClose} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/15 text-primary-foreground"><ArrowLeft size={16} /></button>
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/15 text-2xl">{st.emoji}</span>
+          <div className="min-w-0">
+            <h2 className="truncate font-display text-[19px] font-bold leading-tight text-primary-foreground">{st.label}</h2>
+            <p className="truncate text-[11.5px] text-primary-foreground/80">{st.blurb}</p>
+          </div>
+        </div>
+      </div>
+      <div className="flex-1 overflow-y-auto px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-4">
+        <p className="px-1 text-[11.5px] font-bold uppercase tracking-wide text-foreground/60">Sessions</p>
+        <div className="mt-1.5 space-y-2">
+          {progs.map((p) => <StyleRow key={p.id} prog={p} kg={kg} onOpen={onOpenProgram} />)}
+        </div>
+        {weeks.length > 0 && (
+          <>
+            <p className="mt-5 px-1 text-[11.5px] font-bold uppercase tracking-wide text-foreground/60">Weekly plan</p>
+            <div className="mt-1.5 space-y-2">
+              {weeks.map((w) => <WeekRow key={w.id} w={w} onOpen={onOpenWeek} />)}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function StyleProgramDetail({ prog, onClose, onStart }: { prog: StyleProgram; onClose: () => void; onStart: () => void }) {
+  const st = styleOf(prog.styleId);
+  const kg = bodyWeight();
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col" style={{ background: "var(--gradient-hero)" }}>
+      <div className="relative overflow-hidden px-5 pb-5 pt-[max(1rem,env(safe-area-inset-top))]" style={{ background: "var(--gradient-night)" }}>
+        <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-amber-400/20 blur-3xl" />
+        <div className="relative flex items-center justify-between">
+          <button onClick={onClose} className="flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-primary-foreground"><ArrowLeft size={16} /></button>
+          <button onClick={onStart} className="flex items-center gap-1.5 rounded-full bg-white px-5 py-2 text-[13px] font-bold text-amber-700 shadow"><Play size={14} className="fill-current" /> Start</button>
+        </div>
+        <div className="relative mt-4 flex items-center gap-3">
+          <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/15 text-3xl">{st.emoji}</span>
+          <div className="min-w-0">
+            <h2 className="font-display text-[20px] font-extrabold leading-tight text-primary-foreground">{prog.title}</h2>
+            <p className="mt-0.5 text-[12px] text-primary-foreground/80">{st.levelLabels[levelIdx(prog.level)]} · {programMinutes(prog)} min · {prog.poses.length} poses · 🔥 {styleKcal(prog, kg)} kcal</p>
+          </div>
+        </div>
+      </div>
+      <div className="flex-1 overflow-y-auto px-5 pb-8 pt-4">
+        <p className="rounded-2xl bg-card p-3 text-[12px] leading-relaxed text-foreground/80 ring-1 ring-border/60">{prog.benefit}</p>
+        {prog.caution && <p className="mt-2 rounded-2xl bg-amber-100 p-3 text-[11.5px] leading-relaxed text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">⚠️ {prog.caution}</p>}
+        <p className="mt-4 px-1 text-[11.5px] font-bold uppercase tracking-wide text-muted-foreground">The flow</p>
+        <div className="mt-1.5 space-y-1.5">
+          {prog.poses.map((ps, i) => (
+            <button key={i} onClick={onStart} className="flex w-full items-center gap-3 rounded-2xl bg-card p-2.5 text-left ring-1 ring-border/60 active:scale-[0.99]">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent/50 text-[11px] font-bold text-foreground/70">{i + 1}</span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[13px] font-semibold text-foreground">{ps.name}</p>
+                {ps.cue && <p className="truncate text-[11px] text-muted-foreground">{ps.cue}</p>}
+              </div>
+              <span className="shrink-0 text-[11.5px] font-semibold text-muted-foreground">{fmtS(ps.sec)}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function WeeklyPlanView({ plan, onClose, onOpenProgram }: { plan: WeeklyPlan; onClose: () => void; onOpenProgram: (p: StyleProgram) => void }) {
+  const [done, setDone] = useState<number[]>([]);
+  useEffect(() => { setDone(completedDays(plan.id)); }, [plan.id]);
+  const toggle = (day: number) => setDone(setDayDone(plan.id, day, !done.includes(day)));
+  const kg = bodyWeight();
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col" style={{ background: "var(--gradient-hero)" }}>
+      <div className="px-5 pb-4 pt-[max(1rem,env(safe-area-inset-top))]" style={{ background: "var(--gradient-night)" }}>
+        <div className="flex items-center gap-3">
+          <button onClick={onClose} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/15 text-primary-foreground"><ArrowLeft size={16} /></button>
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/15 text-2xl">{plan.emoji}</span>
+          <div className="min-w-0">
+            <h2 className="truncate font-display text-[18px] font-bold leading-tight text-primary-foreground">{plan.name}</h2>
+            <p className="truncate text-[11.5px] text-primary-foreground/80">{done.length}/7 days done</p>
+          </div>
+        </div>
+      </div>
+      <div className="flex-1 overflow-y-auto px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-4">
+        <p className="mb-3 px-1 text-[12px] text-muted-foreground">{plan.blurb}</p>
+        <div className="space-y-2">
+          {plan.days.map((d) => {
+            const prog = d.programId ? getStyleProgram(d.programId) : undefined;
+            const isDone = done.includes(d.day);
+            return (
+              <div key={d.day} className="flex items-center gap-3 rounded-2xl bg-card p-3 ring-1 ring-border/60">
+                <span className={`flex h-9 w-9 shrink-0 flex-col items-center justify-center rounded-xl text-[9px] font-bold leading-none ${isDone ? "bg-primary text-primary-foreground" : "bg-accent/50 text-foreground/70"}`}>
+                  <span className="text-[8px] opacity-70">DAY</span>{d.day}
+                </span>
+                <button onClick={() => prog && onOpenProgram(prog)} disabled={!prog} className="min-w-0 flex-1 text-left disabled:cursor-default">
+                  <p className="truncate text-[13px] font-semibold text-foreground">{prog ? prog.title : "Rest day"}</p>
+                  <p className="truncate text-[11px] text-muted-foreground">{d.note}{prog ? ` · ${programMinutes(prog)} min · 🔥 ${styleKcal(prog, kg)} kcal` : ""}</p>
+                </button>
+                {prog && <button onClick={() => onOpenProgram(prog)} className="shrink-0 rounded-full bg-primary/10 p-2 text-primary"><Play size={13} /></button>}
+                <button onClick={() => toggle(d.day)} className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${isDone ? "bg-emerald-500 text-white" : "bg-secondary text-muted-foreground ring-1 ring-border/60"}`}>
+                  <Check size={13} strokeWidth={3} />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StylePlayer({ prog, onClose }: { prog: StyleProgram; onClose: () => void }) {
+  const st = styleOf(prog.styleId);
+  const poses = prog.poses;
+  const [idx, setIdx] = useState(0);
+  const cur = poses[idx];
+  const [secs, setSecs] = useState(cur.sec);
+  const [playing, setPlaying] = useState(true);
+  const [voice, setVoice] = useState(true);
+  const [done, setDone] = useState(false);
+  const startRef = useRef(Date.now());
+
+  useEffect(() => { setSecs(poses[idx].sec); }, [idx, poses]);
+
+  useEffect(() => {
+    if (!playing || done) return;
+    if (secs <= 0) { next(); return; }
+    const t = setTimeout(() => setSecs((s) => s - 1), 1000);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [secs, playing, done]);
+
+  useEffect(() => {
+    if (done) return;
+    if (voice && cur) speak(`${cur.name}. ${cur.cue ?? ""}`);
+    else stopSpeaking();
+    return () => stopSpeaking();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [idx, voice, done]);
+
+  function next() { stopSpeaking(); if (idx >= poses.length - 1) { finish(); return; } setIdx((i) => i + 1); }
+  function prev() { stopSpeaking(); if (idx === 0) return; setIdx((i) => i - 1); }
+  function finish() { stopSpeaking(); setPlaying(false); setDone(true); }
+
+  const totalSec = poses.reduce((a, p) => a + p.sec, 0);
+  const doneSec = poses.slice(0, idx).reduce((a, p) => a + p.sec, 0) + (cur.sec - secs);
+  const minutes = Math.max(1, Math.round((Date.now() - startRef.current) / 60000));
+  const kcal = Math.max(1, Math.round(styleKcal(prog, bodyWeight()) * Math.min(1, doneSec / totalSec || 1)));
+
+  const punch = () => {
+    addCalEntry({ kind: "out", label: `Yoga · ${prog.title} (${minutes}m)`, kcal });
+    addYogaHistory({ date: new Date().toISOString().slice(0, 10), label: prog.title, minutes, kcal });
+    toast.success(`${kcal} kcal added to your cal-out 🔥`);
+    onClose();
+  };
+  const skipPunch = () => { addYogaHistory({ date: new Date().toISOString().slice(0, 10), label: prog.title, minutes, kcal }); onClose(); };
+
+  if (done) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-6 backdrop-blur-sm">
+        <div className="w-full max-w-sm rounded-[32px] bg-card p-6 text-center shadow-xl animate-pop-in">
+          <span className="text-5xl">🎉</span>
+          <h3 className="mt-3 font-display text-xl font-bold text-foreground">Beautiful practice!</h3>
+          <p className="mt-1 text-[13px] text-muted-foreground">{prog.title} · {minutes} min</p>
+          <div className="mt-4 rounded-2xl bg-accent/40 p-4 ring-1 ring-border/60">
+            <p className="text-[13px] font-semibold text-foreground">You burnt about <b className="text-primary">{kcal} kcal</b> 🔥</p>
+            <p className="mt-0.5 text-[11.5px] text-muted-foreground">Add it to today's cal-out on your dashboard?</p>
+          </div>
+          <button onClick={punch} className="mt-3 w-full rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground">➕ Punch {kcal} kcal to cal-out</button>
+          <button onClick={skipPunch} className="mt-2 w-full rounded-2xl bg-secondary px-4 py-2.5 text-[13px] font-semibold text-foreground">Just save the session</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col bg-[#0f1419] text-white">
+      <div className="flex items-center justify-between px-5 pt-[max(1rem,env(safe-area-inset-top))]">
+        <button onClick={() => { stopSpeaking(); onClose(); }} className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10"><X size={16} /></button>
+        <p className="text-[12px] font-semibold opacity-80">{idx + 1} / {poses.length} · {prog.title}</p>
+        <button onClick={() => setVoice(!voice)} className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10">{voice ? <Volume2 size={16} /> : <VolumeX size={16} />}</button>
+      </div>
+
+      <div className="mt-3 flex gap-1 px-5">
+        {poses.map((_, i) => (
+          <div key={i} className="h-1 flex-1 overflow-hidden rounded-full bg-white/15">
+            <div className="h-full bg-teal-400 transition-all" style={{ width: i < idx ? "100%" : i === idx ? `${100 - (secs / (cur.sec || 1)) * 100}%` : "0%" }} />
+          </div>
+        ))}
+      </div>
+
+      <div className="flex flex-1 flex-col items-center justify-center px-8 text-center">
+        <span className="animate-breathe text-[88px] leading-none">{st.emoji}</span>
+        <h2 className="mt-5 font-display text-2xl font-bold">{cur.name}</h2>
+        {cur.cue && <p className="mt-3 max-w-xs text-[13.5px] leading-relaxed opacity-85">{cur.cue}</p>}
+        <p className="mt-6 font-display text-5xl font-bold tabular-nums">{fmtS(secs)}</p>
       </div>
 
       <div className="flex items-center justify-center gap-6 px-5">

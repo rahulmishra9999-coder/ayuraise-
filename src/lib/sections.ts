@@ -51,8 +51,8 @@ export const SECTIONS: Section[] = [
   },
   {
     slug: "exercise",
-    title: "Exercise & Vyayam",
-    short: "Strength",
+    title: "Exercise / Workout",
+    short: "Move",
     blurb: "Traditional vyayam, mobility and strength drills paired with modern functional training — strong body, calm mind.",
     icon: Dumbbell,
     gradient: "var(--gradient-clay)",

@@ -22,6 +22,7 @@ export const GOAL_GROUPS: LibCategory[] = [
     title: "Quick Start",
     items: [
       { id: "beginner", label: "Beginner Friendly", emoji: "🌱", goal: "general-wellness", durations: [10, 20, 30, 40] },
+      { id: "advanced", label: "Advanced", emoji: "🔥", goal: "strength", durations: [10, 20, 30, 40] },
       { id: "only-pranayam", label: "Only Pranayam", emoji: "🌬️", goal: "stress-relief", durations: [10, 20, 30, 40] },
       { id: "full-body", label: "Full Body Yoga", emoji: "🧘", goal: "general-wellness", durations: [10, 20, 30, 40, 50, 60] },
       { id: "morning-wake", label: "2-Min Morning Wake-up", emoji: "🌅", goal: "general-wellness", durations: [2, 5, 10] },

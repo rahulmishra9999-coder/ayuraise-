@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft, Play, Pause, X, ChevronRight, ChevronLeft, Heart, Trash2, History,
-  Check, Plus, Minus, ListOrdered, Save, Music,
+  Check, Plus, Minus, ListOrdered, Save, Music, Dumbbell,
 } from "lucide-react";
 import { toast } from "sonner";
 import { BottomNav } from "@/components/BottomNav";
@@ -13,7 +13,13 @@ import { loadProfile, patchPlan, estimateBurn } from "@/lib/weight-loss";
 import { addCalEntry } from "@/lib/trackers";
 import { WORKOUT_LEARN } from "@/lib/exercise-learn";
 import {
-  GROUPS, bucketsInGroup, bucketOf, sessionsIn, getSession, getExercise,
+  PROG_GROUPS, headersInGroup, PROG_LEVELS, PROG_TARGETS, PROG_EQUIP, EMPTY_PROG_FILTERS,
+  matchItem, progLevelLabel, progFocusLabel, progEquipLabel,
+  type ProgramHeader, type ProgramItem, type ProgFilters, type ProgLevel, type ProgFocus,
+  type ProgEquip, type ProgGroup,
+} from "@/lib/programs";
+import {
+  GROUPS, bucketsInGroup, bucketOf, sessionsIn, getSession, getExercise, EXERCISES,
   buildBlocks, stepsOf, exerciseCount, stepKcal, sessionKcal, kcalFor,
   applyFilters, EMPTY_FILTERS, LEVELS, EQUIP_FILTERS, EQUIP_ALL, INTENSITIES,
   FOCUS_LIST, focusLabel, levelLabel, equipLabel, CLASSICS, buildExercisePlan,
@@ -22,7 +28,7 @@ import {
   loadFavs, toggleFav, loadBundles, saveBundle, deleteBundle,
   loadMyExPlans, saveMyExPlan, deleteMyExPlan, loadExHistory, addExHistory, addFeedback,
   type Bucket, type Session, type Step, type Exercise, type ExFilters, type Level,
-  type Intensity, type Equip, type Focus, type Bundle, type BundleItem,
+  type Intensity, type Equip, type Focus, type BodyPart, type Bundle, type BundleItem,
   type SavedExPlan,
 } from "@/lib/exercise";
 
@@ -47,6 +53,8 @@ function WorkoutsPage() {
   const [tab, setTab] = useState<Tab>("practice");
   const [bucket, setBucket] = useState<Bucket | null>(null);
   const [detail, setDetail] = useState<Session | null>(null);
+  const [programHeader, setProgramHeader] = useState<ProgramHeader | null>(null);
+  const [programItem, setProgramItem] = useState<ProgramItem | null>(null);
   const [player, setPlayer] = useState<PlaySource | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [favs, setFavs] = useState<string[]>([]);
@@ -58,18 +66,16 @@ function WorkoutsPage() {
 
   return (
     <div className="min-h-svh pb-28" style={{ background: "var(--gradient-hero)" }}>
-      <div className="relative overflow-hidden px-5 pb-6 pt-[max(1rem,env(safe-area-inset-top))]" style={{ background: "var(--gradient-night)" }}>
-        <div className="absolute -right-16 -top-16 h-48 w-48 rounded-full bg-rose-400/20 blur-3xl" />
-        <div className="relative">
-          <Link to="/home" className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-primary-foreground">
-            <ArrowLeft size={16} />
+      <div className="relative overflow-hidden px-4 pb-4 pt-[max(0.85rem,env(safe-area-inset-top))]" style={{ background: "var(--gradient-night)" }}>
+        <div className="absolute -right-16 -top-16 h-40 w-40 rounded-full bg-rose-400/20 blur-3xl" />
+        <div className="relative flex items-center gap-2.5">
+          <Link to="/home" className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/15 text-primary-foreground">
+            <ArrowLeft size={15} />
           </Link>
-          <div className="mt-4 flex items-center gap-3">
-            <DumbbellIcon />
-            <div>
-              <h1 className="font-display text-[24px] font-extrabold leading-tight text-primary-foreground">Workouts</h1>
-              <p className="text-[13px] text-primary-foreground/80">Desi kasrat to gym — move your way.</p>
-            </div>
+          <DumbbellIcon />
+          <div className="min-w-0">
+            <h1 className="truncate font-display text-[18px] font-extrabold leading-tight text-primary-foreground">Exercise / Workout</h1>
+            <p className="text-[11.5px] text-primary-foreground/80">Desi kasrat to gym — move your way.</p>
           </div>
         </div>
       </div>
@@ -97,7 +103,7 @@ function WorkoutsPage() {
           ))}
         </div>
 
-        {tab === "practice" && <PracticeTab onPick={setBucket} />}
+        {tab === "practice" && <PracticeTab onPick={setBucket} onOpenHeader={setProgramHeader} />}
         {tab === "classics" && (
           <ClassicsTab onPreviewPlay={previewPlay}
             onPlayBundle={(name, items) => setPlayer({ title: name, steps: bundleSteps(items), startIndex: 0 })} />
@@ -127,6 +133,13 @@ function WorkoutsPage() {
           onClose={() => setDetail(null)}
           onStart={(steps, i) => setPlayer({ title: detail.title, steps, startIndex: i })} />
       )}
+      {programHeader && (
+        <ProgramHeaderView header={programHeader} onClose={() => setProgramHeader(null)} onOpen={setProgramItem} />
+      )}
+      {programItem && (
+        <ProgramDetail item={programItem} onClose={() => setProgramItem(null)}
+          onStart={(steps, i) => setPlayer({ title: programItem.title, steps, startIndex: i })} />
+      )}
       {player && <Player src={player} onClose={() => setPlayer(null)} />}
       {createOpen && (
         <CreatePlanSheet onClose={() => setCreateOpen(false)}
@@ -143,25 +156,188 @@ function WorkoutsPage() {
 
 function DumbbellIcon() {
   return (
-    <span className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl shadow-inner" style={{ background: "linear-gradient(160deg,#fda4af 0%,#f43f5e 55%,#9f1239 100%)" }}>
-      <svg viewBox="0 0 64 64" className="h-full w-full">
-        <g stroke="#7f1d1d" strokeLinecap="round">
-          <line x1="20" y1="32" x2="44" y2="32" strokeWidth="4" />
-          <line x1="15" y1="23" x2="15" y2="41" strokeWidth="7" />
-          <line x1="49" y1="23" x2="49" y2="41" strokeWidth="7" />
-          <line x1="9" y1="27" x2="9" y2="37" strokeWidth="5" />
-          <line x1="55" y1="27" x2="55" y2="37" strokeWidth="5" />
-        </g>
-      </svg>
+    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white shadow-sm" style={{ background: "linear-gradient(160deg,#fb7185,#e11d48)" }}>
+      <Dumbbell size={18} strokeWidth={2.2} />
     </span>
   );
 }
 
-/* ================= Practice — Styles / Goal / Programs stacked ================= */
+/* ================= Programs (accordion library) ================= */
 
-function PracticeTab({ onPick }: { onPick: (b: Bucket) => void }) {
+const FOCUS_PARTS_P: Record<ProgFocus, BodyPart[]> = {
+  "full-body": ["full-body"],
+  "upper-body": ["chest", "arms", "shoulders", "back"],
+  legs: ["legs", "butt"],
+  abs: ["abs"],
+  endurance: ["full-body", "legs"],
+};
+const FOCUS_EMOJI_P: Record<ProgFocus, string> = { "full-body": "💪", "upper-body": "💪", legs: "🦵", abs: "🔥", endurance: "🏃" };
+
+function programSteps(item: ProgramItem): Step[] {
+  let names = item.exercises;
+  if (!names.length) {
+    const parts = FOCUS_PARTS_P[item.focus];
+    names = EXERCISES.filter((x) => x.kind === "main" && !x.tag && x.parts.some((p) => parts.includes(p))).slice(0, 8).map((x) => x.name);
+    if (!names.length) names = ["Bodyweight Squat", "Push-ups", "Plank", "Lunges", "Mountain Climbers", "Glute Bridge"];
+  }
+  const count = names.length || 1;
+  const even = Math.max(25, Math.min(75, Math.round((item.minutes * 60) / count)));
+  const emoji = FOCUS_EMOJI_P[item.focus] ?? "💪";
+  return names.map((n, i) => {
+    const seg = n.match(/^(.*?)\s*[–-]\s*(\d+)\s*min\b/i);
+    const name = seg ? seg[1].trim() : n;
+    const sec = seg ? parseInt(seg[2], 10) * 60 : even;
+    return { exId: `prog:${item.id}:${i}`, name, emoji, sec, kind: "main" as const, met: item.met };
+  });
+}
+
+function ProgFilterRow({ group, filters, setFilters }: { group: ProgGroup; filters: ProgFilters; setFilters: (f: ProgFilters) => void }) {
+  const chip = (on: boolean) => `shrink-0 rounded-full px-3.5 py-1.5 text-[12px] font-semibold transition ${on ? "bg-primary text-primary-foreground" : "bg-card text-foreground/70 ring-1 ring-border/60"}`;
+  const togL = (l: ProgLevel) => setFilters({ ...filters, levels: filters.levels.includes(l) ? filters.levels.filter((x) => x !== l) : [...filters.levels, l] });
+  const togT = (t: ProgFocus) => setFilters({ ...filters, targets: filters.targets.includes(t) ? filters.targets.filter((x) => x !== t) : [...filters.targets, t] });
+  const togE = (e: ProgEquip) => setFilters({ ...filters, equips: filters.equips.includes(e) ? filters.equips.filter((x) => x !== e) : [...filters.equips, e] });
+  return (
+    <div className="-mx-5 flex gap-1.5 overflow-x-auto px-5 py-1.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      {PROG_LEVELS.map((l) => <button key={l.id} onClick={() => togL(l.id)} className={chip(filters.levels.includes(l.id))}>{l.label}</button>)}
+      {group === "target" ? (
+        PROG_EQUIP.map((e) => <button key={e.id} onClick={() => togE(e.id)} className={chip(filters.equips.includes(e.id))}>{e.label}</button>)
+      ) : (
+        <>
+          <button onClick={() => togE("none")} className={chip(filters.equips.includes("none"))}>No equipment</button>
+          {PROG_TARGETS.map((t) => <button key={t.id} onClick={() => togT(t.id)} className={chip(filters.targets.includes(t.id))}>{t.label}</button>)}
+        </>
+      )}
+    </div>
+  );
+}
+
+function ProgCard({ it, onOpen }: { it: ProgramItem; onOpen: (i: ProgramItem) => void }) {
+  const meta = it.target || progFocusLabel(it.focus);
+  const eq = it.equip !== "none" ? ` · ${progEquipLabel(it.equip)}` : "";
+  const sub = `${it.minutes} min · ${progLevelLabel(it.level)} · ${meta}${eq}`;
+  return <ListRow seed={it.id} emoji={FOCUS_EMOJI_P[it.focus]} title={it.title} subtitle={sub} onClick={() => onOpen(it)} />;
+}
+
+function ProgramsSection({ onOpenHeader }: { onOpenHeader: (h: ProgramHeader) => void }) {
+  return (
+    <div className="pb-1">
+      {PROG_GROUPS.map((g) => (
+        <section key={g.id} className="pt-4">
+          <h2 className="px-1 font-display text-[16px] font-bold text-foreground">{g.label}</h2>
+          <p className="mt-0.5 px-1 text-[11.5px] leading-snug text-muted-foreground">{g.sub}</p>
+          <div className="mt-2.5 grid grid-cols-4 gap-2">
+            {headersInGroup(g.id).map((h) => (
+              <button key={h.id} onClick={() => onOpenHeader(h)}
+                className="flex flex-col items-center gap-1.5 rounded-2xl bg-card p-2.5 text-center ring-1 ring-border/60 active:scale-[0.97]">
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/50 text-xl">{h.emoji}</span>
+                <span className="text-[9.5px] font-medium leading-tight text-foreground/85">{h.label}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+      ))}
+    </div>
+  );
+}
+
+/* ================= Program header view (opens "inside") ================= */
+
+function ProgramHeaderView({ header, onClose, onOpen }: {
+  header: ProgramHeader; onClose: () => void; onOpen: (i: ProgramItem) => void;
+}) {
+  const [filters, setFilters] = useState<ProgFilters>(EMPTY_PROG_FILTERS);
+  const subs = useMemo(() =>
+    header.subs
+      .map((s) => ({ ...s, items: s.items.filter((it) => matchItem(it, filters)) }))
+      .filter((s) => s.items.length), [header, filters]);
+  const total = subs.reduce((a, s) => a + s.items.length, 0);
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col" style={{ background: "var(--gradient-hero)" }}>
+      <div className="px-5 pb-3 pt-[max(1rem,env(safe-area-inset-top))]" style={{ background: "var(--gradient-night)" }}>
+        <div className="flex items-center gap-3">
+          <button onClick={onClose} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/15 text-primary-foreground"><ArrowLeft size={16} /></button>
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/15 text-2xl">{header.emoji}</span>
+          <div className="min-w-0">
+            <h2 className="truncate font-display text-[19px] font-bold leading-tight text-primary-foreground">{header.label}</h2>
+            <p className="truncate text-[11.5px] text-primary-foreground/80">{total} programs</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="border-b border-border/60 bg-background/85 backdrop-blur-xl">
+        <ProgFilterRow group={header.group} filters={filters} setFilters={setFilters} />
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-3">
+        {subs.length === 0 ? (
+          <div className="mt-2 rounded-3xl bg-card p-6 text-center ring-1 ring-border/60">
+            <p className="text-[13.5px] font-semibold text-foreground">No programs match</p>
+            <p className="mt-1 text-[12px] text-muted-foreground">Try removing a filter or two.</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {subs.map((s) => (
+              <section key={s.label}>
+                <p className="px-1 text-[11.5px] font-bold uppercase tracking-wide text-foreground/60">{s.emoji} {s.label}</p>
+                <div className="mt-0.5 divide-y divide-border/50">
+                  {s.items.map((it) => <ProgCard key={it.id} it={it} onOpen={onOpen} />)}
+                </div>
+              </section>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ProgramDetail({ item, onClose, onStart }: {
+  item: ProgramItem; onClose: () => void; onStart: (steps: Step[], i: number) => void;
+}) {
+  const kg = bodyWeight();
+  const steps = useMemo(() => programSteps(item), [item]);
+  const total = steps.reduce((a, x) => a + x.sec, 0);
+  const kcal = steps.reduce((a, x) => a + stepKcal(x, kg), 0);
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col" style={{ background: "var(--gradient-hero)" }}>
+      <div className="relative overflow-hidden px-5 pb-5 pt-[max(1rem,env(safe-area-inset-top))]" style={{ background: "var(--gradient-night)" }}>
+        <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-rose-400/20 blur-3xl" />
+        <div className="relative flex items-center justify-between">
+          <button onClick={onClose} className="flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-primary-foreground"><ArrowLeft size={16} /></button>
+          <button onClick={() => onStart(steps, 0)} className="flex items-center gap-1.5 rounded-full bg-white px-5 py-2 text-[13px] font-bold text-rose-600 shadow"><Play size={14} className="fill-current" /> Start</button>
+        </div>
+        <div className="relative mt-4">
+          <h2 className="font-display text-[21px] font-extrabold leading-tight text-primary-foreground">{item.title}</h2>
+          <p className="mt-0.5 text-[12px] text-primary-foreground/80">{toMin(total)} min · {progLevelLabel(item.level)} · {steps.length} exercises · 🔥 {kcal} kcal</p>
+        </div>
+      </div>
+      <div className="flex-1 overflow-y-auto px-5 pb-8 pt-4">
+        <p className="mb-2 px-1 text-[11px] text-muted-foreground">Tap any exercise to start from there.</p>
+        <div className="space-y-1.5">
+          {steps.map((st, i) => (
+            <button key={i} onClick={() => onStart(steps, i)} className="flex w-full items-center gap-3 rounded-2xl bg-card p-2.5 text-left ring-1 ring-border/60 active:scale-[0.99]">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent/50 text-[11px] font-bold text-foreground/70">{i + 1}</span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[13px] font-semibold text-foreground">{st.name}</p>
+                <p className="text-[11px] text-muted-foreground">{fmt(st.sec)} · 🔥 {stepKcal(st, kg)} kcal</p>
+              </div>
+              <Play size={14} className="shrink-0 text-primary" />
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ================= Practice — Programs + Styles / Goal / Programs stacked ================= */
+
+function PracticeTab({ onPick, onOpenHeader }: { onPick: (b: Bucket) => void; onOpenHeader: (h: ProgramHeader) => void }) {
   return (
     <div className="pb-2">
+      <ProgramsSection onOpenHeader={onOpenHeader} />
       {GROUPS.map((gr) => (
         <section key={gr.id} className="pt-5">
           <h2 className="px-1 font-display text-[16px] font-bold text-foreground">{gr.label}</h2>
@@ -246,8 +422,25 @@ function BucketView({ bucket, favs, onFav, onClose, onOpenSession }: {
             <p className="text-[13.5px] font-semibold text-foreground">No sessions match</p>
             <p className="mt-1 text-[12px] text-muted-foreground">Try removing a filter or two.</p>
           </div>
+        ) : bucket.curated && bucket.groups ? (
+          <div className="mt-1 space-y-4">
+            {bucket.groups.map((g) => {
+              const gs = sessions.filter((s) => s.group === g);
+              if (!gs.length) return null;
+              return (
+                <section key={g}>
+                  <h3 className="px-1 font-display text-[14px] font-bold text-foreground">{g}</h3>
+                  <div className="mt-0.5 divide-y divide-border/50">
+                    {gs.map((s) => (
+                      <SessionCard key={s.id} s={s} kg={kg} fav={favs.includes(s.id)} onFav={() => onFav(s.id)} onClick={() => onOpenSession(s)} />
+                    ))}
+                  </div>
+                </section>
+              );
+            })}
+          </div>
         ) : (
-          <div className="mt-2 grid grid-cols-2 gap-2.5">
+          <div className="mt-1 divide-y divide-border/50">
             {sessions.map((s) => (
               <SessionCard key={s.id} s={s} kg={kg} fav={favs.includes(s.id)} onFav={() => onFav(s.id)} onClick={() => onOpenSession(s)} />
             ))}
@@ -388,23 +581,48 @@ function BundleSection({ pool, defaultName, onPreviewPlay, onPlayBundle }: {
   );
 }
 
+/* muted, image-like thumbnail tints (no rainbow) */
+const TINTS = [
+  "linear-gradient(135deg,#e9e0cf,#cdbfa2)",
+  "linear-gradient(135deg,#e4ddd1,#c5baa4)",
+  "linear-gradient(135deg,#e8dac9,#c9b298)",
+  "linear-gradient(135deg,#dfe2d6,#bfc4aa)",
+  "linear-gradient(135deg,#dfe4ea,#b7c2d0)",
+  "linear-gradient(135deg,#eadfe6,#c9b3c4)",
+];
+function tintOf(seed: string): string {
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
+  return TINTS[h % TINTS.length];
+}
+
+/** Shared BetterMe-style list row — used inside styles, programs and favourites so they all match. */
+function ListRow({ seed, emoji, title, subtitle, fav, onFav, onClick }: {
+  seed: string; emoji: string; title: string; subtitle: string;
+  fav?: boolean; onFav?: () => void; onClick: () => void;
+}) {
+  return (
+    <div className="flex items-center gap-3 py-2.5">
+      <button onClick={onClick} className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl text-[27px] shadow-inner active:scale-[0.97]" style={{ background: tintOf(seed) }}>{emoji}</button>
+      <button onClick={onClick} className="min-w-0 flex-1 text-left">
+        <p className="truncate text-[14px] font-semibold text-foreground">{title}</p>
+        <p className="mt-0.5 truncate text-[11.5px] text-muted-foreground">{subtitle}</p>
+      </button>
+      {fav !== undefined && (
+        <button onClick={onFav} className="shrink-0 p-1.5" aria-label="Favourite">
+          <Heart size={18} className={fav ? "fill-rose-500 text-rose-500" : "text-muted-foreground"} />
+        </button>
+      )}
+      <ChevronRight size={17} className="shrink-0 text-muted-foreground" />
+    </div>
+  );
+}
+
 function SessionCard({ s, kg, fav, onFav, onClick }: { s: Session; kg: number; fav: boolean; onFav: () => void; onClick: () => void }) {
   const b = bucketOf(s.bucket)!;
   const kcal = useMemo(() => sessionKcal(s, kg), [s, kg]);
-  return (
-    <div className="relative">
-      <button onClick={onClick} className="flex w-full flex-col rounded-2xl bg-card p-3 text-left ring-1 ring-border/60 active:scale-[0.98]">
-        <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-accent/50 text-xl">{b.emoji}</span>
-        <p className="mt-2 line-clamp-2 min-h-[2.4em] text-[12.5px] font-semibold leading-tight text-foreground">{s.title}</p>
-        <p className="mt-1 text-[10.5px] text-muted-foreground">{s.minutes} min · {levelLabel(s.level)}</p>
-        <p className="text-[10.5px] text-muted-foreground">🔥 {kcal} kcal · {focusLabel(s.focus)}</p>
-        {s.equip !== "none" && <p className="mt-0.5 text-[10px] font-semibold text-primary">{equipLabel(s.equip)}</p>}
-      </button>
-      <button onClick={onFav} className="absolute right-1.5 top-1.5 p-1.5" aria-label="Favourite">
-        <Heart size={15} className={fav ? "fill-rose-500 text-rose-500" : "text-muted-foreground"} />
-      </button>
-    </div>
-  );
+  const sub = `${s.minutes} min · ${levelLabel(s.level)} · 🔥 ${kcal} kcal${s.equip !== "none" ? ` · ${equipLabel(s.equip)}` : ""}`;
+  return <ListRow seed={s.id} emoji={b.emoji} title={s.title} subtitle={sub} fav={fav} onFav={onFav} onClick={onClick} />;
 }
 
 function PreviewSheet({ ex, kg, onCancel, onPlay, onAdd }: { ex: Exercise; kg: number; onCancel: () => void; onPlay: () => void; onAdd: () => void }) {
@@ -579,7 +797,7 @@ function Player({ src, onClose }: { src: PlaySource; onClose: () => void }) {
       if (rest !== null) { setRest(rest > 1 ? rest - 1 : null); return; }
       const st = steps[idx];
       if (st.kind !== "break") {
-        kcalRef.current += ((getExercise(st.exId)?.met ?? 4) * 3.5 * kg / 200) / 60;
+        kcalRef.current += ((st.met ?? getExercise(st.exId)?.met ?? 4) * 3.5 * kg / 200) / 60;
         setKcal(Math.round(kcalRef.current));
       }
       if (secs <= 1) advance(); else setSecs(secs - 1);
@@ -841,7 +1059,7 @@ function PlansTab({ favs, onFav, onOpenSession, onPlayBundle, onCreate }: {
       {favSessions.length === 0 ? (
         <p className="mt-1.5 rounded-2xl bg-card p-4 text-center text-[12px] text-muted-foreground ring-1 ring-border/60">Tap the ♥ on any session to keep it here.</p>
       ) : (
-        <div className="mt-1.5 grid grid-cols-2 gap-2.5">
+        <div className="mt-0.5 divide-y divide-border/50">
           {favSessions.map((s) => <SessionCard key={s.id} s={s} kg={kg} fav onFav={() => onFav(s.id)} onClick={() => onOpenSession(s)} />)}
         </div>
       )}
