@@ -28,7 +28,7 @@ import {
   loadFavs, toggleFav, loadBundles, saveBundle, deleteBundle,
   loadMyExPlans, saveMyExPlan, deleteMyExPlan, loadExHistory, addExHistory, addFeedback,
   OBJECTIVES, PROBLEMS, DEFAULT_WEEK_OPTIONS, getMyWeek, saveMyWeek, resetMyWeek, weekDone, setWeekDone,
-  DAY_STYLES, editDay,
+  DAY_STYLES, STYLE_CHOICES, editDay,
   getProgram, startProgram, customizeProgram, toggleProgDay, editProgDay, addProgWeek,
   weekUnlocked, canAddWeek, isProgDayDone, weekDoneCount, PLAN_LIBRARY, startLibraryPlan,
   type Bucket, type Session, type Step, type Exercise, type ExFilters, type Level,
@@ -688,7 +688,7 @@ function ProgramSetupSheet({ initial, initialWeeks, onClose, onCreate }: { initi
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle className="font-display">Build your plan</DialogTitle>
-          <DialogDescription>Set what you like — leave anything on "Any". We recommend 4 weeks.</DialogDescription>
+          <DialogDescription>Set what you like — leave anything on "Any". We recommend 4 weeks. Not sure? <Link to="/coach" className="font-semibold text-primary underline">talk to the bot</Link> to get your plan created.</DialogDescription>
         </DialogHeader>
         <div className="max-h-[62svh] space-y-4 overflow-y-auto pr-1">
           <Field title="How long?">
@@ -712,8 +712,11 @@ function ProgramSetupSheet({ initial, initialWeeks, onClose, onCreate }: { initi
           <Field title="Muscle group (optional)">
             <div className="flex flex-wrap gap-1.5">{FOCUS_LIST.map((f) => <button key={f.id} onClick={() => togF(f.id)} className={chip(focus.includes(f.id))}>{f.label}</button>)}</div>
           </Field>
-          <Field title="Preferred style (optional)">
-            <div className="flex flex-wrap gap-1.5">{PLAN_BUCKETS.map((b) => <button key={b.id} onClick={() => togS(b.id)} className={chip(styles.includes(b.id))}>{b.emoji} {b.label}</button>)}</div>
+          <Field title="Preferred style">
+            <div className="flex flex-wrap gap-1.5">
+              <button onClick={() => setStyles([])} className={chip(styles.length === 0)}>🤖 Let AI pick</button>
+              {STYLE_CHOICES.map((b) => <button key={b.id} onClick={() => togS(b.id)} className={chip(styles.includes(b.id))}>{b.emoji} {b.label}</button>)}
+            </div>
           </Field>
           <Field title="Workout days / week">
             <div className="flex flex-wrap gap-1.5">{[3, 4, 5, 6, 7].map((n) => <button key={n} onClick={() => setActiveDays(n)} className={chip(activeDays === n)}>{n} days</button>)}</div>

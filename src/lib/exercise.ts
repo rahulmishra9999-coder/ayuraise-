@@ -878,8 +878,19 @@ export const EMPTY_FILTERS: ExFilters = { levels: [], focus: [], equip: [] };
 
 export const LEVELS: { id: Level; label: string }[] = [
   { id: "beginner", label: "Beginner" },
-  { id: "medium", label: "Medium" },
-  { id: "advanced", label: "Advance" },
+  { id: "medium", label: "Intermediate" },
+  { id: "advanced", label: "Advanced" },
+];
+// curated preferred-style choices for the plan builder
+export const STYLE_CHOICES: { id: string; label: string; emoji: string }[] = [
+  { id: "desi-kasrat", label: "Desi Kasrat", emoji: "🪷" },
+  { id: "gym", label: "Gym", emoji: "🏋️" },
+  { id: "calisthenics", label: "Calisthenics", emoji: "🤸" },
+  { id: "pilates", label: "Pilates", emoji: "🩰" },
+  { id: "hiit", label: "HIIT", emoji: "⚡" },
+  { id: "dance", label: "Dance workouts", emoji: "💃" },
+  { id: "stretching", label: "Stretching", emoji: "🧘" },
+  { id: "cardio", label: "Cardio", emoji: "🏃" },
 ];
 // row filter options
 export const EQUIP_FILTERS: { id: Equip; label: string }[] = [
@@ -1083,8 +1094,11 @@ export const OBJECTIVES: { id: string; label: string; buckets: string[]; focus: 
   { id: "flexibility", label: "Flexibility", buckets: ["stretching", "strength-yoga", "tai-chi", "flexibility", "somatic"], focus: [] },
   { id: "diabetic", label: "Diabetic-friendly", buckets: ["diabetic", "cardio", "walking"], focus: ["endurance"] },
   { id: "senior", label: "Senior fitness", buckets: ["senior", "walking", "stretching"], focus: [] },
+  { id: "build-abs", label: "Build Abs", buckets: ["abs-program"], focus: ["abs"] },
+  { id: "joint-relief", label: "Joint & Pain Relief", buckets: ["senior", "stretching", "somatic"], focus: [] },
+  { id: "stress-relief", label: "Stress Relief", buckets: ["somatic", "stretching", "strength-yoga", "tai-chi"], focus: [] },
 ];
-const GENTLE_OBJ = new Set(["flexibility", "diabetic", "senior"]);
+const GENTLE_OBJ = new Set(["flexibility", "diabetic", "senior", "joint-relief", "stress-relief"]);
 
 // conditions the plan should be safe for
 export const PROBLEMS: { id: string; label: string; avoidFocus?: Focus[]; avoidBuckets?: string[]; maxAdvanced?: boolean }[] = [
@@ -1321,7 +1335,7 @@ export function buildProgram(options: WeekOptions, totalWeeks: number): ProgramW
 
 const PROGRAM_KEY = "ayuraise.ex.program";
 function defaultProgram(): MyProgram {
-  return { name: "Fitness Plan", options: DEFAULT_WEEK_OPTIONS, weeks: buildProgram(DEFAULT_WEEK_OPTIONS, 4), totalWeeks: 4, done: [], onboarded: false, updatedAt: 0 };
+  return { name: "Current Fitness Plan", options: DEFAULT_WEEK_OPTIONS, weeks: buildProgram(DEFAULT_WEEK_OPTIONS, 4), totalWeeks: 4, done: [], onboarded: false, updatedAt: 0 };
 }
 export function loadProgram(): MyProgram | null { return read<MyProgram | null>(PROGRAM_KEY, null); }
 export function getProgram(): MyProgram {
