@@ -1071,3 +1071,325 @@ export function addFeedback(f: Feedback) {
   write(FEEDBACK_KEY, all.slice(-60));
 }
 export function loadFeedback(): Feedback[] { return read<Feedback[]>(FEEDBACK_KEY, []); }
+
+/* ================= Editable Weekly Plan template ================= */
+
+export const OBJECTIVES: { id: string; label: string; buckets: string[]; focus: Focus[] }[] = [
+  { id: "general", label: "General fitness", buckets: [], focus: [] },
+  { id: "lose-weight", label: "Lose weight", buckets: ["hiit", "cardio", "dance", "zumba", "lose-weight", "belly-fat"], focus: ["full-body", "endurance"] },
+  { id: "strength", label: "Build strength", buckets: ["gym", "calisthenics", "desi-kasrat"], focus: ["upper-body", "lower-body"] },
+  { id: "tone", label: "Tone & sculpt", buckets: ["toning", "pilates"], focus: ["full-body"] },
+  { id: "endurance", label: "Endurance", buckets: ["cardio", "endurance", "running", "cycling"], focus: ["endurance"] },
+  { id: "flexibility", label: "Flexibility", buckets: ["stretching", "strength-yoga", "tai-chi", "flexibility", "somatic"], focus: [] },
+  { id: "diabetic", label: "Diabetic-friendly", buckets: ["diabetic", "cardio", "walking"], focus: ["endurance"] },
+  { id: "senior", label: "Senior fitness", buckets: ["senior", "walking", "stretching"], focus: [] },
+];
+const GENTLE_OBJ = new Set(["flexibility", "diabetic", "senior"]);
+
+// conditions the plan should be safe for
+export const PROBLEMS: { id: string; label: string; avoidFocus?: Focus[]; avoidBuckets?: string[]; maxAdvanced?: boolean }[] = [
+  { id: "back", label: "Back issues", avoidFocus: ["core"], avoidBuckets: ["desi-kasrat", "hiit"], maxAdvanced: true },
+  { id: "knee", label: "Knee issues", avoidFocus: ["legs", "lower-body"], avoidBuckets: ["hiit", "running"], maxAdvanced: true },
+  { id: "shoulder", label: "Shoulder issues", avoidFocus: ["upper-body", "shoulders", "chest", "arms"], maxAdvanced: true },
+  { id: "wrist", label: "Wrist issues", avoidBuckets: ["calisthenics", "desi-kasrat"] },
+  { id: "heart", label: "Heart / BP", avoidBuckets: ["hiit"], maxAdvanced: true },
+];
+function problemsOk(s: Session, ids: string[]): boolean {
+  for (const id of ids) {
+    const p = PROBLEMS.find((x) => x.id === id); if (!p) continue;
+    if (p.avoidFocus?.includes(s.focus)) return false;
+    if (p.avoidBuckets?.includes(s.bucket)) return false;
+    if (p.maxAdvanced && s.level === "advanced") return false;
+  }
+  return true;
+}
+
+export interface WeekOptions {
+  objective: string;
+  level: Level | "any";
+  focus: Focus[];         // muscle groups
+  minutes: number;        // 0 = any
+  equip: Equip | "any";
+  styles: string[];       // bucket ids, empty = any
+  problems: string[];     // conditions to stay safe for
+  activeDays: number;     // 3–7
+}
+export interface WeekDayPlan { day: number; sessionId?: string; rest?: boolean; note: string; focus?: Focus }
+export interface MyWeek { options: WeekOptions; days: WeekDayPlan[]; updatedAt: number }
+
+export const DEFAULT_WEEK_OPTIONS: WeekOptions = {
+  objective: "general", level: "any", focus: [], minutes: 0, equip: "any", styles: [], problems: [], activeDays: 5,
+};
+
+const REST_PATTERN: Record<number, number[]> = { 7: [], 6: [7], 5: [4, 7], 4: [3, 5, 7], 3: [2, 4, 6] };
+// gentle / therapeutic buckets — kept out of a fitness week unless explicitly chosen
+const THERAPEUTIC = new Set(["diabetic", "senior", "stretching", "somatic", "flexibility"]);
+// mainstream training buckets that make a week feel like a fitness plan
+const FITNESS_BUCKETS = new Set(["calisthenics", "gym", "hiit", "cardio", "abs-program", "toning", "desi-kasrat", "pilates", "lose-weight", "belly-fat", "running", "cycling", "dance", "zumba"]);
+// a classic balanced training split, per active day
+function splitFor(n: number): Focus[] {
+  const base: Focus[] = ["full-body", "upper-body", "lower-body", "endurance", "abs", "full-body", "endurance"];
+  return base.slice(0, Math.max(1, n));
+}
+
+export function buildWeek(o: WeekOptions, offset = 0): WeekDayPlan[] {
+  const obj = OBJECTIVES.find((x) => x.id === o.objective);
+  const biasBuckets = new Set<string>([...(obj?.buckets ?? []), ...o.styles]);
+  const passEquip = (s: Session) =>
+    o.equip === "any" ? true : o.equip === "none" ? s.equip === "none" : s.equip === o.equip || (o.equip === "dumbbells" && s.equip === "none");
+  const wantGentle = GENTLE_OBJ.has(o.objective) || o.problems.length > 0 || o.styles.some((s) => THERAPEUTIC.has(s));
+
+  const inPool = (s: Session) => {
+    if (o.level !== "any" && s.level !== o.level) return false;
+    if (!passEquip(s)) return false;
+    if (!problemsOk(s, o.problems)) return false;
+    if (o.styles.length) return o.styles.includes(s.bucket);          // explicit "Type" filter wins
+    if (!wantGentle && THERAPEUTIC.has(s.bucket)) return false;        // exclude therapeutic by default
+    return true;
+  };
+  let pool = SESSIONS.filter(inPool);
+  if (pool.length < o.activeDays) pool = SESSIONS.filter((s) => passEquip(s) && problemsOk(s, o.problems) && (o.styles.length ? o.styles.includes(s.bucket) : !THERAPEUTIC.has(s.bucket)));
+  if (pool.length < o.activeDays) pool = SESSIONS.filter((s) => passEquip(s) && problemsOk(s, o.problems));
+  if (!pool.length) pool = SESSIONS.slice();
+
+  // day themes: the user's muscle groups if set, else a balanced split
+  const themes: Focus[] = o.focus.length
+    ? Array.from({ length: o.activeDays }, (_, i) => o.focus[i % o.focus.length])
+    : splitFor(o.activeDays);
+
+  const score = (s: Session, theme: Focus) => {
+    let n = 0;
+    if (s.focus === theme) n += 5;
+    else if (theme === "endurance" && (s.focus === "full-body" || s.focus === "legs")) n += 1;
+    if (biasBuckets.size && biasBuckets.has(s.bucket)) n += 3;
+    if (FITNESS_BUCKETS.has(s.bucket)) n += 1;
+    if (o.minutes && Math.abs(s.minutes - o.minutes) <= 12) n += 1;
+    return n;
+  };
+
+  const rest = REST_PATTERN[o.activeDays] ?? [7];
+  const days: WeekDayPlan[] = [];
+  const used = new Set<string>();
+  const usedBuckets = new Map<string, number>(); // spread across styles for a varied mix
+  let ti = 0;
+  for (let d = 1; d <= 7; d++) {
+    if (rest.includes(d)) { days.push({ day: d, rest: true, note: "Rest & recover" }); continue; }
+    const theme = themes[ti % themes.length]; ti++;
+    const cands = pool.filter((s) => !used.has(s.id))
+      .map((s) => ({ s, n: score(s, theme) - (usedBuckets.get(s.bucket) ?? 0) * 2, r: hash(`${s.id}:${offset}`) }))
+      .sort((a, b) => b.n - a.n || a.r - b.r);
+    const pick = cands[0]?.s ?? pool.find((s) => !used.has(s.id)) ?? pool[0];
+    if (pick) {
+      used.add(pick.id);
+      usedBuckets.set(pick.bucket, (usedBuckets.get(pick.bucket) ?? 0) + 1);
+      days.push({ day: d, sessionId: pick.id, focus: theme, note: `${focusLabel(theme)} · ${pick.minutes} min` });
+    } else days.push({ day: d, rest: true, note: "Rest & recover" });
+  }
+  return days;
+}
+
+/* one-tap swaps that re-flavour the whole week (shown on the plan card) */
+export const SWAP_PRESETS: { id: string; label: string; emoji: string; patch: Partial<WeekOptions> }[] = [
+  { id: "mix", label: "All-round mix", emoji: "🎛️", patch: { styles: [], equip: "any" } },
+  { id: "gym", label: "Gym", emoji: "🏋️", patch: { styles: ["gym"], equip: "any" } },
+  { id: "desi", label: "Desi Kasrat", emoji: "🪷", patch: { styles: ["desi-kasrat"], equip: "any" } },
+  { id: "pilates", label: "Pilates", emoji: "🩰", patch: { styles: ["pilates"], equip: "any" } },
+  { id: "cali", label: "Calisthenics", emoji: "🤸", patch: { styles: ["calisthenics"], equip: "none" } },
+  { id: "cali-eq", label: "Calisthenics + weights", emoji: "🏋️‍♀️", patch: { styles: ["calisthenics", "gym"], equip: "any" } },
+  { id: "hiit", label: "HIIT heavy", emoji: "⚡", patch: { styles: ["hiit"], equip: "any" } },
+  { id: "cardio", label: "Cardio", emoji: "🏃", patch: { styles: ["cardio", "running", "cycling"], equip: "any" } },
+  { id: "diabetic", label: "Diabetic-friendly", emoji: "🩺", patch: { styles: ["diabetic"], equip: "any" } },
+];
+
+export function activeSwap(opts: WeekOptions): string {
+  const key = [...opts.styles].sort().join(",");
+  const m = SWAP_PRESETS.find((p) => [...(p.patch.styles ?? [])].sort().join(",") === key);
+  return m ? m.id : "";
+}
+
+const MYWEEK_KEY = "ayuraise.ex.myweek";
+const MYWEEK_DONE = "ayuraise.ex.myweek.done";
+
+export function loadMyWeek(): MyWeek | null { return read<MyWeek | null>(MYWEEK_KEY, null); }
+export function getMyWeek(): MyWeek {
+  const m = loadMyWeek();
+  if (m) { m.options = { ...DEFAULT_WEEK_OPTIONS, ...m.options }; return m; }  // backfill new fields
+  return { options: DEFAULT_WEEK_OPTIONS, days: buildWeek(DEFAULT_WEEK_OPTIONS), updatedAt: 0 };
+}
+export function saveMyWeek(options: WeekOptions): MyWeek {
+  const m: MyWeek = { options, days: buildWeek(options), updatedAt: Date.now() };
+  write(MYWEEK_KEY, m);
+  write(MYWEEK_DONE, []); // fresh week resets progress
+  return m;
+}
+export function resetMyWeek(): MyWeek {
+  const m: MyWeek = { options: DEFAULT_WEEK_OPTIONS, days: buildWeek(DEFAULT_WEEK_OPTIONS), updatedAt: 0 };
+  write(MYWEEK_KEY, m);
+  write(MYWEEK_DONE, []);
+  return m;
+}
+export function weekDone(): number[] { return read<number[]>(MYWEEK_DONE, []); }
+export function setWeekDone(day: number, done: boolean): number[] {
+  const cur = new Set(weekDone());
+  if (done) cur.add(day); else cur.delete(day);
+  const arr = [...cur].sort((a, b) => a - b);
+  write(MYWEEK_DONE, arr);
+  return arr;
+}
+
+/* per-day style swap — change one day to a different style */
+export const DAY_STYLES: { id: string; label: string; emoji: string }[] = [
+  { id: "gym", label: "Gym", emoji: "🏋️" },
+  { id: "desi-kasrat", label: "Desi Kasrat", emoji: "🪷" },
+  { id: "calisthenics", label: "Calisthenics", emoji: "🤸" },
+  { id: "pilates", label: "Pilates", emoji: "🩰" },
+  { id: "hiit", label: "HIIT", emoji: "⚡" },
+  { id: "cardio", label: "Cardio", emoji: "🏃" },
+  { id: "toning", label: "Toning", emoji: "✨" },
+  { id: "dance", label: "Dance", emoji: "💃" },
+  { id: "running", label: "Running", emoji: "🏃‍♂️" },
+  { id: "cycling", label: "Cycling", emoji: "🚴" },
+  { id: "strength-yoga", label: "Strength Yoga", emoji: "🧘" },
+  { id: "diabetic", label: "Diabetic-friendly", emoji: "🩺" },
+];
+
+/** Edit a single day: make it Rest, or pick a session by style and/or target area. */
+export function editDay(week: MyWeek, day: number, spec: { style?: string; focus?: Focus; rest?: boolean }): MyWeek {
+  let days: WeekDayPlan[];
+  if (spec.rest) {
+    days = week.days.map((d) => d.day === day ? { day, rest: true, note: "Rest & recover" } : d);
+  } else {
+    const o = week.options;
+    const passEquip = (s: Session) =>
+      o.equip === "any" ? true : o.equip === "none" ? s.equip === "none" : s.equip === o.equip || (o.equip === "dumbbells" && s.equip === "none");
+    const exclude = new Set(week.days.filter((d) => d.day !== day).map((d) => d.sessionId).filter(Boolean) as string[]);
+    const dp = week.days.find((d) => d.day === day);
+    const focus = spec.focus ?? dp?.focus;
+    let pool = SESSIONS.filter((s) => (o.level === "any" || s.level === o.level) && passEquip(s) && problemsOk(s, o.problems));
+    if (spec.style) { const p2 = pool.filter((s) => s.bucket === spec.style); if (p2.length) pool = p2; }
+    if (!pool.length) pool = SESSIONS.filter((s) => (spec.style ? s.bucket === spec.style : true) && passEquip(s));
+    if (!pool.length) pool = SESSIONS.filter((s) => spec.style ? s.bucket === spec.style : true);
+    if (!pool.length) return week;
+    const scored = pool.map((s) => ({
+      s,
+      n: (focus && s.focus === focus ? 3 : 0) + (spec.style && s.bucket === spec.style ? 2 : 0) + (exclude.has(s.id) ? -3 : 0),
+      r: hash(s.id),
+    })).sort((a, b) => b.n - a.n || a.r - b.r);
+    const s = scored[0].s;
+    days = week.days.map((d) => d.day === day
+      ? { day, sessionId: s.id, focus: s.focus, note: `${focusLabel(s.focus)} · ${s.minutes} min` }
+      : d);
+  }
+  const m: MyWeek = { ...week, days };
+  write(MYWEEK_KEY, m);
+  return m;
+}
+
+/* ================= Multi-week Programs ================= */
+
+/** pure: pick the plan for one day (no storage side-effects) */
+export function pickDaySession(o: WeekOptions, days: WeekDayPlan[], day: number, spec: { style?: string; focus?: Focus; rest?: boolean }): WeekDayPlan {
+  if (spec.rest) return { day, rest: true, note: "Rest & recover" };
+  const passEquip = (s: Session) =>
+    o.equip === "any" ? true : o.equip === "none" ? s.equip === "none" : s.equip === o.equip || (o.equip === "dumbbells" && s.equip === "none");
+  const exclude = new Set(days.filter((d) => d.day !== day).map((d) => d.sessionId).filter(Boolean) as string[]);
+  const dp = days.find((d) => d.day === day);
+  const focus = spec.focus ?? dp?.focus;
+  let pool = SESSIONS.filter((s) => (o.level === "any" || s.level === o.level) && passEquip(s) && problemsOk(s, o.problems));
+  if (spec.style) { const p2 = pool.filter((s) => s.bucket === spec.style); if (p2.length) pool = p2; }
+  if (!pool.length) pool = SESSIONS.filter((s) => (spec.style ? s.bucket === spec.style : true) && passEquip(s));
+  if (!pool.length) pool = SESSIONS.filter((s) => spec.style ? s.bucket === spec.style : true);
+  if (!pool.length) return dp ?? { day, rest: true, note: "Rest & recover" };
+  const scored = pool.map((s) => ({
+    s, n: (focus && s.focus === focus ? 3 : 0) + (spec.style && s.bucket === spec.style ? 2 : 0) + (exclude.has(s.id) ? -3 : 0), r: hash(s.id),
+  })).sort((a, b) => b.n - a.n || a.r - b.r);
+  const s = scored[0].s;
+  return { day, sessionId: s.id, focus: s.focus, note: `${focusLabel(s.focus)} · ${s.minutes} min` };
+}
+
+export interface ProgramWeek { days: WeekDayPlan[] }
+export interface MyProgram {
+  name: string; options: WeekOptions; weeks: ProgramWeek[]; totalWeeks: number;
+  done: string[]; onboarded: boolean; updatedAt: number;
+}
+
+export function buildProgram(options: WeekOptions, totalWeeks: number): ProgramWeek[] {
+  const weeks: ProgramWeek[] = [];
+  for (let w = 0; w < Math.max(1, totalWeeks); w++) weeks.push({ days: buildWeek(options, w) });
+  return weeks;
+}
+
+const PROGRAM_KEY = "ayuraise.ex.program";
+function defaultProgram(): MyProgram {
+  return { name: "Fitness Plan", options: DEFAULT_WEEK_OPTIONS, weeks: buildProgram(DEFAULT_WEEK_OPTIONS, 4), totalWeeks: 4, done: [], onboarded: false, updatedAt: 0 };
+}
+export function loadProgram(): MyProgram | null { return read<MyProgram | null>(PROGRAM_KEY, null); }
+export function getProgram(): MyProgram {
+  const p = loadProgram();
+  if (p) { p.options = { ...DEFAULT_WEEK_OPTIONS, ...p.options }; return p; }
+  return defaultProgram();
+}
+function persistProgram(p: MyProgram) { write(PROGRAM_KEY, p); }
+
+export function startProgram(name: string, options: WeekOptions, totalWeeks: number): MyProgram {
+  const p: MyProgram = { name, options, weeks: buildProgram(options, totalWeeks), totalWeeks, done: [], onboarded: true, updatedAt: Date.now() };
+  persistProgram(p);
+  return p;
+}
+export function customizeProgram(prev: MyProgram, options: WeekOptions, totalWeeks: number): MyProgram {
+  const p: MyProgram = { ...prev, options, totalWeeks, weeks: buildProgram(options, totalWeeks), done: [], onboarded: true, updatedAt: Date.now() };
+  persistProgram(p);
+  return p;
+}
+
+export function dayKey(w: number, d: number) { return `w${w}d${d}`; }
+export function isProgDayDone(p: MyProgram, w: number, d: number) { return p.done.includes(dayKey(w, d)); }
+export function weekDoneCount(p: MyProgram, w: number) { return p.done.filter((k) => k.startsWith(`w${w}d`)).length; }
+export function weekUnlocked(p: MyProgram, w: number) { return w === 1 || p.done.includes(dayKey(w - 1, 7)); }
+export function canAddWeek(p: MyProgram) { return p.done.includes(dayKey(p.totalWeeks, 7)); }
+
+export function toggleProgDay(p: MyProgram, w: number, d: number, done: boolean): MyProgram {
+  const set = new Set(p.done);
+  if (done) set.add(dayKey(w, d)); else set.delete(dayKey(w, d));
+  const np = { ...p, done: [...set] };
+  persistProgram(np);
+  return np;
+}
+export function editProgDay(p: MyProgram, w: number, day: number, spec: { style?: string; focus?: Focus; rest?: boolean }): MyProgram {
+  const wk = p.weeks[w - 1]; if (!wk) return p;
+  const nd = pickDaySession(p.options, wk.days, day, spec);
+  const weeks = p.weeks.map((x, i) => i === w - 1 ? { days: x.days.map((d) => d.day === day ? nd : d) } : x);
+  const np = { ...p, weeks };
+  persistProgram(np);
+  return np;
+}
+export function addProgWeek(p: MyProgram): MyProgram {
+  const np = { ...p, weeks: [...p.weeks, { days: buildWeek(p.options, p.totalWeeks) }], totalWeeks: p.totalWeeks + 1 };
+  persistProgram(np);
+  return np;
+}
+
+/* ---- auto-created plans library ---- */
+export const PLAN_LIBRARY: { id: string; name: string; weeks: number; emoji: string; options: Partial<WeekOptions> }[] = [
+  { id: "weight-loss", name: "Weight Loss Plan", weeks: 4, emoji: "🔥", options: { objective: "lose-weight" } },
+  { id: "beginner", name: "Beginner Friendly Plan", weeks: 1, emoji: "🌱", options: { objective: "general", level: "beginner" } },
+  { id: "senior", name: "Sr. Fitness Plan", weeks: 2, emoji: "🧓", options: { objective: "senior" } },
+  { id: "muscle", name: "Muscle Building Plan", weeks: 4, emoji: "💪", options: { objective: "strength", styles: ["gym", "calisthenics"] } },
+  { id: "abs", name: "Abs Program", weeks: 3, emoji: "🎯", options: { styles: ["abs-program"], focus: ["abs"] } },
+  { id: "fat-burn", name: "Fat Burn Plan", weeks: 4, emoji: "⚡", options: { objective: "lose-weight", styles: ["hiit", "cardio"] } },
+  { id: "lean-legs", name: "Lean Legs Plan", weeks: 4, emoji: "🦵", options: { objective: "tone", focus: ["legs"] } },
+  { id: "pilates", name: "Pilates Program", weeks: 4, emoji: "🩰", options: { styles: ["pilates"] } },
+  { id: "pilates-all", name: "Full Pilates Program", weeks: 4, emoji: "🩰", options: { styles: ["pilates"] } },
+  { id: "waistline", name: "Waistline Sculpting Plan", weeks: 2, emoji: "⏳", options: { objective: "tone", focus: ["abs"] } },
+  { id: "bed", name: "Bed Workouts", weeks: 4, emoji: "🛏️", options: { styles: ["somatic", "senior"], equip: "none" } },
+  { id: "walking", name: "Indoor Walking", weeks: 2, emoji: "🚶", options: { styles: ["walking"] } },
+  { id: "knee-fat", name: "Knee-Friendly Fat Burn", weeks: 4, emoji: "🦿", options: { objective: "lose-weight", problems: ["knee"] } },
+  { id: "arm-fat", name: "Arm Fat Burn", weeks: 2, emoji: "💪", options: { objective: "tone", focus: ["arms"] } },
+  { id: "chair", name: "Chair Workouts", weeks: 4, emoji: "🪑", options: { styles: ["senior"], equip: "none" } },
+  { id: "leg-slim", name: "Leg Slimming Plan", weeks: 2, emoji: "🦵", options: { objective: "tone", focus: ["legs"] } },
+];
+export function startLibraryPlan(id: string): MyProgram | null {
+  const pl = PLAN_LIBRARY.find((x) => x.id === id);
+  if (!pl) return null;
+  return startProgram(pl.name, { ...DEFAULT_WEEK_OPTIONS, ...pl.options }, pl.weeks);
+}
