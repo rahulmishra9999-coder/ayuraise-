@@ -11,6 +11,7 @@ import { addCalEntry, calInTotal } from "@/lib/trackers";
 import { loadProfile } from "@/lib/weight-loss";
 
 export const Route = createFileRoute("/coach")({
+  validateSearch: (s: Record<string, unknown>): { seed?: string } => ({ seed: typeof s.seed === "string" ? s.seed : undefined }),
   head: () => ({
     meta: [
       { title: "Ayu AI · AyuRaise" },
@@ -71,6 +72,14 @@ function CoachPage() {
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
   }, [messages, partial]);
+
+  // arrived with ?seed=… (e.g. from a yoga-session feedback tap) → open the chat with that message
+  const { seed } = Route.useSearch();
+  const seededRef = useRef(false);
+  useEffect(() => {
+    if (seed && !seededRef.current) { seededRef.current = true; void send(seed); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seed]);
 
   async function send(text: string) {
     const trimmed = text.trim();

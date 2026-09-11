@@ -103,6 +103,7 @@ export const TECH_INTRO = {
   asana: "Asanas are physical postures — held with breath, they build strength, flexibility and steadiness of body and mind.",
   pranayama: "Pranayama is breath regulation — the fastest lever on the nervous system, calming or energising you at will.",
   bandha: "Bandhas are internal 'locks' — gentle muscular engagements that contain and channel energy through the body.",
+  mudra: "Mudras are simple hand gestures — subtle seals that steady the mind and shift how you feel in minutes.",
 };
 
 /** Asanas mirror the pose engine so each is practisable. */
@@ -121,6 +122,18 @@ export const BANDHAS: Technique[] = [
   { id: "mula", name: "Mula Bandha", sanskrit: "Root Lock", emoji: "🌱", note: "Pelvic floor — stability & energy" },
   { id: "uddiyana", name: "Uddiyana Bandha", sanskrit: "Abdominal Lock", emoji: "🔩", note: "Core & digestion" },
   { id: "jalandhara", name: "Jalandhara Bandha", sanskrit: "Throat Lock", emoji: "🧣", note: "Calm & focus" },
+  { id: "maha", name: "Maha Bandha", sanskrit: "Great Lock", emoji: "🔗", note: "All three locks together" },
+];
+
+export const MUDRAS: Technique[] = [
+  { id: "gyan", name: "Gyan Mudra", sanskrit: "Seal of Knowledge", emoji: "🧘", note: "Thumb + index — focus & calm" },
+  { id: "prana", name: "Prana Mudra", sanskrit: "Seal of Life", emoji: "⚡", note: "Vitality & energy" },
+  { id: "apana", name: "Apana Mudra", sanskrit: "Seal of Digestion", emoji: "🌿", note: "Detox & digestion" },
+  { id: "dhyana", name: "Dhyana Mudra", sanskrit: "Seal of Meditation", emoji: "🕉️", note: "Deep stillness for meditation" },
+  { id: "shuni", name: "Shuni Mudra", sanskrit: "Seal of Patience", emoji: "⏳", note: "Patience & discipline" },
+  { id: "surya", name: "Surya Mudra", sanskrit: "Seal of the Sun", emoji: "☀️", note: "Warmth & metabolism" },
+  { id: "varun", name: "Varun Mudra", sanskrit: "Seal of Water", emoji: "💧", note: "Hydration & glow" },
+  { id: "anjali", name: "Anjali Mudra", sanskrit: "Salutation Seal", emoji: "🙏", note: "Centring & gratitude" },
 ];
 
 /** Build a session from a hand-picked bundle of technique ids (that map to poses). */

@@ -14,6 +14,7 @@ export type SectionSlug =
   | "disease"
   | "yoga"
   | "exercise"
+  | "yoga-workout"
   | "meditation"
   | "diet"
   | "weight-loss"
@@ -57,6 +58,15 @@ export const SECTIONS: Section[] = [
     icon: Dumbbell,
     gradient: "var(--gradient-clay)",
     highlights: ["Surya namaskar variations", "Bodyweight strength", "Mobility & joints"],
+  },
+  {
+    slug: "yoga-workout",
+    title: "Yoga & Workout",
+    short: "Move",
+    blurb: "An experiment — yoga and workouts together: one program builder, plus separate yoga and exercise libraries.",
+    icon: Flower2,
+    gradient: "var(--gradient-leaf)",
+    highlights: ["Combined program", "Survey or ready-made", "Yoga + exercise"],
   },
   {
     slug: "meditation",

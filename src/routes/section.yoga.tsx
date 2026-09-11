@@ -1,20 +1,24 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { BottomNav } from "@/components/BottomNav";
+import { loadYogaPlans, upsertYogaPlan, removeYogaPlan, loadSavedPlans, addSavedPlan, removeSavedPlan, newPlanId, MAX_PLANS, MAX_FAV, WEEKDAYS, themeForWeek, blurbForWeek, dayName, loadYogaProgress, saveYogaProgress, sessionKey, totalSessions, isSessionReady, completeSession, doneToday, DAILY_CAP, BUFFER, type YogaPlan as SavedYogaConfig, type YogaProgress } from "@/lib/yoga-plan";
+import { YogaPlanSheet } from "@/components/YogaPlanSheet";
+import { YogaProgramSheet } from "@/components/YogaProgramSheet";
+import { YOGA_TEMPLATES, CATEGORY_LABELS, CATEGORY_ORDER, templateToPlan, type YogaTemplate } from "@/lib/yoga-templates";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import {
-  ArrowLeft, Play, Pause, ChevronRight, ChevronLeft, X, Trash2, Volume2, VolumeX, History, Bot, Plus, Check,
+  ArrowLeft, Play, Pause, ChevronRight, ChevronLeft, X, Trash2, Volume2, VolumeX, History, Bot, Plus, Check, Sliders, Star,
 } from "lucide-react";
 import {
   POSES, DURATIONS, GOALS, DISEASES, generatePlan, posesFor, speak, stopSpeaking,
   type Goal, type Disease, type YogaPlan,
 } from "@/lib/yoga";
 import {
-  GOAL_GROUPS, ASANAS, PRANAYAMAS, BANDHAS, TECH_INTRO,
+  GOAL_GROUPS, ASANAS, PRANAYAMAS, BANDHAS, MUDRAS, TECH_INTRO,
   sessionFor, techniqueSession, buildBundleSession, yogaKcal,
   loadMyYogaPlans, saveMyYogaPlan, deleteMyYogaPlan, loadYogaHistory, addYogaHistory,
-  type LibItem, type SavedYogaPlan, type Technique,
+  type LibItem, type SavedYogaPlan, type Technique, type YogaHistoryEntry,
 } from "@/lib/yoga-library";
 import { YOGA_LEARN_SECTIONS, type LearnSection } from "@/lib/yoga-learn";
 import { loadPlan as loadWLPlan } from "@/lib/weight-loss";
@@ -35,15 +39,15 @@ export const Route = createFileRoute("/section/yoga")({
   component: YogaSection,
 });
 
-type Tab = "goal" | "styles" | "know" | "plans" | "learn";
+type Tab = "popular" | "know" | "learn";
 
 function bodyWeight() { return loadWLPlan()?.currentWeight ?? 68; }
 
-/* Session shape passed to the player */
-type Session = { title: string; plan: YogaPlan; feedback: boolean };
+/* Session shape passed to the player. onDone (plan sessions) → auto-punches cal, then asks for one-tap feedback. */
+type Session = { title: string; plan: YogaPlan; feedback: boolean; onDone?: (choice: string | null) => void };
 
 function YogaSection() {
-  const [tab, setTab] = useState<Tab>("goal");
+  const [tab, setTab] = useState<Tab>("popular");
   const [session, setSession] = useState<Session | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [item, setItem] = useState<LibItem | null>(null);
@@ -51,6 +55,68 @@ function YogaSection() {
   const [prog, setProg] = useState<StyleProgram | null>(null);
   const [week, setWeek] = useState<WeeklyPlan | null>(null);
   const [stylePlay, setStylePlay] = useState<StyleProgram | null>(null);
+  const [yPlans, setYPlans] = useState<SavedYogaConfig[]>([]);
+  const [planSheet, setPlanSheet] = useState(false);
+  const [sheetInit, setSheetInit] = useState<SavedYogaConfig | null>(null);   // null → brand-new; else edit/template
+  const [decision, setDecision] = useState<SavedYogaConfig | null>(null);     // incoming new plan awaiting keep-both/replace
+  const [deletePlan, setDeletePlan] = useState<SavedYogaConfig | null>(null); // plan awaiting delete confirmation
+  const [program, setProgram] = useState<YogaTemplate | null>(null);         // a program being customised
+  const [preview, setPreview] = useState<YogaTemplate | null>(null);         // a ready-made plan being previewed
+  const [saved, setSaved] = useState<SavedYogaConfig[]>([]);                  // ⭐ My Fav Plans
+  const [confirmCurrent, setConfirmCurrent] = useState<SavedYogaConfig | null>(null); // confirm before replacing current plan
+  const [openPlan, setOpenPlan] = useState<SavedYogaConfig | null>(null); // "opened" saved plan detail
+  useEffect(() => { setYPlans(loadYogaPlans()); setSaved(loadSavedPlans()); }, []);
+
+
+  const openNew = () => { setSheetInit(null); setPlanSheet(true); };
+  const openEdit = (p: SavedYogaConfig) => { setSheetInit(p); setPlanSheet(true); };
+  const commit = (p: SavedYogaConfig, id?: string) => { const plan = { ...p, id: id ?? (p.id || newPlanId()) }; setYPlans(upsertYogaPlan(plan)); };
+  const makeCurrent = (plan: SavedYogaConfig) => {   // replace the single current plan
+    const cur = loadYogaPlans();
+    if (cur[0]) removeYogaPlan(cur[0].id);
+    setYPlans(upsertYogaPlan({ ...plan, id: newPlanId() }));
+  };
+
+  // Customise flow (from a ready-made): Save & practice → ⭐ favourite (no replace) and open the plan; Replace → becomes current plan.
+  const onSaveProgram = (plan: SavedYogaConfig) => { setSaved(addSavedPlan(plan)); setProgram(null); setPreview(null); setOpenPlan(plan); toast.success("Saved to ⭐ My Fav Plans"); };
+  const onActivateProgram = (plan: SavedYogaConfig, replaceId?: string) => {
+    if (replaceId) removeYogaPlan(replaceId);
+    setYPlans(upsertYogaPlan(plan));
+    setProgram(null); setPreview(null);
+    toast.success(replaceId ? "Plan replaced 🧘" : "Plan started — first 3 days are ready 🌱");
+  };
+
+  // Save & practice a ready-made as-is → add to favs and open it.
+  const addFav = (t: YogaTemplate) => { const plan = templateToPlan(t); setSaved(addSavedPlan(plan)); setPreview(null); setOpenPlan(plan); toast.success("Saved to ⭐ My Fav Plans"); };
+  const unfav = (id: string) => { setSaved(removeSavedPlan(id)); toast.success("Removed from favourites"); };
+  // Save a built bundle as a fav plan (daily practice) and open it.
+  const saveBundle = (poseIds: string[]) => {
+    if (!poseIds.length) return;
+    const plan: SavedYogaConfig = { id: newPlanId(), sourceId: "my-bundle", primary: "My Bundle", secondary: null, level: "Beginner", weeks: 1, daysPerWeek: 7, days: WEEKDAYS.map((w) => w.id), duration: Math.max(5, poseIds.length * 2), protect: [], updatedAt: Date.now(), poseIds };
+    setSaved(addSavedPlan(plan)); setOpenPlan(plan); toast.success("Bundle saved to ⭐ My Fav Plans");
+  };
+  const favoriteIds = [...saved, ...yPlans].map((p) => p.sourceId).filter(Boolean) as string[];
+  const closeSheet = () => { setPlanSheet(false); setSheetInit(null); };
+
+  const onSheetSave = (p: SavedYogaConfig) => {
+    const plans = loadYogaPlans();
+    const editing = p.id ? plans.find((x) => x.id === p.id) : undefined;
+    // editing with the same goal → just update that plan in place
+    if (editing && editing.primary === p.primary) { commit(p); closeSheet(); toast.success("Yoga plan saved 🧘"); return; }
+
+    const incoming = { ...p, id: newPlanId() };   // otherwise it's effectively a new plan
+    const sameGoalOther = plans.find((x) => x.primary === incoming.primary && x.id !== editing?.id);
+    if (sameGoalOther) { commit(incoming, sameGoalOther.id); closeSheet(); toast.success(`Updated your ${p.primary} plan 🧘`); return; }  // same goal as another plan → replace it
+
+    if (editing) {   // editing but goal changed → keep the original, add the new one below
+      if (plans.length < MAX_PLANS) { commit(incoming); closeSheet(); toast.success("Added as a second plan 🧘"); return; }
+      setPlanSheet(false); setSheetInit(null); setDecision(incoming); return;   // no room → ask which to replace
+    }
+    if (plans.length === 0) { commit(incoming); closeSheet(); toast.success("Yoga plan saved 🧘"); return; }  // first plan
+    setPlanSheet(false); setSheetInit(null); setDecision(incoming);   // brand-new + different goal → ask keep-both / replace
+  };
+  const replaceWith = (oldId: string) => { if (decision) { removeYogaPlan(oldId); commit(decision); toast.success("Plan replaced 🧘"); } setDecision(null); };
+  const confirmDelete = () => { if (deletePlan) { setYPlans(removeYogaPlan(deletePlan.id)); toast.success("Plan deleted"); } setDeletePlan(null); };
 
   return (
     <div className="min-h-svh pb-28" style={{ background: "var(--gradient-hero)" }}>
@@ -70,23 +136,32 @@ function YogaSection() {
       </div>
 
       <div className="mx-auto max-w-xl px-5">
-        {/* create personalized plan — the entry point */}
-        <button onClick={() => setCreateOpen(true)} className="group mt-4 w-full overflow-hidden rounded-3xl p-5 text-left text-primary-foreground shadow-[var(--shadow-glow)] transition active:scale-[0.985]" style={{ background: "var(--gradient-violet)" }}>
-          <div className="flex items-center gap-3">
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/20 text-xl">✨</span>
-            <div className="min-w-0 flex-1">
-              <p className="font-display text-[16px] font-bold leading-tight">Create Your Personalized Yoga Plan</p>
-              <p className="mt-1.5 text-[12px] leading-relaxed opacity-90">A yoga journey tailored to your body, goals, and lifestyle — with optional real-time feedback from your AI Yoga Instructor.</p>
+        {/* active yoga plans (up to 2) — or the create entry point */}
+        {yPlans.length > 0 ? (
+          <>
+            {yPlans.map((p) => <YogaPlanBoard key={p.id} plan={p} onEdit={() => openEdit(p)} onDelete={() => setDeletePlan(p)} onPlay={setSession} />)}
+          </>
+        ) : (
+          <button onClick={openNew} className="group mt-4 block w-full overflow-hidden rounded-3xl p-5 text-left text-primary-foreground shadow-[var(--shadow-glow)] transition active:scale-[0.985]" style={{ background: "var(--gradient-violet)" }}>
+            <div className="flex items-center gap-3">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/20 text-xl">✨</span>
+              <div className="min-w-0 flex-1">
+                <p className="font-display text-[16px] font-bold leading-tight">Create Your Personalized Yoga Plan</p>
+                <p className="mt-1.5 text-[12px] leading-relaxed opacity-90">A yoga journey tailored to your body, goals, and lifestyle — with optional real-time feedback from your AI Yoga Instructor.</p>
+              </div>
             </div>
-          </div>
-          <span className="mt-3.5 inline-flex items-center gap-1.5 rounded-full bg-white px-4 py-2 text-[12.5px] font-bold text-violet-700 shadow-sm transition group-active:gap-2.5">
-            Get started <ChevronRight size={15} />
-          </span>
-        </button>
+            <span className="mt-3.5 inline-flex items-center gap-1.5 rounded-full bg-white px-4 py-2 text-[12.5px] font-bold text-violet-700 shadow-sm transition group-active:gap-2.5">
+              Get started <ChevronRight size={15} />
+            </span>
+          </button>
+        )}
+
+        {/* ⭐ My Fav Plans — above the tabs */}
+        <MyFavPlans saved={saved} onOpen={setOpenPlan} onUnstar={(p) => { setSaved(removeSavedPlan(p.id)); toast.success("Moved back to Ready-made"); }} onDelete={(p) => { setSaved(removeSavedPlan(p.id)); toast.success("Deleted"); }} />
 
         {/* main tabs */}
         <div className="sticky top-0 z-30 -mx-5 mt-3 flex gap-1.5 overflow-x-auto bg-background/85 px-5 py-2.5 backdrop-blur-xl [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {([["goal", "🎯 Select a Goal & Practice"], ["styles", "🧘‍♀️ Yoga Styles"], ["know", "🧘 Select Poses & Practice"], ["plans", "📋 My Plans"], ["learn", "🎓 Learn"]] as const).map(([id, label]) => (
+          {([["popular", "🧘‍♀️ Ready-made Plans"], ["know", "🧘 Select Poses & Practice"], ["learn", "🎓 Learn"]] as const).map(([id, label]) => (
             <button key={id} onClick={() => setTab(id)}
               className={`shrink-0 rounded-full px-3.5 py-1.5 text-[12.5px] font-semibold transition ${tab === id ? "bg-primary text-primary-foreground shadow-[var(--shadow-glow)]" : "bg-card text-foreground/70 ring-1 ring-border/60"}`}>
               {label}
@@ -94,10 +169,8 @@ function YogaSection() {
           ))}
         </div>
 
-        {tab === "styles" && <StylesTab onOpenStyle={setStyleId} onOpenWeek={setWeek} />}
-        {tab === "know" && <KnowTab onPractise={(title, plan) => setSession({ title, plan, feedback: true })} />}
-        {tab === "goal" && <GoalTab onPick={setItem} />}
-        {tab === "plans" && <PlansTab onPlay={(p) => setSession({ title: p.name, plan: p, feedback: p.withFeedback })} />}
+        {tab === "popular" && <PopularPlans favoriteIds={favoriteIds} onPreview={setPreview} />}
+        {tab === "know" && <KnowTab onPractise={(title, plan) => setSession({ title, plan, feedback: true })} onSaveBundle={saveBundle} />}
         {tab === "learn" && <LearnTab onPractise={(title, plan) => setSession({ title, plan, feedback: true })} />}
       </div>
 
@@ -109,8 +182,71 @@ function YogaSection() {
         <CreatePlanSheet onClose={() => setCreateOpen(false)}
           onPlay={(title, plan, feedback) => { setSession({ title, plan, feedback }); setCreateOpen(false); }} />
       )}
+      {planSheet && (
+        <YogaPlanSheet initial={sheetInit} onClose={closeSheet} onSave={onSheetSave} />
+      )}
+      {preview && (
+        <ReadyMadePreview
+          template={preview}
+          onClose={() => setPreview(null)}
+          onCustomize={(t) => { setPreview(null); setProgram(t); }}
+          onAddFav={addFav}
+          onPlay={(t) => setSession({ title: t.name, plan: generatePlan("none", toYogaGoal(t.primary), t.duration), feedback: false })}
+        />
+      )}
+      {program && (
+        <YogaProgramSheet template={program} activePlans={yPlans} onClose={() => setProgram(null)} onSave={onSaveProgram} onActivate={onActivateProgram} />
+      )}
+      {openPlan && (
+        <PlanDetail
+          plan={openPlan}
+          isCurrent={yPlans.some((p) => p.id === openPlan.id)}
+          onClose={() => setOpenPlan(null)}
+          onPlay={setSession}
+          onMakeCurrent={() => { setConfirmCurrent(openPlan); }}
+        />
+      )}
+      {confirmCurrent && (
+        <Dialog open onOpenChange={(v) => { if (!v) setConfirmCurrent(null); }}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle className="font-display">Replace your current plan?</DialogTitle>
+              <DialogDescription>{yPlans[0] ? `Your current “${yPlans[0].primary}” plan will be replaced with “${confirmCurrent.primary}”.` : `Start “${confirmCurrent.primary}” as your current plan?`}</DialogDescription>
+            </DialogHeader>
+            <button onClick={() => { makeCurrent(confirmCurrent); setConfirmCurrent(null); toast.success("Now your current plan 🧘"); }} className="w-full rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground">Yes, make it current</button>
+            <button onClick={() => setConfirmCurrent(null)} className="w-full rounded-2xl bg-secondary px-4 py-3 text-[13px] font-semibold text-foreground">Cancel</button>
+          </DialogContent>
+        </Dialog>
+      )}
+      {decision && (
+        <Dialog open onOpenChange={(v) => { if (!v) setDecision(null); }}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle className="font-display">Replace, or save separately?</DialogTitle>
+              <DialogDescription>You're practising “{yPlans[0]?.primary}”. Replace it with “{decision.primary}”, or keep it and save this one to My Fav Plans?</DialogDescription>
+            </DialogHeader>
+            {yPlans.map((p) => (
+              <button key={p.id} onClick={() => replaceWith(p.id)} className="w-full rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground">🔄 Replace with “{decision.primary}”</button>
+            ))}
+            <button onClick={() => { setSaved(addSavedPlan(decision)); setDecision(null); toast.success("Saved to ⭐ My Fav Plans"); }} className="w-full rounded-2xl bg-secondary px-4 py-3 text-[13.5px] font-semibold text-foreground">💾 Save &amp; practice (keep current)</button>
+            <button onClick={() => setDecision(null)} className="w-full rounded-2xl px-4 py-1.5 text-[12.5px] font-semibold text-muted-foreground">Cancel</button>
+          </DialogContent>
+        </Dialog>
+      )}
+      {deletePlan && (
+        <Dialog open onOpenChange={(v) => { if (!v) setDeletePlan(null); }}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle className="font-display">Delete this plan?</DialogTitle>
+              <DialogDescription>“{deletePlan.primary}” and its progress will be removed. This can't be undone.</DialogDescription>
+            </DialogHeader>
+            <button onClick={confirmDelete} className="w-full rounded-2xl bg-rose-500 px-4 py-3 text-sm font-semibold text-white">Delete plan</button>
+            <button onClick={() => setDeletePlan(null)} className="w-full rounded-2xl bg-secondary px-4 py-2.5 text-[13px] font-semibold text-foreground">Cancel</button>
+          </DialogContent>
+        </Dialog>
+      )}
       {session && (
-        <SessionPlayer title={session.title} plan={session.plan} feedback={session.feedback} onClose={() => setSession(null)} />
+        <SessionPlayer title={session.title} plan={session.plan} feedback={session.feedback} onDone={session.onDone} onClose={() => setSession(null)} />
       )}
 
       {styleId && (
@@ -128,6 +264,158 @@ function YogaSection() {
 
       <BottomNav />
     </div>
+  );
+}
+
+/* ================= Current yoga plan card (mirrors the workout plan) ================= */
+
+/** Map a plan's primary focus to a generatable yoga goal (for dummy sessions via the pose engine). */
+function toYogaGoal(primary: string): Goal {
+  const p = primary.toLowerCase();
+  if (/flex|mobil|posture|ache|knee|back|neck|hip|spine|arthritis|joint/.test(p)) return "flexibility";
+  if (/strength|ageing|senior|sr\.|balance|osteo|muscle/.test(p)) return "strength";
+  if (/weight|metabolic|fatigue|fatty|cholesterol|diabet|gut|belly/.test(p)) return "weight-loss";
+  if (/stress|anxiety|sleep|mood|breath|pranayam|migraine|asthma|heart|bp|hypertension/.test(p)) return "stress-relief";
+  return "general-wellness";
+}
+
+function YogaPlanBoard({ plan, onEdit, onDelete, onPlay }: {
+  plan: SavedYogaConfig; onEdit: () => void; onDelete: () => void; onPlay: (s: Session) => void;
+}) {
+  const [progress, setProgress] = useState<YogaProgress>({ done: [], feedback: {} });
+  const [showAll, setShowAll] = useState(false);
+  const [capOpen, setCapOpen] = useState(false);
+  useEffect(() => { setProgress(loadYogaProgress(plan.id)); }, [plan.id]);
+
+  const goal = toYogaGoal(plan.primary);
+  const N = totalSessions(plan);
+  const doneN = progress.done.length;
+  const isDone = (i: number) => progress.done.includes(sessionKey(i));
+
+  // Play a session → auto-logs cal + feedback screen; completing marks it done and opens the next.
+  const play = (i: number) => {
+    if (!isDone(i) && doneToday(progress) >= DAILY_CAP) { setCapOpen(true); return; }
+    onPlay({
+      title: `Day ${i}`,
+      plan: plan.poseIds?.length ? buildBundleSession(plan.poseIds) : generatePlan("none", goal, plan.duration),
+      feedback: false,
+      onDone: (choice) => {
+        setProgress((p) => {
+          const np = p.done.includes(sessionKey(i))
+            ? { ...p, feedback: choice ? { ...p.feedback, [sessionKey(i)]: choice } : p.feedback }
+            : completeSession(p, i, choice);
+          saveYogaProgress(plan.id, np);
+          return np;
+        });
+        if (choice && choice !== "good") toast.success("Noted — your sessions will adapt 🌱");
+      },
+    });
+  };
+
+  // the open window: next up-to-3 sessions that aren't done yet
+  const open: number[] = [];
+  for (let i = 1; i <= N && open.length < BUFFER; i++) if (!isDone(i) && isSessionReady(progress, i)) open.push(i);
+  const complete = doneN >= N;
+
+  // the arc: each phase spans one "week" of days, shown by day-range (no "week" wording)
+  const dpw = plan.daysPerWeek;
+  const nextSession = Math.min(doneN + 1, N);
+  const phase = Math.max(1, Math.ceil(nextSession / dpw));
+  const phaseStart = (phase - 1) * dpw + 1;
+  const phaseEnd = Math.min(phase * dpw, N);
+
+  const sessionRow = (i: number, locked = false) => {
+    const done = isDone(i);
+    return (
+      <div key={i} className={`flex items-center gap-2.5 rounded-2xl p-2 ${!locked ? "bg-card ring-1 ring-border/60" : "bg-secondary/15"}`}>
+        <span className={`flex h-8 w-9 shrink-0 flex-col items-center justify-center rounded-lg text-[11px] font-bold leading-none ${done ? "bg-primary text-primary-foreground" : locked ? "bg-secondary text-muted-foreground/70" : "bg-accent/60 text-foreground/70"}`}><span className="text-[7px] opacity-70">DAY</span>{i}</span>
+        <div className="min-w-0 flex-1">
+          <p className={`truncate text-[12.5px] font-semibold ${locked ? "text-muted-foreground" : "text-foreground"}`}>Day {i}</p>
+          <p className="truncate text-[10.5px] text-muted-foreground">{done ? "✓ Done" : locked ? "🔒 Opens as you go" : `${plan.duration} min · ${plan.level}`}</p>
+        </div>
+        {!done && !locked && <button onClick={() => play(i)} className="flex shrink-0 items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-[11.5px] font-bold text-primary-foreground"><Play size={12} /> Play</button>}
+        {done && (
+          <div className="flex shrink-0 items-center gap-1.5">
+            <button onClick={() => play(i)} title="Practise again" className="flex h-6 w-6 items-center justify-center rounded-full bg-secondary text-foreground/70"><Play size={11} /></button>
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-white"><Check size={12} strokeWidth={3} /></span>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <section className="pt-4">
+      <div className="flex items-start justify-between gap-2 px-1">
+        <div className="min-w-0">
+          <h2 className="truncate font-display text-[16px] font-bold text-foreground">Current Yoga Plan</h2>
+          <p className="text-[11.5px] font-semibold text-foreground/70">Primary Goal: {plan.primary}{plan.secondary ? <> · Secondary Goal: {plan.secondary}</> : ""}</p>
+        </div>
+        <div className="flex shrink-0 items-center gap-1.5">
+          <button onClick={onEdit} className="flex items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-[11.5px] font-bold text-primary-foreground"><Sliders size={12} /> Edit</button>
+          <button onClick={onDelete} title="Delete plan" className="flex h-7 w-7 items-center justify-center rounded-full bg-secondary text-muted-foreground"><Trash2 size={13} /></button>
+        </div>
+      </div>
+      <p className="mt-0.5 px-1 text-[11px] leading-snug text-muted-foreground">{plan.level} · {plan.duration} min/day · {N} days · {plan.weeks} weeks · {doneN} done{doneToday(progress) > 0 ? ` · ${doneToday(progress)}/${DAILY_CAP} today` : ""}</p>
+
+      {/* broad arc header for the current phase (day-range, no "week") */}
+      {!complete && (
+        <div className="mt-2 rounded-2xl bg-accent/30 px-3 py-2.5 ring-1 ring-border/50">
+          <p className="text-[12.5px] font-bold text-foreground">{themeForWeek(phase)} <span className="font-semibold text-muted-foreground">· Days {phaseStart}–{phaseEnd}</span></p>
+          <p className="mt-0.5 text-[10.5px] leading-snug text-muted-foreground">{blurbForWeek(phase)}</p>
+        </div>
+      )}
+
+      <div className="mt-2 rounded-2xl bg-primary/5 px-3 py-2.5 ring-1 ring-primary/15">
+        <p className="text-[11px] leading-relaxed text-foreground/75">We have generated your first sessions and keep building the next ones as you progress — shaped by your feedback. To see the outline, <button onClick={() => setShowAll(true)} className="font-bold text-primary underline underline-offset-2">see the whole plan</button>.</p>
+      </div>
+
+      <div className="mt-2 space-y-1.5">
+        {complete
+          ? <div className="rounded-2xl bg-emerald-50 p-4 text-center ring-1 ring-emerald-200 dark:bg-emerald-900/20 dark:ring-emerald-800"><p className="text-[13px] font-bold text-emerald-700 dark:text-emerald-300">🎉 Plan complete — all {N} sessions done!</p></div>
+          : open.map((i) => sessionRow(i))}
+      </div>
+
+      <button onClick={() => setShowAll(true)} className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-2xl bg-secondary/40 py-2.5 text-[12px] font-bold text-foreground/75 ring-1 ring-border/60">See whole plan <ChevronRight size={13} /></button>
+
+      {showAll && (
+        <Dialog open onOpenChange={(v) => { if (!v) setShowAll(false); }}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle className="font-display">Your whole plan</DialogTitle>
+              <DialogDescription>{N} days over {plan.weeks} weeks. The next few are open now — we generate the rest as you progress.</DialogDescription>
+            </DialogHeader>
+            <div className="max-h-[62svh] space-y-3 overflow-y-auto pr-1">
+              {Array.from({ length: plan.weeks }, (_, pi) => pi + 1).map((ph) => {
+                const start = (ph - 1) * dpw + 1, end = Math.min(ph * dpw, N);
+                if (start > N) return null;
+                return (
+                  <div key={ph}>
+                    <p className="px-1 text-[12px] font-bold text-foreground">{themeForWeek(ph)} <span className="font-semibold text-muted-foreground">· Days {start}–{end}</span></p>
+                    <p className="mb-1 px-1 text-[10px] text-muted-foreground">{blurbForWeek(ph)}</p>
+                    <div className="space-y-1.5">
+                      {Array.from({ length: end - start + 1 }, (_, k) => start + k).map((i) => sessionRow(i, !isDone(i) && !isSessionReady(progress, i)))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {capOpen && (
+        <Dialog open onOpenChange={(v) => { if (!v) setCapOpen(false); }}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle className="font-display">That's {DAILY_CAP} for today 🙏</DialogTitle>
+              <DialogDescription>You've completed {DAILY_CAP} sessions today — lovely work. Come back tomorrow and the next one will be ready. Rest is part of the practice.</DialogDescription>
+            </DialogHeader>
+            <button onClick={() => setCapOpen(false)} className="w-full rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground">Got it</button>
+          </DialogContent>
+        </Dialog>
+      )}
+    </section>
   );
 }
 
@@ -203,7 +491,7 @@ function VideoCard({ label }: { label: string }) {
 
 /* ================= Know Yoga Techniques & Practice ================= */
 
-function KnowTab({ onPractise }: { onPractise: (title: string, plan: YogaPlan) => void }) {
+function KnowTab({ onPractise, onSaveBundle }: { onPractise: (title: string, plan: YogaPlan) => void; onSaveBundle: (poseIds: string[]) => void }) {
   const [bundle, setBundle] = useState<string[]>([]);
   const [showAll, setShowAll] = useState<Record<string, boolean>>({});
   const toggleBundle = (id: string) => setBundle((b) => b.includes(id) ? b.filter((x) => x !== id) : [...b, id]);
@@ -254,8 +542,8 @@ function KnowTab({ onPractise }: { onPractise: (title: string, plan: YogaPlan) =
     <div className="pb-24">
       {/* build-your-own-bundle bucket at the top */}
       <div className="mt-3 rounded-3xl bg-card p-4 ring-1 ring-border/60">
-        <p className="text-[12.5px] font-semibold leading-snug text-foreground">🧺 Build your own bundle</p>
-        <p className="mt-0.5 text-[11.5px] leading-snug text-muted-foreground">Tap ➕ on any asana or pranayam below and it drops in here — then practise them together.</p>
+        <p className="text-[12.5px] font-semibold leading-snug text-foreground">🧺 My Bundle</p>
+        <p className="mt-0.5 text-[11.5px] leading-snug text-muted-foreground">Tap ➕ on any asana or pranayam below and it drops in here — then practise or save it.</p>
         {bundleItems.length === 0 ? (
           <div className="mt-3 flex min-h-[52px] items-center justify-center rounded-2xl border border-dashed border-border/70 bg-secondary/30 px-3 text-center text-[11px] text-muted-foreground">
             Your picked poses will appear here
@@ -270,18 +558,22 @@ function KnowTab({ onPractise }: { onPractise: (title: string, plan: YogaPlan) =
                 </button>
               ))}
             </div>
-            <div className="mt-3 flex items-center gap-2">
-              <button onClick={() => setBundle([])} className="rounded-full bg-secondary px-3 py-2 text-[11.5px] font-semibold text-foreground/70">Clear</button>
-              <button onClick={() => onPractise("My bundle", buildBundleSession(bundle))} className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-primary px-3 py-2 text-[12.5px] font-bold text-primary-foreground"><Play size={13} /> Practise {bundleItems.length} together</button>
+            <div className="mt-3 space-y-2">
+              <button onClick={() => onPractise("My Bundle", buildBundleSession(bundle))} className="flex w-full items-center justify-center gap-1.5 rounded-full bg-primary px-3 py-2 text-[12.5px] font-bold text-primary-foreground"><Play size={13} /> Practise</button>
+              <div className="flex items-center gap-2">
+                <button onClick={() => setBundle([])} className="rounded-full bg-secondary px-3 py-2 text-[11.5px] font-semibold text-foreground/70">Clear</button>
+                <button onClick={() => onSaveBundle(bundle)} className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-amber-400 px-3 py-2 text-[12px] font-bold text-amber-950"><Star size={13} /> Save to My Fav Plans</button>
+              </div>
             </div>
           </>
         )}
       </div>
 
-      <SubTabs tabs={[{ id: "asanas", label: "🧘 Asanas" }, { id: "pranayam", label: "🌬️ Pranayam" }, { id: "bandh", label: "🔒 Bandh" }]} />
+      <SubTabs tabs={[{ id: "asanas", label: "🧘 Asanas" }, { id: "pranayam", label: "🌬️ Pranayam" }, { id: "bandh", label: "🔒 Bandh" }, { id: "mudra", label: "🙏 Mudras" }]} />
       {group("asanas", "Yoga Asanas", TECH_INTRO.asana, ASANAS, "About yoga — 2 min")}
       {group("pranayam", "Pranayam", TECH_INTRO.pranayama, PRANAYAMAS, "About pranayam — 2 min")}
       {group("bandh", "Bandh", TECH_INTRO.bandha, BANDHAS, "About bandh — 2 min")}
+      {group("mudra", "Mudras", TECH_INTRO.mudra, MUDRAS, "About mudras — 2 min")}
 
       {/* floating bundle bar — quick access while scrolling */}
       {bundle.length > 0 && (
@@ -322,50 +614,268 @@ function GoalTab({ onPick }: { onPick: (i: LibItem) => void }) {
 
 /* ================= My Plans ================= */
 
-function PlansTab({ onPlay }: { onPlay: (p: SavedYogaPlan) => void }) {
-  const [plans, setPlans] = useState<SavedYogaPlan[]>([]);
-  const [histOpen, setHistOpen] = useState(false);
-  useEffect(() => { setPlans(loadMyYogaPlans()); }, []);
+function TemplateCard({ t, favorite, onStart }: { t: YogaTemplate; favorite?: boolean; onStart: (t: YogaTemplate) => void }) {
+  return (
+    <button onClick={() => onStart(t)} className={`relative flex items-center gap-2.5 rounded-xl bg-card p-2.5 text-left ring-1 active:scale-[0.98] ${favorite ? "ring-2 ring-amber-400" : "ring-border/60"}`}>
+      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-accent/50 text-[15px]">{t.emoji}</span>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-[12px] font-bold leading-tight text-foreground">{t.name}{favorite ? " ⭐" : ""}</p>
+        {t.tagline
+          ? <p className="truncate text-[9.5px] font-semibold uppercase tracking-wide text-primary">{t.tagline}</p>
+          : <p className="truncate text-[10px] text-muted-foreground">{t.duration} min · {t.daysCount}/wk</p>}
+      </div>
+    </button>
+  );
+}
 
+function MyFavPlans({ saved, onOpen, onUnstar, onDelete }: {
+  saved: SavedYogaConfig[];
+  onOpen: (p: SavedYogaConfig) => void;
+  onUnstar: (p: SavedYogaConfig) => void;
+  onDelete: (p: SavedYogaConfig) => void;
+}) {
+  if (!saved.length) return null;
+  return (
+    <section className="mt-4">
+      <h2 className="px-1 font-display text-[15px] font-bold text-foreground">⭐ My Fav Plans</h2>
+      <p className="mt-0.5 px-1 text-[11px] text-muted-foreground">Tap to open and practise. Up to {MAX_FAV}.</p>
+      <div className="mt-2 space-y-2">
+        {saved.map((p) => {
+          const bundle = !!p.poseIds?.length;
+          return (
+            <div key={p.id} className="flex items-center gap-2.5 rounded-2xl bg-card p-2.5 ring-1 ring-amber-400/70">
+              <button onClick={() => onOpen(p)} className="flex min-w-0 flex-1 items-center gap-2.5 text-left">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent/50 text-[16px]">{bundle ? "🧺" : "🧘"}</span>
+                <div className="min-w-0">
+                  <p className="truncate text-[12.5px] font-bold text-foreground">{p.primary}{p.variant ? ` · ${p.variant}` : ""}</p>
+                  <p className="truncate text-[10.5px] text-muted-foreground">{p.level} · {p.duration} min · {totalSessions(p)} sessions</p>
+                </div>
+              </button>
+              {!bundle && <button onClick={() => onUnstar(p)} title="Unstar — back to Ready-made" className="shrink-0 rounded-full p-1.5 text-amber-500"><Star size={15} fill="currentColor" /></button>}
+              <button onClick={() => onDelete(p)} title={bundle ? "Delete bundle" : "Delete"} className="shrink-0 rounded-full p-1.5 text-muted-foreground hover:text-rose-500"><Trash2 size={14} /></button>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function PopularPlans({ favoriteIds, onPreview }: { favoriteIds: string[]; onPreview: (t: YogaTemplate) => void }) {
+  const isFav = (t: YogaTemplate) => favoriteIds.includes(t.id);
   return (
     <div className="py-4">
-      <div className="flex items-center justify-between px-1">
-        <h2 className="font-display text-[15px] font-semibold">My saved plans</h2>
-        <button onClick={() => setHistOpen(true)} className="flex items-center gap-1 rounded-full bg-secondary px-2.5 py-1.5 text-[11px] font-semibold text-foreground/75">
-          <History size={11} /> History
-        </button>
-      </div>
+      {CATEGORY_ORDER.map((cat) => {
+        const items = YOGA_TEMPLATES.filter((t) => t.category === cat);
+        if (!items.length) return null;
+        return (
+          <section key={cat} className="pt-4 first:pt-0">
+            <h2 className="px-1 font-display text-[15px] font-bold text-foreground">{CATEGORY_LABELS[cat]}</h2>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              {items.map((t) => <TemplateCard key={t.id} t={t} favorite={isFav(t)} onStart={onPreview} />)}
+            </div>
+          </section>
+        );
+      })}
+    </div>
+  );
+}
 
+/** Preview a ready-made plan: all sessions shown (unlocked), then Customise or add to Favourites. */
+function ReadyMadePreview({ template, onClose, onCustomize, onAddFav, onPlay }: {
+  template: YogaTemplate;
+  onClose: () => void;
+  onCustomize: (t: YogaTemplate) => void;
+  onAddFav: (t: YogaTemplate) => void;
+  onPlay: (t: YogaTemplate, w: number, d: number) => void;
+}) {
+  const base = templateToPlan(template);
+  const days = Array.from({ length: base.daysPerWeek }, (_, j) => j + 1);
+  const kcal = yogaKcal(base.duration, bodyWeight());
+  return (
+    <Dialog open onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle className="font-display">{template.emoji} {template.name}</DialogTitle>
+          <DialogDescription>{template.blurb}</DialogDescription>
+        </DialogHeader>
+        <div className="flex flex-wrap gap-1.5 text-[10.5px] font-semibold">
+          <span className="rounded-full bg-secondary px-2.5 py-1 text-foreground/70">{base.weeks} weeks</span>
+          <span className="rounded-full bg-secondary px-2.5 py-1 text-foreground/70">{base.daysPerWeek} days/week</span>
+          <span className="rounded-full bg-secondary px-2.5 py-1 text-foreground/70">{base.duration} min</span>
+          <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">~{kcal} kcal/day</span>
+        </div>
+        <div className="max-h-[48svh] space-y-3 overflow-y-auto pr-1">
+          {Array.from({ length: base.weeks }, (_, i) => i + 1).map((w) => (
+            <div key={w}>
+              <p className="mb-1 px-1 text-[12px] font-bold text-foreground">Week {w} · {themeForWeek(w)}</p>
+              <div className="space-y-1">
+                {days.map((d) => (
+                  <div key={d} className="flex items-center gap-2.5 rounded-xl bg-secondary/15 px-2.5 py-1.5">
+                    <span className="flex h-6 w-8 shrink-0 flex-col items-center justify-center rounded-md bg-accent/50 text-[9px] font-bold leading-none text-foreground/70"><span className="text-[6px] opacity-70">DAY</span>{(w - 1) * base.daysPerWeek + d}</span>
+                    <span className="flex-1 truncate text-[11.5px] font-medium text-foreground/80">{dayName(base, d)}</span>
+                    <span className="text-[10px] text-muted-foreground">{base.duration} min · ~{kcal} kcal</span>
+                    <button onClick={() => onPlay(template, w, d)} className="rounded-full bg-primary/10 p-1 text-primary"><Play size={11} /></button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+        <p className="px-1 text-[10.5px] leading-snug text-muted-foreground">“Save &amp; practice” keeps this plan in your ⭐ Fav Plans. “Customise” makes it adaptive (first 3 days now, the rest built from your feedback).</p>
+        <div className="flex gap-2">
+          <button onClick={() => onAddFav(template)} className="flex-1 rounded-2xl bg-primary px-4 py-3 text-[13px] font-semibold text-primary-foreground">💾 Save &amp; practice</button>
+          <button onClick={() => onCustomize(template)} className="flex-1 rounded-2xl bg-secondary px-4 py-3 text-[13px] font-semibold text-foreground">⚙ Customise</button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/** "Opened" saved plan: session queue (next 3 open), whole-plan list, make current (not for bundles). */
+function PlanDetail({ plan, isCurrent, onClose, onPlay, onMakeCurrent }: {
+  plan: SavedYogaConfig; isCurrent: boolean; onClose: () => void; onPlay: (s: Session) => void; onMakeCurrent: () => void;
+}) {
+  const [progress, setProgress] = useState<YogaProgress>({ done: [], feedback: {} });
+  const [showAll, setShowAll] = useState(false);
+  const [capOpen, setCapOpen] = useState(false);
+  useEffect(() => { setProgress(loadYogaProgress(plan.id)); }, [plan.id]);
+  const bundle = !!plan.poseIds?.length;
+  const noCurrent = bundle || YOGA_TEMPLATES.find((t) => t.id === plan.sourceId)?.noCurrent;   // bundles & Quick can't be the current plan
+  const goal = toYogaGoal(plan.primary);
+  const N = totalSessions(plan);
+  const kcal = yogaKcal(plan.duration, bodyWeight());
+  const isDone = (i: number) => progress.done.includes(sessionKey(i));
+  const play = (i: number) => {
+    if (!isDone(i) && doneToday(progress) >= DAILY_CAP) { setCapOpen(true); return; }
+    onPlay({
+      title: `${plan.primary} · Day ${i}`,
+      plan: bundle ? buildBundleSession(plan.poseIds!) : generatePlan("none", goal, plan.duration),
+      feedback: false,
+      onDone: (choice) => {
+        setProgress((p) => { const np = p.done.includes(sessionKey(i)) ? { ...p, feedback: choice ? { ...p.feedback, [sessionKey(i)]: choice } : p.feedback } : completeSession(p, i, choice); saveYogaProgress(plan.id, np); return np; });
+        if (choice && choice !== "good") toast.success("Noted — your sessions will adapt 🌱");
+      },
+    });
+  };
+  const open: number[] = [];
+  for (let i = 1; i <= N && open.length < BUFFER; i++) if (!isDone(i) && isSessionReady(progress, i)) open.push(i);
+
+  const row = (i: number, locked = false) => {
+    const done = isDone(i);
+    return (
+      <div key={i} className={`flex items-center gap-2.5 rounded-xl px-2.5 py-1.5 ${!locked ? "bg-secondary/15" : "bg-secondary/10"}`}>
+        <span className={`flex h-6 w-8 shrink-0 flex-col items-center justify-center rounded-md text-[9px] font-bold leading-none ${done ? "bg-primary text-primary-foreground" : locked ? "bg-secondary text-muted-foreground/60" : "bg-accent/50 text-foreground/70"}`}><span className="text-[6px] opacity-70">DAY</span>{i}</span>
+        <span className={`flex-1 truncate text-[11.5px] font-medium ${locked ? "text-muted-foreground" : "text-foreground/80"}`}>Day {i}</span>
+        {!done && !locked && <button onClick={() => play(i)} className="flex items-center gap-1 rounded-full bg-primary px-2.5 py-1 text-[11px] font-bold text-primary-foreground"><Play size={11} /> Play</button>}
+        {done && <span className="text-[10px] font-semibold text-emerald-600">✓ Done</span>}
+        {locked && <span className="text-[10px] text-muted-foreground">🔒</span>}
+      </div>
+    );
+  };
+
+  return (
+    <Dialog open onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle className="font-display">{plan.primary}{plan.variant ? ` · ${plan.variant}` : ""}</DialogTitle>
+          <DialogDescription>⭐ Saved in your Fav Plans — practise it anytime.</DialogDescription>
+        </DialogHeader>
+        <div className="flex flex-wrap gap-1.5 text-[10.5px] font-semibold">
+          <span className="rounded-full bg-secondary px-2.5 py-1 text-foreground/70">{N} sessions</span>
+          <span className="rounded-full bg-secondary px-2.5 py-1 text-foreground/70">{plan.duration} min</span>
+          <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">~{kcal} kcal/day</span>
+        </div>
+        <div className="space-y-1">{open.length ? open.map((i) => row(i)) : <p className="rounded-xl bg-secondary/30 p-3 text-center text-[12px] text-muted-foreground">All sessions done 🎉</p>}</div>
+        <button onClick={() => setShowAll((s) => !s)} className="text-[11.5px] font-bold text-primary">{showAll ? "Hide" : "Show whole plan"}</button>
+        {showAll && (
+          <>
+            <p className="px-1 text-[10.5px] text-muted-foreground">We create the next sessions as you progress.</p>
+            <div className="max-h-[34svh] space-y-1 overflow-y-auto pr-1">
+              {Array.from({ length: N }, (_, k) => k + 1).map((i) => row(i, !isDone(i) && !isSessionReady(progress, i)))}
+            </div>
+          </>
+        )}
+        {!noCurrent && !isCurrent && <button onClick={onMakeCurrent} className="w-full rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground">Make it my current plan</button>}
+        {!noCurrent && isCurrent && <p className="rounded-2xl bg-secondary/40 px-4 py-2.5 text-center text-[12px] font-semibold text-foreground/70">This is your current plan</p>}
+        {bundle && <p className="rounded-2xl bg-secondary/40 px-4 py-2.5 text-center text-[12px] font-semibold text-foreground/70">🧺 Your saved bundle — practise it daily</p>}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function PlansTab({ plans, onEdit, onDelete }: {
+  plans: SavedYogaConfig[];
+  onEdit: (p: SavedYogaConfig) => void;
+  onDelete: (p: SavedYogaConfig) => void;
+}) {
+  return (
+    <div className="py-4">
+      <h2 className="px-1 font-display text-[15px] font-bold text-foreground">Your plans</h2>
+      <p className="mt-0.5 px-1 text-[11px] text-muted-foreground">Your current plans (up to 2). Edit or remove them here — practise them from the top of the page.</p>
       {plans.length === 0 ? (
         <div className="mt-3 rounded-3xl bg-card p-6 text-center ring-1 ring-border/60">
-          <p className="text-[13.5px] font-semibold text-foreground">No saved plans yet</p>
-          <p className="mt-1 text-[12px] text-muted-foreground">Create a personalized plan and save it here to practise anytime.</p>
+          <p className="text-[13.5px] font-semibold text-foreground">No plans yet</p>
+          <p className="mt-1 text-[12px] text-muted-foreground">Open a program in Popular Plans and tap “Save &amp; practice”, or build your own.</p>
         </div>
       ) : (
         <div className="mt-3 space-y-2">
           {plans.map((p) => (
-            <div key={p.id} className="flex items-center gap-3 rounded-2xl bg-card p-3.5 ring-1 ring-border/60">
-              <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-accent/50 text-xl">🧘</span>
+            <div key={p.id} className="flex items-center gap-3 rounded-2xl bg-card p-3 ring-1 ring-border/60">
+              <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-accent/50 text-lg">🧘</span>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-[13.5px] font-semibold text-foreground">{p.name}</p>
-                <p className="text-[11px] text-muted-foreground">{p.duration} min · {p.poseIds.length} poses · {p.withFeedback ? "with feedback" : "no feedback"}</p>
+                <p className="truncate text-[13px] font-semibold text-foreground">{p.sourceId ? "⭐ " : ""}{p.primary}{p.variant ? ` · ${p.variant}` : ""}</p>
+                <p className="truncate text-[11px] text-muted-foreground">{p.level} · {p.duration} min · {p.weeks} wk · {p.daysPerWeek}/wk</p>
               </div>
-              <button onClick={() => onPlay(p)} className="flex items-center gap-1 rounded-full bg-primary px-3 py-2 text-[12px] font-bold text-primary-foreground"><Play size={12} /> Play</button>
-              <button onClick={() => setPlans(deleteMyYogaPlan(p.id))} className="rounded-full p-1.5 text-muted-foreground hover:text-rose-500"><Trash2 size={14} /></button>
+              <button onClick={() => onEdit(p)} title="Edit plan" className="flex items-center gap-1 rounded-full bg-primary px-3 py-2 text-[12px] font-bold text-primary-foreground"><Sliders size={12} /> Edit</button>
+              <button onClick={() => onDelete(p)} title="Delete plan" className="rounded-full p-1.5 text-muted-foreground hover:text-rose-500"><Trash2 size={14} /></button>
             </div>
           ))}
         </div>
       )}
 
-      <Dialog open={histOpen} onOpenChange={setHistOpen}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="font-display">Practice history</DialogTitle>
-            <DialogDescription>Every session you've practised, and the energy burnt.</DialogDescription>
-          </DialogHeader>
-          <YogaHistoryList />
-        </DialogContent>
-      </Dialog>
+      <h2 className="mt-6 px-1 font-display text-[15px] font-bold text-foreground">📈 Practice trend</h2>
+      <p className="mt-0.5 px-1 text-[11px] text-muted-foreground">Minutes and calories per day.</p>
+      <div className="mt-3"><PracticeTrend /></div>
+
+      <h2 className="mt-6 px-1 font-display text-[15px] font-bold text-foreground">📦 Session archive</h2>
+      <p className="mt-0.5 px-1 text-[11px] text-muted-foreground">Every session you've completed, and the energy burnt.</p>
+      <div className="mt-3"><YogaHistoryList /></div>
+    </div>
+  );
+}
+
+function PracticeTrend() {
+  const byDay = useMemo(() => {
+    const m = new Map<string, { min: number; kcal: number }>();
+    for (const h of loadYogaHistory()) {
+      const e = m.get(h.date) ?? { min: 0, kcal: 0 };
+      e.min += h.minutes; e.kcal += h.kcal; m.set(h.date, e);
+    }
+    return [...m.entries()].sort((a, b) => (a[0] < b[0] ? -1 : 1)).slice(-14);
+  }, []);
+  if (!byDay.length) return <p className="rounded-2xl bg-secondary/50 p-4 text-center text-[12px] text-muted-foreground">No practice yet — your daily trend appears here.</p>;
+  const maxMin = Math.max(...byDay.map(([, e]) => e.min), 1);
+  const totalMin = byDay.reduce((a, [, e]) => a + e.min, 0);
+  const totalKcal = byDay.reduce((a, [, e]) => a + e.kcal, 0);
+  return (
+    <div className="rounded-2xl bg-card p-3 ring-1 ring-border/60">
+      <div className="flex gap-2 text-[11px] font-semibold">
+        <span className="rounded-full bg-secondary px-2.5 py-1 text-foreground/70">{totalMin} min</span>
+        <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">{totalKcal} kcal</span>
+        <span className="rounded-full bg-secondary px-2.5 py-1 text-foreground/70">last {byDay.length} days</span>
+      </div>
+      <div className="mt-3 flex h-24 items-end gap-1">
+        {byDay.map(([date, e]) => (
+          <div key={date} className="flex flex-1 flex-col items-center gap-1" title={`${new Date(date).toLocaleDateString(undefined, { day: "numeric", month: "short" })} · ${e.min} min · ${e.kcal} kcal`}>
+            <div className="flex w-full items-end justify-center" style={{ height: "100%" }}>
+              <div className="w-full max-w-[16px] rounded-t bg-primary" style={{ height: `${Math.max(6, (e.min / maxMin) * 100)}%` }} />
+            </div>
+            <span className="text-[8px] tabular-nums text-muted-foreground">{new Date(date).getDate()}</span>
+          </div>
+        ))}
+      </div>
+      <p className="mt-1 text-[10px] text-muted-foreground">Bar height = minutes practised. Tap-hold a bar for the day's total.</p>
     </div>
   );
 }
@@ -608,7 +1118,7 @@ function CreatePlanSheet({ onClose, onPlay }: { onClose: () => void; onPlay: (ti
 
 /* ================= Session player ================= */
 
-function SessionPlayer({ title, plan, feedback, onClose }: { title: string; plan: YogaPlan; feedback: boolean; onClose: () => void }) {
+function SessionPlayer({ title, plan, feedback, onDone, onClose }: { title: string; plan: YogaPlan; feedback: boolean; onDone?: (choice: string | null) => void; onClose: () => void }) {
   const poses = useMemo(() => { const p = posesFor(plan); return p.length ? p : POSES.slice(0, 5); }, [plan]);
   const [idx, setIdx] = useState(0);
   const [secs, setSecs] = useState(poses[0]?.durationSec ?? 40);
@@ -649,6 +1159,20 @@ function SessionPlayer({ title, plan, feedback, onClose }: { title: string; plan
   };
   const skipPunch = () => { addYogaHistory({ date: new Date().toISOString().slice(0, 10), label: title, minutes, kcal }); onClose(); };
 
+  // Plan sessions auto-log the calories (no manual punch) the moment the session ends.
+  const punchedRef = useRef(false);
+  useEffect(() => {
+    if (!done || !onDone || punchedRef.current) return;
+    punchedRef.current = true;
+    addCalEntry({ kind: "out", label: `Yoga · ${title} (${minutes}m)`, kcal });
+    addYogaHistory({ date: new Date().toISOString().slice(0, 10), label: title, minutes, kcal });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [done]);
+  const navigate = useNavigate();
+  const complete = (choice: string | null) => { onDone?.(choice); onClose(); };
+  // "tweak" / "change" record the feedback, then open Ayu so the user can say what they want changed
+  const completeChat = (choice: string, seed: string) => { onDone?.(choice); navigate({ to: "/coach", search: { seed } }); };
+
   if (done) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-6 backdrop-blur-sm">
@@ -656,12 +1180,30 @@ function SessionPlayer({ title, plan, feedback, onClose }: { title: string; plan
           <span className="text-5xl">🎉</span>
           <h3 className="mt-3 font-display text-xl font-bold text-foreground">Beautiful practice!</h3>
           <p className="mt-1 text-[13px] text-muted-foreground">{title} · {minutes} min · {poses.length} poses</p>
-          <div className="mt-4 rounded-2xl bg-accent/40 p-4 ring-1 ring-border/60">
-            <p className="text-[13px] font-semibold text-foreground">You burnt about <b className="text-primary">{kcal} kcal</b> 🔥</p>
-            <p className="mt-0.5 text-[11.5px] text-muted-foreground">Add it to today's cal-out on your dashboard?</p>
-          </div>
-          <button onClick={punch} className="mt-3 w-full rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground">➕ Punch {kcal} kcal to cal-out</button>
-          <button onClick={skipPunch} className="mt-2 w-full rounded-2xl bg-secondary px-4 py-2.5 text-[13px] font-semibold text-foreground">Just save the session</button>
+          {onDone ? (
+            <>
+              <div className="mt-4 rounded-2xl bg-accent/40 p-3 ring-1 ring-border/60">
+                <p className="text-[12.5px] font-semibold text-foreground"><b className="text-primary">{kcal} kcal</b> added to your cal-out ✅</p>
+              </div>
+              <p className="mt-4 text-[13.5px] font-bold text-foreground">How did that feel?</p>
+              <p className="mb-2 text-[11px] text-muted-foreground">Optional — it shapes what comes next.</p>
+              <div className="space-y-2">
+                <button onClick={() => complete("good")} className="w-full rounded-2xl bg-primary px-4 py-3 text-[13.5px] font-semibold text-primary-foreground">😌 Good — keep it coming</button>
+                <button onClick={() => completeChat("tweak", "I'm following my personalized yoga plan and it's mostly good, but I'd like a few tweaks. Can you help me adjust it?")} className="w-full rounded-2xl bg-secondary px-4 py-3 text-[13.5px] font-semibold text-foreground">👍 Good, but I want some tweaks</button>
+                <button onClick={() => completeChat("change", "I'm not happy with my personalized yoga plan and want major changes. Can you help me rework it?")} className="w-full rounded-2xl bg-secondary px-4 py-3 text-[13.5px] font-semibold text-foreground">👎 Not for me — I want major changes</button>
+                <button onClick={() => complete(null)} className="w-full rounded-2xl px-4 py-1.5 text-[12.5px] font-semibold text-muted-foreground">Skip</button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="mt-4 rounded-2xl bg-accent/40 p-4 ring-1 ring-border/60">
+                <p className="text-[13px] font-semibold text-foreground">You burnt about <b className="text-primary">{kcal} kcal</b> 🔥</p>
+                <p className="mt-0.5 text-[11.5px] text-muted-foreground">Add it to today's cal-out on your dashboard?</p>
+              </div>
+              <button onClick={punch} className="mt-3 w-full rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground">➕ Punch {kcal} kcal to cal-out</button>
+              <button onClick={skipPunch} className="mt-2 w-full rounded-2xl bg-secondary px-4 py-2.5 text-[13px] font-semibold text-foreground">Just save the session</button>
+            </>
+          )}
         </div>
       </div>
     );

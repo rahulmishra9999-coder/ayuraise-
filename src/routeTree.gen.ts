@@ -24,6 +24,7 @@ import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as CombinedPlanRouteImport } from './routes/combined-plan'
 import { Route as CoachRouteImport } from './routes/coach'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as SectionYogaWorkoutRouteImport } from './routes/section.yoga-workout'
 import { Route as SectionYogaRouteImport } from './routes/section.yoga'
 import { Route as SectionWeightLossRouteImport } from './routes/section.weight-loss'
 import { Route as SectionMeditationRouteImport } from './routes/section.meditation'
@@ -112,6 +113,11 @@ const CoachRoute = CoachRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SectionYogaWorkoutRoute = SectionYogaWorkoutRouteImport.update({
+  id: '/section/yoga-workout',
+  path: '/section/yoga-workout',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SectionYogaRoute = SectionYogaRouteImport.update({
@@ -214,6 +220,7 @@ export interface FileRoutesByFullPath {
   '/section/meditation': typeof SectionMeditationRoute
   '/section/weight-loss': typeof SectionWeightLossRoute
   '/section/yoga': typeof SectionYogaRoute
+  '/section/yoga-workout': typeof SectionYogaWorkoutRoute
   '/diet/journey/$slug': typeof DietJourneySlugRoute
 }
 export interface FileRoutesByTo {
@@ -245,6 +252,7 @@ export interface FileRoutesByTo {
   '/section/meditation': typeof SectionMeditationRoute
   '/section/weight-loss': typeof SectionWeightLossRoute
   '/section/yoga': typeof SectionYogaRoute
+  '/section/yoga-workout': typeof SectionYogaWorkoutRoute
   '/diet/journey/$slug': typeof DietJourneySlugRoute
 }
 export interface FileRoutesById {
@@ -277,6 +285,7 @@ export interface FileRoutesById {
   '/section/meditation': typeof SectionMeditationRoute
   '/section/weight-loss': typeof SectionWeightLossRoute
   '/section/yoga': typeof SectionYogaRoute
+  '/section/yoga-workout': typeof SectionYogaWorkoutRoute
   '/diet/journey/$slug': typeof DietJourneySlugRoute
 }
 export interface FileRouteTypes {
@@ -310,6 +319,7 @@ export interface FileRouteTypes {
     | '/section/meditation'
     | '/section/weight-loss'
     | '/section/yoga'
+    | '/section/yoga-workout'
     | '/diet/journey/$slug'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -341,6 +351,7 @@ export interface FileRouteTypes {
     | '/section/meditation'
     | '/section/weight-loss'
     | '/section/yoga'
+    | '/section/yoga-workout'
     | '/diet/journey/$slug'
   id:
     | '__root__'
@@ -372,6 +383,7 @@ export interface FileRouteTypes {
     | '/section/meditation'
     | '/section/weight-loss'
     | '/section/yoga'
+    | '/section/yoga-workout'
     | '/diet/journey/$slug'
   fileRoutesById: FileRoutesById
 }
@@ -403,6 +415,7 @@ export interface RootRouteChildren {
   SectionMeditationRoute: typeof SectionMeditationRoute
   SectionWeightLossRoute: typeof SectionWeightLossRoute
   SectionYogaRoute: typeof SectionYogaRoute
+  SectionYogaWorkoutRoute: typeof SectionYogaWorkoutRoute
   DietJourneySlugRoute: typeof DietJourneySlugRoute
 }
 
@@ -511,6 +524,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/section/yoga-workout': {
+      id: '/section/yoga-workout'
+      path: '/section/yoga-workout'
+      fullPath: '/section/yoga-workout'
+      preLoaderRoute: typeof SectionYogaWorkoutRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/section/yoga': {
@@ -652,6 +672,7 @@ const rootRouteChildren: RootRouteChildren = {
   SectionMeditationRoute: SectionMeditationRoute,
   SectionWeightLossRoute: SectionWeightLossRoute,
   SectionYogaRoute: SectionYogaRoute,
+  SectionYogaWorkoutRoute: SectionYogaWorkoutRoute,
   DietJourneySlugRoute: DietJourneySlugRoute,
 }
 export const routeTree = rootRouteImport

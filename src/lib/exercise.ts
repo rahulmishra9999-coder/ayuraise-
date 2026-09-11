@@ -13,7 +13,7 @@ export type Focus =
   | "arms" | "legs" | "chest" | "shoulders" | "abs" | "core";
 export type Level = "beginner" | "medium" | "advanced";
 export type Intensity = "low" | "medium" | "high";
-export type Equip = "none" | "dumbbells" | "gym" | "desi";
+export type Equip = "none" | "dumbbells" | "gym" | "desi" | "bands";
 export type Kind = "warmup" | "main" | "cooldown";
 
 export interface Exercise {
@@ -361,6 +361,84 @@ export const FOCUS_LIST: { id: Focus; label: string }[] = [
 ];
 export function focusLabel(f: Focus): string { return FOCUS_LIST.find((x) => x.id === f)?.label ?? f; }
 
+/** Focus-area choices that make sense for a given objective. `focus` maps a display
+ *  option to the nearest engine focus; `key` keeps duplicate focuses selectable. */
+export type FocusChoice = { key: string; focus: Focus; label: string; recommended?: boolean };
+const fo = (key: string, focus: Focus, label: string): FocusChoice => ({ key, focus, label });
+export function focusChoicesFor(objective: string): { hide: boolean; options: FocusChoice[] } {
+  switch (objective) {
+    case "endurance":
+    case "metabolic":
+    case "posture":
+    case "stress-relief":
+      return { hide: true, options: [] };
+    case "general": return { hide: false, options: [
+      fo("full-body", "full-body", "Full Body"), fo("upper-body", "upper-body", "Upper Body"),
+      fo("lower-body", "lower-body", "Lower Body"), fo("abs-core", "core", "Abs & Core"), fo("cardio", "endurance", "Cardio"),
+    ] };
+    case "lose-weight": return { hide: false, options: [
+      fo("full-body", "full-body", "Full Body"), fo("belly", "abs", "Belly Fat Burn"),
+    ] };
+    case "muscle": return { hide: false, options: [
+      fo("full-body", "full-body", "Full Body"), fo("upper-body", "upper-body", "Upper Body"), fo("lower-body", "lower-body", "Lower Body"),
+      fo("chest", "chest", "Chest"), fo("back", "upper-body", "Back"), fo("shoulders", "shoulders", "Shoulders"),
+      fo("arms", "arms", "Arms"), fo("abs-core", "abs", "Abs & Core"),
+    ] };
+    case "tone": return { hide: false, options: [
+      fo("full-body", "full-body", "Full Body"), fo("upper-body", "upper-body", "Upper Body"), fo("lower-body", "lower-body", "Lower Body"),
+      fo("chest", "chest", "Chest"), fo("back", "upper-body", "Back"), fo("shoulders", "shoulders", "Shoulders"),
+      fo("arms", "arms", "Arms"), fo("abs-core", "abs", "Abs & Core"), fo("legs-glutes", "legs", "Legs & Glutes"),
+    ] };
+    case "strength": return { hide: false, options: [
+      fo("full-body", "full-body", "Full Body"), fo("upper-body", "upper-body", "Upper Body"), fo("lower-body", "lower-body", "Lower Body"),
+      fo("push", "chest", "Push"), fo("pull", "upper-body", "Pull"), fo("core", "core", "Core"),
+    ] };
+    case "flexibility": return { hide: false, options: [
+      fo("full-body", "full-body", "Full Body"), fo("upper-body", "upper-body", "Upper Body"), fo("hips-legs", "legs", "Hips & Legs"),
+      fo("back-spine", "core", "Back & Spine"), fo("shoulders", "shoulders", "Shoulders"), fo("lower-body", "lower-body", "Lower Body"),
+    ] };
+    case "senior": return { hide: false, options: [
+      fo("full-body", "full-body", "🌿 Full Body"), fo("balance", "core", "⚖️ Balance & Stability"), fo("mobility", "full-body", "🔄 Joint & Mobility"),
+      fo("heart", "endurance", "❤️ Heart Health"), fo("legs", "lower-body", "🦵 Legs & Lower Body"), fo("flex", "full-body", "🧘 Flexibility"),
+    ] };
+    case "joint-relief": return { hide: false, options: [
+      fo("full-body", "full-body", "🌿 Full Body"), fo("knees", "legs", "🦵 Knees"), fo("back-spine", "core", "🧍 Back & Spine"),
+      fo("neck-shoulders", "shoulders", "🧘 Neck & Shoulders"), fo("hips", "lower-body", "🦴 Hips"), fo("wrists-elbows", "arms", "👐 Wrists & Elbows"),
+    ] };
+    case "diabetic": return { hide: false, options: [
+      fo("full-body", "full-body", "🌿 Full Body"), fo("cardio-heart", "endurance", "❤️ Cardio & Heart Health"), fo("strength", "full-body", "💪 Strength"),
+      fo("walking", "endurance", "🚶 Walking"), fo("balance", "core", "⚖️ Balance & Mobility"), fo("metabolic", "endurance", "🔥 Metabolic Fitness"),
+    ] };
+    default: return { hide: false, options: FOCUS_LIST.map((f) => ({ key: f.id, focus: f.id, label: f.label })) };
+  }
+}
+
+/** Preferred-style choices per objective. `auto` = hide the picker, AI recommends. */
+export type StyleChoice = { id: string; label: string; emoji: string };
+const STY: Record<string, StyleChoice> = {
+  cardio: { id: "cardio", label: "Cardio", emoji: "🏃" },
+  hiit: { id: "hiit", label: "HIIT", emoji: "⚡" },
+  gym: { id: "gym", label: "Gym", emoji: "🏋️" },
+  calisthenics: { id: "calisthenics", label: "Calisthenics", emoji: "🤸" },
+  desi: { id: "desi-kasrat", label: "Desi Kasrat", emoji: "🪷" },
+  pilates: { id: "pilates", label: "Pilates", emoji: "🩰" },
+  yoga: { id: "yoga", label: "Yoga/Stretching", emoji: "🧘‍♀️" },
+  somatic: { id: "somatic", label: "Somatic", emoji: "🌀" },
+};
+const FULL_STYLES: StyleChoice[] = [STY.cardio, STY.hiit, STY.gym, STY.calisthenics, STY.desi, STY.pilates, STY.yoga];
+export function styleChoicesFor(objective: string): { auto: boolean; options: StyleChoice[] } {
+  switch (objective) {
+    case "posture":
+    case "flexibility":
+    case "senior":
+    case "joint-relief":
+      return { auto: true, options: [] };
+    case "endurance": return { auto: false, options: [STY.cardio, STY.hiit, STY.calisthenics, STY.desi, STY.yoga] };
+    case "stress-relief": return { auto: false, options: [STY.cardio, STY.somatic, { id: "yoga", label: "Yoga & Pranayam", emoji: "🧘‍♀️" }] };
+    default: return { auto: false, options: FULL_STYLES };
+  }
+}
+
 const FOCUS_PARTS: Record<Focus, BodyPart[]> = {
   "full-body": ["full-body"],
   "upper-body": ["chest", "arms", "shoulders", "back"],
@@ -407,6 +485,7 @@ export const BUCKETS: Bucket[] = [
   { id: "zumba", label: "Zumba", emoji: "🕺", blurb: "Latin-inspired cardio dance party.", group: "styles", tag: "dance", music: true },
   { id: "dance", label: "Dancing Workouts", emoji: "💃", blurb: "Sweat without noticing you're working out.", group: "styles", tag: "dance", music: true },
   { id: "somatic", label: "Somatic", emoji: "🌀", blurb: "Slow, gentle movement to calm the nervous system.", group: "styles", tag: "somatic", maxMet: 3 },
+  { id: "yoga", label: "Yoga", emoji: "🧘", blurb: "Breath-led poses and flows for strength & calm.", group: "styles", tag: "yoga" },
 
   // ---- Goal ----
   { id: "lose-weight", label: "Lose Weight", emoji: "🔥", blurb: "Burn calories and hold on to muscle.", group: "goal" },
@@ -657,6 +736,15 @@ const SPECS: Record<string, Spec[]> = {
     ["full-body", "Bedtime Somatic Wind-Down", 15, "beginner"],
     ["full-body", "Deep Somatic Session", 25, "medium"],
   ],
+  yoga: [
+    ["full-body", "Gentle Yoga Flow", 15, "beginner"],
+    ["full-body", "Sun Salutation Flow", 20, "beginner"],
+    ["upper-body", "Yoga for Upper Body", 15, "beginner"],
+    ["lower-body", "Yoga for Hips & Legs", 18, "medium"],
+    ["core", "Core Power Yoga", 15, "medium"],
+    ["full-body", "Strength Yoga Flow", 25, "medium"],
+    ["full-body", "Advanced Vinyasa Flow", 25, "advanced"],
+  ],
   "abs-program": [
     ["abs", "Beginner Abs", 10, "beginner"],
     ["abs", "Standing Abs", 12, "beginner"],
@@ -888,9 +976,9 @@ export const STYLE_CHOICES: { id: string; label: string; emoji: string }[] = [
   { id: "calisthenics", label: "Calisthenics", emoji: "🤸" },
   { id: "pilates", label: "Pilates", emoji: "🩰" },
   { id: "hiit", label: "HIIT", emoji: "⚡" },
-  { id: "dance", label: "Dance workouts", emoji: "💃" },
-  { id: "stretching", label: "Stretching", emoji: "🧘" },
   { id: "cardio", label: "Cardio", emoji: "🏃" },
+  { id: "yoga", label: "Yoga/Stretching", emoji: "🧘‍♀️" },
+  { id: "somatic", label: "Somatic", emoji: "🌀" },
 ];
 // row filter options
 export const EQUIP_FILTERS: { id: Equip; label: string }[] = [
@@ -898,13 +986,91 @@ export const EQUIP_FILTERS: { id: Equip; label: string }[] = [
   { id: "dumbbells", label: "Only dumbbells" },
   { id: "desi", label: "Desi implements" },
 ];
-// plan sheet needs the full set incl. gym machines
+// plan sheet — multi-select equipment ("none" is mutually exclusive with the rest)
 export const EQUIP_ALL: { id: Equip; label: string }[] = [
-  { id: "none", label: "No equipment" },
-  { id: "dumbbells", label: "Only dumbbells" },
-  { id: "gym", label: "Gym machines" },
-  { id: "desi", label: "Desi implements" },
+  { id: "none", label: "No Equipment" },
+  { id: "dumbbells", label: "Dumbbells" },
+  { id: "gym", label: "Gym Equipment" },
+  { id: "bands", label: "Resistance Bands" },
+  { id: "desi", label: "Traditional / Desi Equipment" },
 ];
+
+/* Detailed, style-specific equipment. Each item maps to a coarse Equip the engine
+ * understands. "No equipment" is added by equipmentForStyles and stays exclusive. */
+export type EquipItem = { label: string; equip: Equip; emoji: string; note?: string };
+const EQ_NONE: EquipItem = { label: "No equipment", equip: "none", emoji: "🙅" };
+export const STYLE_EQUIPMENT: Record<string, EquipItem[]> = {
+  gym: [
+    { label: "Dumbbells", equip: "dumbbells", emoji: "🏋️", note: "a water bottle works too" },
+    { label: "Barbells", equip: "gym", emoji: "🏋️‍♂️" }, { label: "Weight Plates", equip: "gym", emoji: "⚫" }, { label: "Cable Machines", equip: "gym", emoji: "🔗" },
+    { label: "Lat Pull-down", equip: "gym", emoji: "🔽" }, { label: "Leg Press", equip: "gym", emoji: "🦵" }, { label: "Shoulder Press", equip: "gym", emoji: "💪" },
+    { label: "Seated Chest Press", equip: "gym", emoji: "🪑" }, { label: "Seated Row", equip: "gym", emoji: "🚣" },
+    { label: "Smith Machine", equip: "gym", emoji: "🏗️" }, { label: "Benches", equip: "gym", emoji: "🛋️" },
+    { label: "Kettlebells", equip: "dumbbells", emoji: "🔔" }, { label: "Pull-up Bar", equip: "none", emoji: "🆙" }, { label: "Dip Station", equip: "none", emoji: "⬇️" },
+  ],
+  pilates: [
+    { label: "Dumbbells", equip: "dumbbells", emoji: "🏋️", note: "a water bottle works too" }, { label: "Pilates Mat", equip: "none", emoji: "🟦" },
+    { label: "Resistance Bands", equip: "bands", emoji: "🎗️" }, { label: "Pilates Ring", equip: "none", emoji: "⭕" },
+    { label: "Pilates Ball", equip: "none", emoji: "🔵" }, { label: "Small Exercise Ball", equip: "none", emoji: "🔴" }, { label: "Foam Roller", equip: "none", emoji: "🧻" },
+  ],
+  calisthenics: [
+    { label: "Pull-up Bar", equip: "none", emoji: "🆙" }, { label: "Dip Bars", equip: "none", emoji: "⬇️" }, { label: "Parallel Bars", equip: "none", emoji: "🟰" },
+    { label: "Resistance Bands", equip: "bands", emoji: "🎗️" }, { label: "Parallettes", equip: "none", emoji: "▪️" },
+  ],
+  "desi-kasrat": [
+    { label: "Gada", equip: "desi", emoji: "🏑" }, { label: "Indian Club / Mudgar", equip: "desi", emoji: "🏏" },
+    { label: "SamTola", equip: "desi", emoji: "🪨" }, { label: "Naal", equip: "desi", emoji: "🪵" },
+  ],
+  hiit: [
+    { label: "Dumbbells", equip: "dumbbells", emoji: "🏋️", note: "a water bottle works too" }, { label: "Kettlebells", equip: "dumbbells", emoji: "🔔" },
+    { label: "Resistance Bands", equip: "bands", emoji: "🎗️" }, { label: "Jump Rope", equip: "none", emoji: "🪢" }, { label: "Sandbag", equip: "gym", emoji: "🎒" },
+  ],
+  cardio: [
+    { label: "Jump Rope", equip: "none", emoji: "🪢" }, { label: "Treadmill", equip: "gym", emoji: "🏃" }, { label: "Stationary Bike", equip: "gym", emoji: "🚴" },
+    { label: "Elliptical", equip: "gym", emoji: "🌀" }, { label: "Rowing Machine", equip: "gym", emoji: "🚣" }, { label: "Stepper", equip: "none", emoji: "🪜" },
+  ],
+  yoga: [],
+};
+const MIX_EQUIPMENT: EquipItem[] = [
+  { label: "Dumbbells", equip: "dumbbells", emoji: "🏋️", note: "a water bottle works too" }, { label: "Resistance Bands", equip: "bands", emoji: "🎗️" },
+  { label: "Kettlebells", equip: "dumbbells", emoji: "🔔" }, { label: "Gym Equipment", equip: "gym", emoji: "🏋️‍♂️" }, { label: "Pull-up Bar", equip: "none", emoji: "🆙" },
+  { label: "Dip Bars", equip: "none", emoji: "⬇️" }, { label: "Yoga Props", equip: "none", emoji: "🧘" }, { label: "Pilates Props", equip: "none", emoji: "⭕" },
+  { label: "Traditional Desi Tools", equip: "desi", emoji: "🏑" }, { label: "Cardio Machines", equip: "gym", emoji: "🏃" },
+];
+/** Equipment options to show for the chosen styles (union, de-duplicated), always led by "No equipment".
+ *  Styles with no gear (e.g. Yoga/Stretching) show only "No equipment". */
+export function equipmentForStyles(styleIds: string[]): EquipItem[] {
+  const src = styleIds.flatMap((id) => STYLE_EQUIPMENT[id] ?? []);
+  if (styleIds.length && !src.length) return [EQ_NONE];
+  const list = src.length ? src : MIX_EQUIPMENT;
+  const out: EquipItem[] = [EQ_NONE];
+  const seen = new Set<string>(["No equipment"]);
+  for (const it of list) if (!seen.has(it.label)) { seen.add(it.label); out.push(it); }
+  return out;
+}
+/** One flat equipment list (all styles combined, de-duplicated) — used to reduce a selection to coarse Equip. */
+export const EQUIPMENT_ITEMS: EquipItem[] = (() => {
+  const out: EquipItem[] = [EQ_NONE];
+  const seen = new Set<string>(["No equipment"]);
+  for (const list of Object.values(STYLE_EQUIPMENT)) for (const it of list) if (!seen.has(it.label)) { seen.add(it.label); out.push(it); }
+  return out;
+})();
+/** All equipment grouped under a style header (for the "show everything, grouped" picker). */
+export const EQUIPMENT_GROUPS: { style: string; emoji: string; items: EquipItem[] }[] = [
+  { style: "Gym", emoji: "🏋️", items: STYLE_EQUIPMENT.gym },
+  { style: "Pilates", emoji: "🩰", items: STYLE_EQUIPMENT.pilates },
+  { style: "Calisthenics", emoji: "🤸", items: STYLE_EQUIPMENT.calisthenics },
+  { style: "Desi Kasrat", emoji: "🪷", items: STYLE_EQUIPMENT["desi-kasrat"] },
+  { style: "HIIT", emoji: "⚡", items: STYLE_EQUIPMENT.hiit },
+  { style: "Cardio", emoji: "🏃", items: STYLE_EQUIPMENT.cardio },
+];
+/** Reduce chosen detailed-equipment labels to the coarse Equip[] the engine filters on. */
+export function coarseEquip(items: EquipItem[], chosenLabels: string[]): Equip[] {
+  const chosen = items.filter((i) => chosenLabels.includes(i.label));
+  if (!chosen.length || chosen.some((c) => c.label === "No equipment")) return ["none"];
+  const set = Array.from(new Set(chosen.map((c) => c.equip)));
+  return set.length ? set : ["none"];
+}
 export const INTENSITIES: { id: Intensity; label: string }[] = [
   { id: "low", label: "Low" }, { id: "medium", label: "Medium" }, { id: "high", label: "High" },
 ];
@@ -1086,27 +1252,29 @@ export function loadFeedback(): Feedback[] { return read<Feedback[]>(FEEDBACK_KE
 /* ================= Editable Weekly Plan template ================= */
 
 export const OBJECTIVES: { id: string; label: string; buckets: string[]; focus: Focus[] }[] = [
-  { id: "general", label: "General fitness", buckets: [], focus: [] },
-  { id: "lose-weight", label: "Lose weight", buckets: ["hiit", "cardio", "dance", "zumba", "lose-weight", "belly-fat"], focus: ["full-body", "endurance"] },
-  { id: "strength", label: "Build strength", buckets: ["gym", "calisthenics", "desi-kasrat"], focus: ["upper-body", "lower-body"] },
-  { id: "tone", label: "Tone & sculpt", buckets: ["toning", "pilates"], focus: ["full-body"] },
+  { id: "general", label: "General Fitness", buckets: [], focus: [] },
+  { id: "lose-weight", label: "Weight Loss", buckets: ["hiit", "cardio", "lose-weight", "belly-fat"], focus: ["full-body", "endurance"] },
+  { id: "muscle", label: "Muscle Building", buckets: ["gym", "calisthenics", "desi-kasrat"], focus: ["upper-body", "lower-body"] },
+  { id: "strength", label: "Strength", buckets: ["gym", "calisthenics", "desi-kasrat"], focus: ["upper-body", "lower-body"] },
+  { id: "tone", label: "Toning", buckets: ["toning", "pilates"], focus: ["full-body"] },
   { id: "endurance", label: "Endurance", buckets: ["cardio", "endurance", "running", "cycling"], focus: ["endurance"] },
-  { id: "flexibility", label: "Flexibility", buckets: ["stretching", "strength-yoga", "tai-chi", "flexibility", "somatic"], focus: [] },
-  { id: "diabetic", label: "Diabetic-friendly", buckets: ["diabetic", "cardio", "walking"], focus: ["endurance"] },
-  { id: "senior", label: "Senior fitness", buckets: ["senior", "walking", "stretching"], focus: [] },
-  { id: "build-abs", label: "Build Abs", buckets: ["abs-program"], focus: ["abs"] },
+  { id: "metabolic", label: "Metabolic Boost", buckets: ["hiit", "cardio"], focus: ["endurance"] },
+  { id: "flexibility", label: "Flexibility", buckets: ["stretching", "yoga", "flexibility", "somatic"], focus: [] },
+  { id: "posture", label: "Better Posture", buckets: ["pilates", "yoga", "stretching", "somatic"], focus: [] },
+  { id: "stress-relief", label: "Stress Relief", buckets: ["somatic", "yoga", "stretching"], focus: [] },
+  { id: "senior", label: "Senior Fitness", buckets: ["senior", "walking", "stretching"], focus: [] },
   { id: "joint-relief", label: "Joint & Pain Relief", buckets: ["senior", "stretching", "somatic"], focus: [] },
-  { id: "stress-relief", label: "Stress Relief", buckets: ["somatic", "stretching", "strength-yoga", "tai-chi"], focus: [] },
+  { id: "diabetic", label: "Diabetes-Friendly", buckets: ["diabetic", "cardio", "walking"], focus: ["endurance"] },
 ];
-const GENTLE_OBJ = new Set(["flexibility", "diabetic", "senior", "joint-relief", "stress-relief"]);
+const GENTLE_OBJ = new Set(["flexibility", "posture", "diabetic", "senior", "joint-relief", "stress-relief"]);
 
 // conditions the plan should be safe for
 export const PROBLEMS: { id: string; label: string; avoidFocus?: Focus[]; avoidBuckets?: string[]; maxAdvanced?: boolean }[] = [
-  { id: "back", label: "Back issues", avoidFocus: ["core"], avoidBuckets: ["desi-kasrat", "hiit"], maxAdvanced: true },
-  { id: "knee", label: "Knee issues", avoidFocus: ["legs", "lower-body"], avoidBuckets: ["hiit", "running"], maxAdvanced: true },
-  { id: "shoulder", label: "Shoulder issues", avoidFocus: ["upper-body", "shoulders", "chest", "arms"], maxAdvanced: true },
-  { id: "wrist", label: "Wrist issues", avoidBuckets: ["calisthenics", "desi-kasrat"] },
-  { id: "heart", label: "Heart / BP", avoidBuckets: ["hiit"], maxAdvanced: true },
+  { id: "knee", label: "Knees", avoidFocus: ["legs", "lower-body"], avoidBuckets: ["hiit", "running"], maxAdvanced: true },
+  { id: "back", label: "Lower Back", avoidFocus: ["core"], avoidBuckets: ["desi-kasrat", "hiit"], maxAdvanced: true },
+  { id: "hips", label: "Hips", avoidFocus: ["lower-body", "legs"], avoidBuckets: ["hiit"], maxAdvanced: true },
+  { id: "shoulder", label: "Shoulders", avoidFocus: ["upper-body", "shoulders", "chest", "arms"], maxAdvanced: true },
+  { id: "heart", label: "Heart / Blood Pressure", avoidBuckets: ["hiit"], maxAdvanced: true },
 ];
 function problemsOk(s: Session, ids: string[]): boolean {
   for (const id of ids) {
@@ -1123,19 +1291,32 @@ export interface WeekOptions {
   level: Level | "any";
   focus: Focus[];         // muscle groups
   minutes: number;        // 0 = any
-  equip: Equip | "any";
+  equip: Equip[];         // multi-select; [] = any; ["none"] = bodyweight only
   styles: string[];       // bucket ids, empty = any
   problems: string[];     // conditions to stay safe for
-  activeDays: number;     // 3–7
+  activeDays: number;     // 1–7 workout days
+  restDay?: boolean;      // true (default) = lay a 7-day week with rest days; false = only the active days
+  days?: string[];        // scheduled weekdays (mon..sun) — for the weekly-schedule UI & reminders
+  time?: string;          // workout time "HH:MM" applied to the scheduled days
+  styleByDay?: string[]; // explicit style per active day (index 0 = Day 1); empty/undefined = balanced mix
+}
+
+/** Multi-equipment gate: [] = any; a session passes if its equipment is selected,
+ *  and bodyweight is allowed whenever "none"/dumbbells/bands are in the mix. */
+function equipPass(eqs: Equip[]): (s: Session) => boolean {
+  if (!eqs.length) return () => true;
+  const set = new Set(eqs);
+  const bodyOk = set.has("none") || set.has("dumbbells") || set.has("bands");
+  return (s: Session) => (s.equip === "none" ? bodyOk : set.has(s.equip));
 }
 export interface WeekDayPlan { day: number; sessionId?: string; rest?: boolean; note: string; focus?: Focus }
 export interface MyWeek { options: WeekOptions; days: WeekDayPlan[]; updatedAt: number }
 
 export const DEFAULT_WEEK_OPTIONS: WeekOptions = {
-  objective: "general", level: "any", focus: [], minutes: 0, equip: "any", styles: [], problems: [], activeDays: 5,
+  objective: "general", level: "any", focus: [], minutes: 0, equip: [], styles: [], problems: [], activeDays: 5,
 };
 
-const REST_PATTERN: Record<number, number[]> = { 7: [], 6: [7], 5: [4, 7], 4: [3, 5, 7], 3: [2, 4, 6] };
+const REST_PATTERN: Record<number, number[]> = { 7: [], 6: [7], 5: [4, 7], 4: [3, 5, 7], 3: [2, 4, 6, 7], 2: [2, 3, 5, 6, 7], 1: [2, 3, 4, 5, 6, 7] };
 // gentle / therapeutic buckets — kept out of a fitness week unless explicitly chosen
 const THERAPEUTIC = new Set(["diabetic", "senior", "stretching", "somatic", "flexibility"]);
 // mainstream training buckets that make a week feel like a fitness plan
@@ -1149,8 +1330,7 @@ function splitFor(n: number): Focus[] {
 export function buildWeek(o: WeekOptions, offset = 0): WeekDayPlan[] {
   const obj = OBJECTIVES.find((x) => x.id === o.objective);
   const biasBuckets = new Set<string>([...(obj?.buckets ?? []), ...o.styles]);
-  const passEquip = (s: Session) =>
-    o.equip === "any" ? true : o.equip === "none" ? s.equip === "none" : s.equip === o.equip || (o.equip === "dumbbells" && s.equip === "none");
+  const passEquip = equipPass(o.equip);
   const wantGentle = GENTLE_OBJ.has(o.objective) || o.problems.length > 0 || o.styles.some((s) => THERAPEUTIC.has(s));
 
   const inPool = (s: Session) => {
@@ -1181,15 +1361,21 @@ export function buildWeek(o: WeekOptions, offset = 0): WeekDayPlan[] {
     return n;
   };
 
-  const rest = REST_PATTERN[o.activeDays] ?? [7];
+  const withRest = o.restDay !== false;                    // default: lay a 7-day week with rest days
+  const span = withRest ? 7 : Math.max(1, o.activeDays);   // no rest → exactly the active days, back to back
+  const rest = withRest ? (REST_PATTERN[o.activeDays] ?? []) : [];
   const days: WeekDayPlan[] = [];
   const used = new Set<string>();
   const usedBuckets = new Map<string, number>(); // spread across styles for a varied mix
   let ti = 0;
-  for (let d = 1; d <= 7; d++) {
+  for (let d = 1; d <= span; d++) {
     if (rest.includes(d)) { days.push({ day: d, rest: true, note: "Rest & recover" }); continue; }
-    const theme = themes[ti % themes.length]; ti++;
-    const cands = pool.filter((s) => !used.has(s.id))
+    const theme = themes[ti % themes.length];
+    const targetStyle = o.styleByDay?.[ti];                // explicit style chosen for this active day (if any)
+    ti++;
+    let candPool = pool.filter((s) => !used.has(s.id));
+    if (targetStyle) { const t = candPool.filter((s) => s.bucket === targetStyle); if (t.length) candPool = t; }
+    const cands = candPool
       .map((s) => ({ s, n: score(s, theme) - (usedBuckets.get(s.bucket) ?? 0) * 2, r: hash(`${s.id}:${offset}`) }))
       .sort((a, b) => b.n - a.n || a.r - b.r);
     const pick = cands[0]?.s ?? pool.find((s) => !used.has(s.id)) ?? pool[0];
@@ -1202,17 +1388,35 @@ export function buildWeek(o: WeekOptions, offset = 0): WeekDayPlan[] {
   return days;
 }
 
+/** Recommend an explicit style-per-day arrangement, weighted toward the goal's preferred styles. */
+export function recommendStyleByDay(objective: string, styles: string[], activeDays: number): string[] {
+  if (!styles.length || activeDays < 1) return [];
+  const bset = new Set(OBJECTIVES.find((o) => o.id === objective)?.buckets ?? []);
+  const raw = styles.map((s) => bset.has(s) ? 2 : 1);      // goal-relevant styles weigh double
+  const total = raw.reduce((a, b) => a + b, 0);
+  const share = raw.map((w) => (w / total) * activeDays);
+  const counts = share.map((r) => Math.floor(r));
+  let assigned = counts.reduce((a, b) => a + b, 0);
+  const byFrac = share.map((r, i) => ({ i, frac: r - Math.floor(r) })).sort((a, b) => b.frac - a.frac);
+  for (let k = 0; assigned < activeDays && byFrac.length; k++, assigned++) counts[byFrac[k % byFrac.length].i]++;
+  const order: string[] = [];                              // interleave so it isn't front-loaded
+  const c = counts.slice();
+  let remaining = activeDays;
+  while (remaining > 0) { let placed = false; for (let i = 0; i < styles.length; i++) if (c[i] > 0) { order.push(styles[i]); c[i]--; remaining--; placed = true; } if (!placed) break; }
+  return order;
+}
+
 /* one-tap swaps that re-flavour the whole week (shown on the plan card) */
 export const SWAP_PRESETS: { id: string; label: string; emoji: string; patch: Partial<WeekOptions> }[] = [
-  { id: "mix", label: "All-round mix", emoji: "🎛️", patch: { styles: [], equip: "any" } },
-  { id: "gym", label: "Gym", emoji: "🏋️", patch: { styles: ["gym"], equip: "any" } },
-  { id: "desi", label: "Desi Kasrat", emoji: "🪷", patch: { styles: ["desi-kasrat"], equip: "any" } },
-  { id: "pilates", label: "Pilates", emoji: "🩰", patch: { styles: ["pilates"], equip: "any" } },
-  { id: "cali", label: "Calisthenics", emoji: "🤸", patch: { styles: ["calisthenics"], equip: "none" } },
-  { id: "cali-eq", label: "Calisthenics + weights", emoji: "🏋️‍♀️", patch: { styles: ["calisthenics", "gym"], equip: "any" } },
-  { id: "hiit", label: "HIIT heavy", emoji: "⚡", patch: { styles: ["hiit"], equip: "any" } },
-  { id: "cardio", label: "Cardio", emoji: "🏃", patch: { styles: ["cardio", "running", "cycling"], equip: "any" } },
-  { id: "diabetic", label: "Diabetic-friendly", emoji: "🩺", patch: { styles: ["diabetic"], equip: "any" } },
+  { id: "mix", label: "All-round mix", emoji: "🎛️", patch: { styles: [], equip: [] } },
+  { id: "gym", label: "Gym", emoji: "🏋️", patch: { styles: ["gym"], equip: [] } },
+  { id: "desi", label: "Desi Kasrat", emoji: "🪷", patch: { styles: ["desi-kasrat"], equip: [] } },
+  { id: "pilates", label: "Pilates", emoji: "🩰", patch: { styles: ["pilates"], equip: [] } },
+  { id: "cali", label: "Calisthenics", emoji: "🤸", patch: { styles: ["calisthenics"], equip: ["none"] } },
+  { id: "cali-eq", label: "Calisthenics + weights", emoji: "🏋️‍♀️", patch: { styles: ["calisthenics", "gym"], equip: [] } },
+  { id: "hiit", label: "HIIT heavy", emoji: "⚡", patch: { styles: ["hiit"], equip: [] } },
+  { id: "cardio", label: "Cardio", emoji: "🏃", patch: { styles: ["cardio", "running", "cycling"], equip: [] } },
+  { id: "diabetic", label: "Diabetic-friendly", emoji: "🩺", patch: { styles: ["diabetic"], equip: [] } },
 ];
 
 export function activeSwap(opts: WeekOptions): string {
@@ -1274,8 +1478,7 @@ export function editDay(week: MyWeek, day: number, spec: { style?: string; focus
     days = week.days.map((d) => d.day === day ? { day, rest: true, note: "Rest & recover" } : d);
   } else {
     const o = week.options;
-    const passEquip = (s: Session) =>
-      o.equip === "any" ? true : o.equip === "none" ? s.equip === "none" : s.equip === o.equip || (o.equip === "dumbbells" && s.equip === "none");
+    const passEquip = equipPass(o.equip);
     const exclude = new Set(week.days.filter((d) => d.day !== day).map((d) => d.sessionId).filter(Boolean) as string[]);
     const dp = week.days.find((d) => d.day === day);
     const focus = spec.focus ?? dp?.focus;
@@ -1304,8 +1507,7 @@ export function editDay(week: MyWeek, day: number, spec: { style?: string; focus
 /** pure: pick the plan for one day (no storage side-effects) */
 export function pickDaySession(o: WeekOptions, days: WeekDayPlan[], day: number, spec: { style?: string; focus?: Focus; rest?: boolean }): WeekDayPlan {
   if (spec.rest) return { day, rest: true, note: "Rest & recover" };
-  const passEquip = (s: Session) =>
-    o.equip === "any" ? true : o.equip === "none" ? s.equip === "none" : s.equip === o.equip || (o.equip === "dumbbells" && s.equip === "none");
+  const passEquip = equipPass(o.equip);
   const exclude = new Set(days.filter((d) => d.day !== day).map((d) => d.sessionId).filter(Boolean) as string[]);
   const dp = days.find((d) => d.day === day);
   const focus = spec.focus ?? dp?.focus;
@@ -1315,7 +1517,8 @@ export function pickDaySession(o: WeekOptions, days: WeekDayPlan[], day: number,
   if (!pool.length) pool = SESSIONS.filter((s) => spec.style ? s.bucket === spec.style : true);
   if (!pool.length) return dp ?? { day, rest: true, note: "Rest & recover" };
   const scored = pool.map((s) => ({
-    s, n: (focus && s.focus === focus ? 3 : 0) + (spec.style && s.bucket === spec.style ? 2 : 0) + (exclude.has(s.id) ? -3 : 0), r: hash(s.id),
+    s, n: (focus && s.focus === focus ? 3 : 0) + (spec.style && s.bucket === spec.style ? 2 : 0)
+      + (o.minutes && Math.abs(s.minutes - o.minutes) <= 12 ? 1 : 0) + (exclude.has(s.id) ? -3 : 0), r: hash(s.id),
   })).sort((a, b) => b.n - a.n || a.r - b.r);
   const s = scored[0].s;
   return { day, sessionId: s.id, focus: s.focus, note: `${focusLabel(s.focus)} · ${s.minutes} min` };
@@ -1351,7 +1554,7 @@ export function startProgram(name: string, options: WeekOptions, totalWeeks: num
   return p;
 }
 export function customizeProgram(prev: MyProgram, options: WeekOptions, totalWeeks: number): MyProgram {
-  const p: MyProgram = { ...prev, options, totalWeeks, weeks: buildProgram(options, totalWeeks), done: [], onboarded: true, updatedAt: Date.now() };
+  const p: MyProgram = { ...prev, name: "Current Fitness Plan", options, totalWeeks, weeks: buildProgram(options, totalWeeks), done: [], onboarded: true, updatedAt: Date.now() };
   persistProgram(p);
   return p;
 }
@@ -1359,8 +1562,20 @@ export function customizeProgram(prev: MyProgram, options: WeekOptions, totalWee
 export function dayKey(w: number, d: number) { return `w${w}d${d}`; }
 export function isProgDayDone(p: MyProgram, w: number, d: number) { return p.done.includes(dayKey(w, d)); }
 export function weekDoneCount(p: MyProgram, w: number) { return p.done.filter((k) => k.startsWith(`w${w}d`)).length; }
-export function weekUnlocked(p: MyProgram, w: number) { return w === 1 || p.done.includes(dayKey(w - 1, 7)); }
-export function canAddWeek(p: MyProgram) { return p.done.includes(dayKey(p.totalWeeks, 7)); }
+function lastActiveDay(wk: ProgramWeek | undefined): number | null {
+  if (!wk) return null;
+  const active = wk.days.filter((d) => !d.rest);
+  return active.length ? active[active.length - 1].day : null;
+}
+export function weekUnlocked(p: MyProgram, w: number) {
+  if (w === 1) return true;
+  const last = lastActiveDay(p.weeks[w - 2]);
+  return last != null && p.done.includes(dayKey(w - 1, last));
+}
+export function canAddWeek(p: MyProgram) {
+  const last = lastActiveDay(p.weeks[p.totalWeeks - 1]);
+  return last != null && p.done.includes(dayKey(p.totalWeeks, last));
+}
 
 export function toggleProgDay(p: MyProgram, w: number, d: number, done: boolean): MyProgram {
   const set = new Set(p.done);
@@ -1369,10 +1584,40 @@ export function toggleProgDay(p: MyProgram, w: number, d: number, done: boolean)
   persistProgram(np);
   return np;
 }
-export function editProgDay(p: MyProgram, w: number, day: number, spec: { style?: string; focus?: Focus; rest?: boolean }): MyProgram {
+export function editProgDay(p: MyProgram, w: number, day: number, spec: { style?: string; focus?: Focus; rest?: boolean }, dayOpts?: Partial<WeekOptions>): MyProgram {
   const wk = p.weeks[w - 1]; if (!wk) return p;
-  const nd = pickDaySession(p.options, wk.days, day, spec);
+  const o = dayOpts ? { ...p.options, ...dayOpts } : p.options;
+  const nd = pickDaySession(o, wk.days, day, spec);
   const weeks = p.weeks.map((x, i) => i === w - 1 ? { days: x.days.map((d) => d.day === day ? nd : d) } : x);
+  const np = { ...p, weeks };
+  persistProgram(np);
+  return np;
+}
+/** re-pick every active day AFTER `fromDay` in week `w` using the program's options */
+export function readjustAfter(p: MyProgram, w: number, fromDay: number): MyProgram {
+  const wk = p.weeks[w - 1]; if (!wk) return p;
+  const days = wk.days.slice();
+  for (let i = 0; i < days.length; i++) {
+    const d = days[i];
+    if (d.day > fromDay && !d.rest) days[i] = pickDaySession(p.options, days, d.day, {});
+  }
+  const weeks = p.weeks.map((x, i) => i === w - 1 ? { days } : x);
+  const np = { ...p, weeks };
+  persistProgram(np);
+  return np;
+}
+/** Drag a rest day up/down: swap the day at `dayNum` with its neighbour (dir -1 = earlier, +1 = later). */
+export function moveRestDay(p: MyProgram, w: number, dayNum: number, dir: -1 | 1): MyProgram {
+  const wk = p.weeks[w - 1]; if (!wk) return p;
+  const days = wk.days.slice().sort((a, b) => a.day - b.day);
+  const i = days.findIndex((d) => d.day === dayNum);
+  const j = i + dir;
+  if (i < 0 || j < 0 || j >= days.length) return p;
+  const an = days[i].day, bn = days[j].day;                 // swap contents, keep day numbers 1..N in order
+  const a = { ...days[i], day: bn }, b = { ...days[j], day: an };
+  days[i] = b; days[j] = a;
+  days.sort((x, y) => x.day - y.day);
+  const weeks = p.weeks.map((x, k) => k === w - 1 ? { days } : x);
   const np = { ...p, weeks };
   persistProgram(np);
   return np;
@@ -1393,14 +1638,11 @@ export const PLAN_LIBRARY: { id: string; name: string; weeks: number; emoji: str
   { id: "fat-burn", name: "Fat Burn Plan", weeks: 4, emoji: "⚡", options: { objective: "lose-weight", styles: ["hiit", "cardio"] } },
   { id: "lean-legs", name: "Lean Legs Plan", weeks: 4, emoji: "🦵", options: { objective: "tone", focus: ["legs"] } },
   { id: "pilates", name: "Pilates Program", weeks: 4, emoji: "🩰", options: { styles: ["pilates"] } },
-  { id: "pilates-all", name: "Full Pilates Program", weeks: 4, emoji: "🩰", options: { styles: ["pilates"] } },
   { id: "waistline", name: "Waistline Sculpting Plan", weeks: 2, emoji: "⏳", options: { objective: "tone", focus: ["abs"] } },
-  { id: "bed", name: "Bed Workouts", weeks: 4, emoji: "🛏️", options: { styles: ["somatic", "senior"], equip: "none" } },
+  { id: "bed", name: "Bed Workouts", weeks: 4, emoji: "🛏️", options: { styles: ["somatic", "senior"], equip: ["none"] } },
   { id: "walking", name: "Indoor Walking", weeks: 2, emoji: "🚶", options: { styles: ["walking"] } },
-  { id: "knee-fat", name: "Knee-Friendly Fat Burn", weeks: 4, emoji: "🦿", options: { objective: "lose-weight", problems: ["knee"] } },
-  { id: "arm-fat", name: "Arm Fat Burn", weeks: 2, emoji: "💪", options: { objective: "tone", focus: ["arms"] } },
-  { id: "chair", name: "Chair Workouts", weeks: 4, emoji: "🪑", options: { styles: ["senior"], equip: "none" } },
-  { id: "leg-slim", name: "Leg Slimming Plan", weeks: 2, emoji: "🦵", options: { objective: "tone", focus: ["legs"] } },
+  { id: "chair", name: "Chair Workouts", weeks: 4, emoji: "🪑", options: { styles: ["senior"], equip: ["none"] } },
+  { id: "limited-mobility", name: "Limited Mobility", weeks: 4, emoji: "♿", options: { objective: "joint-relief", level: "beginner", equip: ["none"], styles: ["senior", "somatic", "stretching"] } },
 ];
 export function startLibraryPlan(id: string): MyProgram | null {
   const pl = PLAN_LIBRARY.find((x) => x.id === id);

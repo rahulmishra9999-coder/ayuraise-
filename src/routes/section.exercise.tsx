@@ -22,15 +22,15 @@ import {
   GROUPS, bucketsInGroup, bucketOf, sessionsIn, getSession, getExercise, EXERCISES,
   buildBlocks, stepsOf, exerciseCount, stepKcal, sessionKcal, kcalFor,
   applyFilters, EMPTY_FILTERS, LEVELS, EQUIP_FILTERS, EQUIP_ALL, INTENSITIES,
-  FOCUS_LIST, focusLabel, levelLabel, equipLabel, CLASSICS, buildExercisePlan,
+  FOCUS_LIST, focusLabel, focusChoicesFor, styleChoicesFor, equipmentForStyles, coarseEquip, levelLabel, equipLabel, CLASSICS, buildExercisePlan,
   PLAN_BUCKETS, bundleSteps, bundleSeconds, bundleKcal, SET_OPTIONS, SEC_OPTIONS,
   BREAK_SEC, MUSIC_LINKS,
   loadFavs, toggleFav, loadBundles, saveBundle, deleteBundle,
   loadMyExPlans, saveMyExPlan, deleteMyExPlan, loadExHistory, addExHistory, addFeedback,
   OBJECTIVES, PROBLEMS, DEFAULT_WEEK_OPTIONS, getMyWeek, saveMyWeek, resetMyWeek, weekDone, setWeekDone,
-  DAY_STYLES, STYLE_CHOICES, editDay,
-  getProgram, startProgram, customizeProgram, toggleProgDay, editProgDay, addProgWeek,
-  weekUnlocked, canAddWeek, isProgDayDone, weekDoneCount, PLAN_LIBRARY, startLibraryPlan,
+  DAY_STYLES, STYLE_CHOICES, STYLE_EQUIPMENT, editDay,
+  getProgram, startProgram, customizeProgram, toggleProgDay, editProgDay, readjustAfter, addProgWeek, moveRestDay,
+  weekUnlocked, canAddWeek, isProgDayDone, weekDoneCount, recommendStyleByDay,
   type Bucket, type Session, type Step, type Exercise, type ExFilters, type Level,
   type Intensity, type Equip, type Focus, type BodyPart, type Bundle, type BundleItem,
   type SavedExPlan, type MyWeek, type WeekOptions, type MyProgram,
@@ -60,7 +60,7 @@ function WorkoutsPage() {
   const [programHeader, setProgramHeader] = useState<ProgramHeader | null>(null);
   const [programItem, setProgramItem] = useState<ProgramItem | null>(null);
   const [player, setPlayer] = useState<PlaySource | null>(null);
-  const [createOpen, setCreateOpen] = useState(false);
+  const [editNonce, setEditNonce] = useState(0);
   const [favs, setFavs] = useState<string[]>([]);
   useEffect(() => { setFavs(loadFavs()); }, []);
   const onFav = (id: string) => setFavs(toggleFav(id));
@@ -85,12 +85,12 @@ function WorkoutsPage() {
       </div>
 
       <div className="mx-auto max-w-xl px-5">
-        <button onClick={() => setCreateOpen(true)} className="group mt-4 w-full overflow-hidden rounded-3xl p-5 text-left text-primary-foreground shadow-[var(--shadow-glow)] transition active:scale-[0.985]" style={{ background: "var(--gradient-violet)" }}>
+        <button onClick={() => { setTab("programs"); setEditNonce((n) => n + 1); }} className="group mt-4 w-full overflow-hidden rounded-3xl p-5 text-left text-primary-foreground shadow-[var(--shadow-glow)] transition active:scale-[0.985]" style={{ background: "var(--gradient-violet)" }}>
           <div className="flex items-center gap-3">
             <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/20 text-xl">✨</span>
             <div className="min-w-0 flex-1">
               <p className="font-display text-[16px] font-bold leading-tight">Build My Personalized Plan</p>
-              <p className="mt-1.5 text-[12px] leading-relaxed opacity-90">Level, intensity, focus area, time, equipment and the styles you like.</p>
+              <p className="mt-1.5 text-[12px] leading-relaxed opacity-90">Goal, focus, level, schedule, style & equipment — one question at a time.</p>
             </div>
           </div>
           <span className="mt-3.5 inline-flex items-center gap-1.5 rounded-full bg-white px-4 py-2 text-[12.5px] font-bold text-violet-700 shadow-sm transition group-active:gap-2.5">
@@ -107,7 +107,7 @@ function WorkoutsPage() {
           ))}
         </div>
 
-        {tab === "programs" && <MyProgramTab onOpenSession={setDetail} />}
+        {tab === "programs" && <MyProgramTab onOpenSession={setDetail} editSignal={editNonce} />}
         {tab === "library" && <LibraryTab onPick={setBucket} onOpenHeader={setProgramHeader} />}
         {tab === "classics" && (
           <ClassicsTab onPreviewPlay={previewPlay}
@@ -141,11 +141,6 @@ function WorkoutsPage() {
           onStart={(steps, i) => setPlayer({ title: programItem.title, steps, startIndex: i })} />
       )}
       {player && <Player src={player} onClose={() => setPlayer(null)} />}
-      {createOpen && (
-        <CreatePlanSheet onClose={() => setCreateOpen(false)}
-          onDone={() => { setCreateOpen(false); setTab("programs"); }}
-          onStart={(s) => { setCreateOpen(false); setDetail(s); }} />
-      )}
 
       <BottomNav />
     </div>
@@ -370,8 +365,8 @@ function MyWeekCard({ onOpenSession }: { onOpenSession: (s: Session) => void }) 
         <div className="mt-2.5 space-y-1.5">
           <PickRow label="Level" opts={[{ id: "any", label: "Any" }, ...LEVELS]} value={week.options.level}
             onPick={(v) => regen({ ...week.options, level: v as Level | "any" })} />
-          <PickRow label="Equip" opts={[{ id: "any", label: "Any" }, { id: "none", label: "No equipment" }]} value={week.options.equip}
-            onPick={(v) => regen({ ...week.options, equip: v as Equip | "any" })} />
+          <PickRow label="Equip" opts={[{ id: "any", label: "Any" }, { id: "none", label: "No equipment" }]} value={week.options.equip[0] ?? "any"}
+            onPick={(v) => regen({ ...week.options, equip: v === "any" ? [] : [v as Equip] })} />
           <div className="flex items-start gap-2">
             <span className="mt-1 w-12 shrink-0 text-[10px] font-bold uppercase tracking-wide text-foreground/50">Style</span>
             <div className="-mr-4 flex flex-1 gap-1.5 overflow-x-auto pr-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -474,7 +469,7 @@ function WeekEditorSheet({ initial, onClose, onGenerate }: { initial: WeekOption
   const [level, setLevel] = useState<Level | "any">(initial.level);
   const [focus, setFocus] = useState<Focus[]>(initial.focus);
   const [minutes, setMinutes] = useState(initial.minutes);
-  const [equip, setEquip] = useState<Equip | "any">(initial.equip);
+  const [equip, setEquip] = useState<Equip[]>(initial.equip);
   const [styles, setStyles] = useState<string[]>(initial.styles);
   const [problems, setProblems] = useState<string[]>(initial.problems);
   const [activeDays, setActiveDays] = useState(initial.activeDays);
@@ -507,7 +502,7 @@ function WeekEditorSheet({ initial, onClose, onGenerate }: { initial: WeekOption
             <div className="flex flex-wrap gap-1.5">{[{ v: 0, l: "Any" }, { v: 10, l: "10 min" }, { v: 20, l: "20 min" }, { v: 30, l: "30 min" }, { v: 45, l: "45 min" }].map((d) => <button key={d.v} onClick={() => setMinutes(d.v)} className={chip(minutes === d.v)}>{d.l}</button>)}</div>
           </Field>
           <Field title="Equipment">
-            <div className="flex flex-wrap gap-1.5">{([{ id: "any", label: "Any" }, ...EQUIP_ALL] as { id: string; label: string }[]).map((e) => <button key={e.id} onClick={() => setEquip(e.id as Equip | "any")} className={chip(equip === e.id)}>{e.label}</button>)}</div>
+            <div className="flex flex-wrap gap-1.5">{([{ id: "any", label: "Any" }, ...EQUIP_ALL] as { id: string; label: string }[]).map((e) => <button key={e.id} onClick={() => setEquip(e.id === "any" ? [] : [e.id as Equip])} className={chip(e.id === "any" ? equip.length === 0 : equip.includes(e.id as Equip))}>{e.label}</button>)}</div>
           </Field>
           <Field title="Type of exercise (optional)">
             <div className="flex flex-wrap gap-1.5">{PLAN_BUCKETS.map((b) => <button key={b.id} onClick={() => togS(b.id)} className={chip(styles.includes(b.id))}>{b.emoji} {b.label}</button>)}</div>
@@ -522,48 +517,171 @@ function WeekEditorSheet({ initial, onClose, onGenerate }: { initial: WeekOption
   );
 }
 
+function DayEditorFull({ day, base, onClose, onSave }: {
+  day: number; base: WeekOptions; onClose: () => void;
+  onSave: (spec: { style?: string; focus?: Focus; rest?: boolean }, dayOpts: Partial<WeekOptions>) => void;
+}) {
+  const fc = focusChoicesFor(base.objective); // focus options follow the plan's goal
+  const [rest, setRest] = useState(false);
+  const [level, setLevel] = useState<Level>(base.level === "any" ? "beginner" : base.level);
+  const [problems, setProblems] = useState<string[]>([]);
+  const [minutes, setMinutes] = useState<"ai" | number>("ai");
+  const [equip, setEquip] = useState<Equip[]>(base.equip.length ? base.equip : ["none"]);
+  const [focusKey, setFocusKey] = useState<"ai" | string>("ai");
+  const [style, setStyle] = useState<"ai" | string>("ai");
+  const chip = (on: boolean) => `rounded-full px-3 py-1.5 text-[12px] font-semibold ${on ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground/75"}`;
+  const ai = "🤖 AI auto-recommend";
+  const togP = (p: string) => setProblems((c) => c.includes(p) ? c.filter((x) => x !== p) : [...c, p]);
+  const togEquip = (id: Equip) => setEquip((c) => {
+    if (id === "none") return ["none"];
+    const b = c.filter((x) => x !== "none");
+    return b.includes(id) ? (b.filter((x) => x !== id).length ? b.filter((x) => x !== id) : ["none"]) : [...b, id];
+  });
+
+  const save = () => {
+    if (rest) { onSave({ rest: true }, {}); return; }
+    const dayOpts: Partial<WeekOptions> = { level, objective: base.objective, equip };
+    if (problems.length) dayOpts.problems = problems;
+    if (minutes !== "ai") dayOpts.minutes = minutes;
+    const spec: { style?: string; focus?: Focus } = {};
+    if (focusKey !== "ai") spec.focus = fc.options.find((o) => o.key === focusKey)?.focus;
+    if (style !== "ai") spec.style = style;
+    onSave(spec, dayOpts);
+  };
+
+  return (
+    <Dialog open onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle className="font-display">Edit Day {day}</DialogTitle>
+          <DialogDescription>Set your level & equipment. For duration, focus area & style you can pick — or leave it on 🤖 AI auto-recommend.</DialogDescription>
+        </DialogHeader>
+        <button onClick={() => setRest(!rest)} className={`w-full rounded-2xl px-4 py-2.5 text-[12.5px] font-semibold ${rest ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground ring-1 ring-border/60"}`}>😴 {rest ? "This is a rest day" : "Make it a rest day"}</button>
+        {!rest && (
+          <div className="max-h-[52svh] space-y-3.5 overflow-y-auto pr-1">
+            <Field title="Level"><div className="flex flex-wrap gap-1.5">{LEVELS.map((l) => <button key={l.id} onClick={() => setLevel(l.id)} className={chip(level === l.id)}>{l.label}</button>)}</div></Field>
+            {!fc.hide && (
+              <Field title="Focus area"><div className="flex flex-wrap gap-1.5"><button onClick={() => setFocusKey("ai")} className={chip(focusKey === "ai")}>{ai}</button>{fc.options.map((o) => <button key={o.key} onClick={() => setFocusKey(o.key)} className={chip(focusKey === o.key)}>{o.label}{o.recommended ? " ⭐" : ""}</button>)}</div></Field>
+            )}
+            <Field title="Any problem?"><div className="flex flex-wrap gap-1.5">{PROBLEMS.map((p) => <button key={p.id} onClick={() => togP(p.id)} className={chip(problems.includes(p.id))}>{p.label}</button>)}</div></Field>
+            <Field title="Session duration"><div className="flex flex-wrap gap-1.5"><button onClick={() => setMinutes("ai")} className={chip(minutes === "ai")}>{ai}</button>{[10, 20, 30, 45].map((m) => <button key={m} onClick={() => setMinutes(m)} className={chip(minutes === m)}>{m} min</button>)}</div></Field>
+            <Field title="Equipment (pick any)"><div className="flex flex-wrap gap-1.5">{EQUIP_ALL.map((e) => <button key={e.id} onClick={() => togEquip(e.id)} className={chip(equip.includes(e.id))}>{e.label}</button>)}</div></Field>
+            <Field title="Style"><div className="flex flex-wrap gap-1.5"><button onClick={() => setStyle("ai")} className={chip(style === "ai")}>{ai}</button>{STYLE_CHOICES.map((s) => <button key={s.id} onClick={() => setStyle(s.id)} className={chip(style === s.id)}>{s.emoji} {s.label}</button>)}</div></Field>
+          </div>
+        )}
+        <button onClick={save} className="w-full rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground">Save day</button>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 /* ================= Practice Library tab (all buckets & programs) ================= */
 
 function LibraryTab({ onPick, onOpenHeader }: { onPick: (b: Bucket) => void; onOpenHeader: (h: ProgramHeader) => void }) {
+  const [goalOpen, setGoalOpen] = useState(false);
+  const main = GROUPS.filter((g) => g.id !== "goal");   // Styles + Programs stay prominent
+  const goal = GROUPS.find((g) => g.id === "goal");
+  const tile = (b: Bucket) => (
+    <button key={b.id} onClick={() => onPick(b)}
+      className="flex flex-col items-center gap-1.5 rounded-2xl bg-card p-2.5 text-center ring-1 ring-border/60 active:scale-[0.97]">
+      <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/50 text-xl">{b.emoji}</span>
+      <span className="text-[9.5px] font-medium leading-tight text-foreground/85">{b.label}</span>
+    </button>
+  );
   return (
     <div className="pb-2">
       <ProgramsSection onOpenHeader={onOpenHeader} />
-      {GROUPS.map((gr) => (
+      {main.map((gr) => (
         <section key={gr.id} className="pt-4">
           <h2 className="px-1 font-display text-[16px] font-bold text-foreground">{gr.label}</h2>
           <p className="mt-0.5 px-1 text-[11.5px] leading-snug text-muted-foreground">{gr.sub}</p>
-          <div className="mt-2.5 grid grid-cols-4 gap-2">
-            {bucketsInGroup(gr.id).map((b) => (
-              <button key={b.id} onClick={() => onPick(b)}
-                className="flex flex-col items-center gap-1.5 rounded-2xl bg-card p-2.5 text-center ring-1 ring-border/60 active:scale-[0.97]">
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/50 text-xl">{b.emoji}</span>
-                <span className="text-[9.5px] font-medium leading-tight text-foreground/85">{b.label}</span>
-              </button>
-            ))}
-          </div>
+          <div className="mt-2.5 grid grid-cols-4 gap-2">{bucketsInGroup(gr.id).map(tile)}</div>
         </section>
       ))}
+
+      {goal && (
+        <section className="pt-6">
+          <button onClick={() => setGoalOpen(!goalOpen)} className="flex w-full items-center gap-2 px-1 text-left">
+            <div className="min-w-0 flex-1">
+              <h2 className="font-display text-[13.5px] font-bold text-foreground/70">By goal <span className="text-[11px] font-normal text-muted-foreground">· quick single sessions</span></h2>
+              <p className="text-[11px] leading-snug text-muted-foreground">Want a full goal-based <b>plan</b>? Use “Build My Personalized Plan”.</p>
+            </div>
+            <ChevronRight size={15} className={`shrink-0 text-muted-foreground transition-transform ${goalOpen ? "rotate-90" : ""}`} />
+          </button>
+          {goalOpen && <div className="mt-2 grid grid-cols-4 gap-2">{bucketsInGroup(goal.id).map(tile)}</div>}
+        </section>
+      )}
     </div>
   );
 }
 
 /* ================= My Programs tab (multi-week plan) ================= */
 
-function MyProgramTab({ onOpenSession }: { onOpenSession: (s: Session) => void }) {
+type MorePlan = { id: string; name: string; emoji: string; weeks: number; options: Partial<WeekOptions>; spec: string; default?: boolean; custom?: { lockFocusHidden?: boolean; hideStyleIds?: string[] } };
+const GOAL_EMOJI: Record<string, string> = {
+  general: "🏃", "lose-weight": "🔥", muscle: "💪", strength: "🏋️", tone: "✨", endurance: "🫀",
+  metabolic: "⚡", flexibility: "🤸", posture: "🧍", "stress-relief": "🌙", senior: "🧓", "joint-relief": "🦵", diabetic: "🩺",
+};
+const GENTLE_GOALS = new Set(["flexibility", "posture", "stress-relief", "senior", "joint-relief", "diabetic"]);
+// one ready-made plan per goal in the editor
+const GOAL_PLANS: MorePlan[] = OBJECTIVES.map((o) => {
+  const gentle = GENTLE_GOALS.has(o.id);
+  const minutes = gentle ? 20 : 25;
+  return {
+    id: `goal-${o.id}`, name: o.label, emoji: GOAL_EMOJI[o.id] ?? "🎯", weeks: 4, default: o.id === "general",
+    options: { objective: o.id, level: gentle ? "beginner" : "any", minutes, activeDays: 5 },
+    spec: `${o.label} · 4 weeks · ${minutes} min/day · 5 days a week`,
+  };
+});
+// curated specialty plans
+const SPECIALTY_PLANS: MorePlan[] = [
+  { id: "slim-belly", name: "Slim & Tone Belly", emoji: "🔥", weeks: 4,
+    options: { objective: "lose-weight", focus: ["abs"], level: "beginner", minutes: 20, styles: ["cardio", "hiit"], equip: ["none"], activeDays: 5 },
+    spec: "15–20 min · Abs & Core · Beginner · 4 weeks · Mix (more cardio) · No equipment (a dumbbell / water bottle works)",
+    custom: { lockFocusHidden: true, hideStyleIds: ["gym"] } },
+  { id: "slim-legs", name: "Slim Legs", emoji: "🦵", weeks: 4,
+    options: { objective: "tone", focus: ["legs"], level: "beginner", minutes: 20, styles: ["cardio", "hiit"], equip: ["none"], activeDays: 5 },
+    spec: "15–20 min · Beginner · 4 weeks · Mix (more cardio) · No equipment (a dumbbell / water bottle works)",
+    custom: { hideStyleIds: ["gym"] } },
+  { id: "full-sculpt", name: "Full-Body Sculpting", emoji: "✨", weeks: 4,
+    options: { objective: "tone", focus: ["full-body"], level: "beginner", minutes: 30, styles: ["gym", "calisthenics"], activeDays: 5 },
+    spec: "30 min · Full Body · 4 weeks · Gym + Calisthenics" },
+  { id: "full-pilates", name: "Full-Body Pilates program", emoji: "🩰", weeks: 4,
+    options: { objective: "tone", styles: ["pilates"], minutes: 30, activeDays: 5 },
+    spec: "30 min · Pilates · 4 weeks" },
+  { id: "abs-core", name: "Abs & Core program", emoji: "🎯", weeks: 3,
+    options: { styles: ["abs-program"], focus: ["abs"], minutes: 20, activeDays: 5 },
+    spec: "20 min · Abs & Core · 3 weeks" },
+  { id: "bed", name: "Bed Workouts", emoji: "🛏️", weeks: 4,
+    options: { styles: ["somatic", "senior"], equip: ["none"], minutes: 20, activeDays: 5 },
+    spec: "20 min · Gentle · 4 weeks · No equipment" },
+  { id: "limited-mobility", name: "Limited Mobility", emoji: "♿", weeks: 4,
+    options: { objective: "joint-relief", level: "beginner", equip: ["none"], styles: ["senior", "somatic", "stretching"], minutes: 20, activeDays: 5 },
+    spec: "20 min · Gentle & seated-friendly · 4 weeks · No equipment" },
+  { id: "chair", name: "Chair Workout", emoji: "🪑", weeks: 4,
+    options: { styles: ["senior"], equip: ["none"], minutes: 20, activeDays: 5 },
+    spec: "20 min · Seated · 4 weeks · No equipment" },
+];
+const MORE_PLANS: MorePlan[] = [...GOAL_PLANS, ...SPECIALTY_PLANS];
+
+type SetupInit = { options: WeekOptions; weeks: number; lockFocusHidden?: boolean; hideStyleIds?: string[] };
+
+function MyProgramTab({ onOpenSession, editSignal = 0 }: { onOpenSession: (s: Session) => void; editSignal?: number }) {
   const kg = bodyWeight();
-  const [prog, setProg] = useState<MyProgram>(() => ({ name: "Fitness Plan", options: DEFAULT_WEEK_OPTIONS, weeks: [], totalWeeks: 4, done: [], onboarded: false, updatedAt: 0 }));
+  const [prog, setProg] = useState<MyProgram>(() => ({ name: "Current Fitness Plan", options: DEFAULT_WEEK_OPTIONS, weeks: [], totalWeeks: 4, done: [], onboarded: false, updatedAt: 0 }));
   const [expanded, setExpanded] = useState<number>(1);
-  const [swap, setSwap] = useState<{ week: number; day: number } | null>(null);
-  const [setupOpen, setSetupOpen] = useState(false);
-  const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [setupInit, setSetupInit] = useState<SetupInit | null>(null);
+  const [planAction, setPlanAction] = useState<MorePlan | null>(null);
   useEffect(() => { setProg(getProgram()); }, []);
+  // "Build My Personalized Plan" hero button opens the same wizard for the current plan
+  useEffect(() => { if (editSignal > 0) { const p = getProgram(); setSetupInit({ options: p.options, weeks: p.totalWeeks }); } }, [editSignal]);
 
   const openDay = (id?: string) => { if (id) { const s = getSession(id); if (s) onOpenSession(s); } };
 
   return (
     <div className="pb-4">
       {!prog.onboarded && (
-        <button onClick={() => setSetupOpen(true)} className="mt-4 flex w-full items-center gap-3 rounded-3xl p-4 text-left text-primary-foreground shadow-[var(--shadow-glow)]" style={{ background: "var(--gradient-violet)" }}>
+        <button onClick={() => setSetupInit({ options: prog.options, weeks: prog.totalWeeks })} className="mt-4 flex w-full items-center gap-3 rounded-3xl p-4 text-left text-primary-foreground shadow-[var(--shadow-glow)]" style={{ background: "var(--gradient-violet)" }}>
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white/20 text-lg">✨</span>
           <div className="min-w-0 flex-1"><p className="text-[14px] font-bold">Personalize your plan</p><p className="text-[11px] opacity-90">Tell us your goal, time & preferences — or just follow the standard plan below.</p></div>
           <ChevronRight size={18} className="opacity-80" />
@@ -573,9 +691,9 @@ function MyProgramTab({ onOpenSession }: { onOpenSession: (s: Session) => void }
       <section className="pt-4">
         <div className="flex items-center justify-between px-1">
           <h2 className="font-display text-[16px] font-bold text-foreground">{prog.name}</h2>
-          <button onClick={() => setSetupOpen(true)} className="flex items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-[11.5px] font-bold text-primary-foreground"><Sliders size={12} /> Customize</button>
+          <button onClick={() => setSetupInit({ options: prog.options, weeks: prog.totalWeeks })} className="flex items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-[11.5px] font-bold text-primary-foreground"><Sliders size={12} /> Edit plan</button>
         </div>
-        <p className="mt-0.5 px-1 text-[11px] leading-snug text-muted-foreground">{prog.totalWeeks}-week plan · tap ⇄ to edit any day; finish a week to unlock the next.</p>
+        <p className="mt-0.5 px-1 text-[11px] leading-snug text-muted-foreground">{prog.totalWeeks}-week plan · use ↑ ↓ to move a rest day; finish a week to unlock the next.</p>
 
         <div className="mt-2.5 space-y-2">
           {prog.weeks.map((wk, i) => {
@@ -600,19 +718,24 @@ function MyProgramTab({ onOpenSession }: { onOpenSession: (s: Session) => void }
                       const s = d.sessionId ? getSession(d.sessionId) : undefined;
                       const dn = isProgDayDone(prog, wnum, d.day);
                       return (
-                        <div key={d.day} className="flex items-center gap-2.5 rounded-2xl bg-secondary/40 p-2">
-                          <span className={`flex h-8 w-8 shrink-0 flex-col items-center justify-center rounded-lg text-[9px] font-bold leading-none ${dn ? "bg-primary text-primary-foreground" : "bg-accent/60 text-foreground/70"}`}><span className="text-[7px] opacity-70">DAY</span>{d.day}</span>
+                        <div key={d.day} className={`flex items-center gap-2.5 rounded-2xl p-2 ${d.rest ? "bg-secondary/15" : "bg-secondary/40"}`}>
+                          <span className={`flex h-8 w-8 shrink-0 flex-col items-center justify-center rounded-lg text-[9px] font-bold leading-none ${d.rest ? "bg-secondary text-muted-foreground/70" : dn ? "bg-primary text-primary-foreground" : "bg-accent/60 text-foreground/70"}`}><span className="text-[7px] opacity-70">DAY</span>{d.day}</span>
                           <button onClick={() => openDay(d.sessionId)} disabled={!s} className="min-w-0 flex-1 text-left disabled:cursor-default">
-                            <p className="truncate text-[12.5px] font-semibold text-foreground">{s ? s.title : "Rest day"}</p>
-                            <p className="truncate text-[10.5px] text-muted-foreground">{s ? `${bucketOf(s.bucket)?.label} · ${s.minutes} min · 🔥 ${sessionKcal(s, kg)} kcal` : d.note}</p>
+                            <p className={`truncate text-[12.5px] font-semibold ${d.rest ? "text-muted-foreground" : "text-foreground"}`}>{s ? s.title : "😴 Rest day"}</p>
+                            <p className="truncate text-[10.5px] text-muted-foreground">{s ? `${bucketOf(s.bucket)?.label} · ${s.minutes} min · 🔥 ${sessionKcal(s, kg)} kcal` : "Light walk or gentle stretch"}</p>
                           </button>
-                          {unlocked && !d.rest && <button onClick={() => setSwap({ week: wnum, day: d.day })} title="Edit this day" className="shrink-0 rounded-full bg-secondary p-1.5 text-foreground/55"><Shuffle size={12} /></button>}
+                          {unlocked && d.rest && (
+                            <div className="flex shrink-0 items-center gap-1">
+                              <button onClick={() => setProg((p) => moveRestDay(p, wnum, d.day, -1))} title="Move rest day up" className="flex h-7 w-7 items-center justify-center rounded-full bg-secondary text-[13px] font-bold text-foreground/60">↑</button>
+                              <button onClick={() => setProg((p) => moveRestDay(p, wnum, d.day, 1))} title="Move rest day down" className="flex h-7 w-7 items-center justify-center rounded-full bg-secondary text-[13px] font-bold text-foreground/60">↓</button>
+                            </div>
+                          )}
                           {s && <button onClick={() => openDay(d.sessionId)} className="shrink-0 rounded-full bg-primary/10 p-1.5 text-primary"><Play size={12} /></button>}
-                          <button onClick={() => setProg((p) => toggleProgDay(p, wnum, d.day, !isProgDayDone(p, wnum, d.day)))} className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${dn ? "bg-emerald-500 text-white" : "bg-card text-muted-foreground ring-1 ring-border/60"}`}><Check size={11} strokeWidth={3} /></button>
+                          {!d.rest && <button onClick={() => setProg((p) => toggleProgDay(p, wnum, d.day, !isProgDayDone(p, wnum, d.day)))} className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${dn ? "bg-emerald-500 text-white" : "bg-card text-muted-foreground ring-1 ring-border/60"}`}><Check size={11} strokeWidth={3} /></button>}
                         </div>
                       );
                     })}
-                    {!unlocked && <p className="px-1 pt-1 text-[10.5px] text-muted-foreground">Finish Week {wnum - 1} to edit this week.</p>}
+                    {!unlocked && <p className="px-1 pt-1 text-[10.5px] text-muted-foreground">Finish Week {wnum - 1} to unlock this week.</p>}
                   </div>
                 )}
               </div>
@@ -629,10 +752,11 @@ function MyProgramTab({ onOpenSession }: { onOpenSession: (s: Session) => void }
 
       <section className="pt-6">
         <h2 className="px-1 font-display text-[15px] font-bold text-foreground">More plans</h2>
-        <p className="mt-0.5 px-1 text-[11px] leading-snug text-muted-foreground">Ready-made programs — they extend automatically based on your feedback & inputs.</p>
+        <p className="mt-0.5 px-1 text-[11px] leading-snug text-muted-foreground">Ready-made plans — use one as is, or customize and save it as your current plan.</p>
         <div className="mt-2.5 grid grid-cols-2 gap-2.5">
-          {PLAN_LIBRARY.map((pl) => (
-            <button key={pl.id} onClick={() => setConfirmId(pl.id)} className="flex items-center gap-3 rounded-2xl bg-card p-3 text-left ring-1 ring-border/60 active:scale-[0.98]">
+          {MORE_PLANS.map((pl) => (
+            <button key={pl.id} onClick={() => setPlanAction(pl)} className="relative flex items-center gap-3 rounded-2xl bg-card p-3 text-left ring-1 ring-border/60 active:scale-[0.98]">
+              {pl.default && <span className="absolute right-2 top-2 rounded-full bg-primary/15 px-1.5 py-0.5 text-[8.5px] font-bold text-primary">Default</span>}
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent/50 text-xl">{pl.emoji}</span>
               <div className="min-w-0"><p className="truncate text-[12.5px] font-semibold text-foreground">{pl.name}</p><p className="text-[10.5px] text-muted-foreground">{pl.weeks} week{pl.weeks > 1 ? "s" : ""}</p></div>
             </button>
@@ -640,89 +764,259 @@ function MyProgramTab({ onOpenSession }: { onOpenSession: (s: Session) => void }
         </div>
       </section>
 
-      {setupOpen && (
-        <ProgramSetupSheet initial={prog.options} initialWeeks={prog.totalWeeks} onClose={() => setSetupOpen(false)}
-          onCreate={(opts, weeks) => { setProg(customizeProgram(prog, opts, weeks)); setExpanded(1); setSetupOpen(false); }} />
+      {setupInit && (
+        <ProgramSetupSheet initial={setupInit.options} initialWeeks={setupInit.weeks}
+          lockFocusHidden={setupInit.lockFocusHidden} hideStyleIds={setupInit.hideStyleIds}
+          onClose={() => setSetupInit(null)}
+          onCreate={(opts, weeks) => { setProg(customizeProgram(prog, opts, weeks)); setExpanded(1); setSetupInit(null); }} />
       )}
-      {swap && (
-        <DayEditor day={swap.day} onClose={() => setSwap(null)}
-          onPick={(spec) => { setProg((p) => editProgDay(p, swap.week, swap.day, spec)); setSwap(null); }} />
-      )}
-      <Dialog open={confirmId !== null} onOpenChange={(v) => { if (!v) setConfirmId(null); }}>
+
+      {/* More-plans detail: replace current plan, or customize it */}
+      <Dialog open={planAction !== null} onOpenChange={(v) => { if (!v) setPlanAction(null); }}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle className="font-display">Start this program?</DialogTitle>
-            <DialogDescription>{PLAN_LIBRARY.find((p) => p.id === confirmId)?.name} — this replaces your current plan.</DialogDescription>
+            <DialogTitle className="font-display">{planAction?.emoji} {planAction?.name}</DialogTitle>
+            <DialogDescription>{planAction?.spec}</DialogDescription>
           </DialogHeader>
-          <button onClick={() => { const np = confirmId ? startLibraryPlan(confirmId) : null; if (np) { setProg(np); setExpanded(1); } setConfirmId(null); }} className="w-full rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground">Start program</button>
-          <button onClick={() => setConfirmId(null)} className="w-full rounded-2xl bg-secondary px-4 py-2.5 text-[13px] font-semibold text-foreground">Cancel</button>
+          <button onClick={() => { const pl = planAction; if (pl) { const np = startProgram(`Current Fitness Plan (${pl.name})`, { ...DEFAULT_WEEK_OPTIONS, ...pl.options }, pl.weeks); setProg(np); setExpanded(1); } setPlanAction(null); }} className="w-full rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground">Replace my plan with this</button>
+          <button onClick={() => { const pl = planAction; if (pl) setSetupInit({ options: { ...DEFAULT_WEEK_OPTIONS, ...pl.options }, weeks: pl.weeks, lockFocusHidden: pl.custom?.lockFocusHidden, hideStyleIds: pl.custom?.hideStyleIds }); setPlanAction(null); }} className="w-full rounded-2xl bg-secondary px-4 py-3 text-sm font-semibold text-foreground">Customize it to my needs</button>
         </DialogContent>
       </Dialog>
     </div>
   );
 }
 
-function ProgramSetupSheet({ initial, initialWeeks, onClose, onCreate }: { initial: WeekOptions; initialWeeks: number; onClose: () => void; onCreate: (o: WeekOptions, weeks: number) => void }) {
+const WEEKDAYS: { id: string; label: string }[] = [
+  { id: "mon", label: "Mon" }, { id: "tue", label: "Tue" }, { id: "wed", label: "Wed" }, { id: "thu", label: "Thu" },
+  { id: "fri", label: "Fri" }, { id: "sat", label: "Sat" }, { id: "sun", label: "Sun" },
+];
+
+/** iOS-style vertical wheel picker. */
+function WheelPicker({ items, value, onChange }: { items: { v: number; label: string }[]; value: number; onChange: (v: number) => void }) {
+  const H = 40;
+  const ref = useRef<HTMLDivElement>(null);
+  const settle = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    const el = ref.current; if (!el) return;
+    const i = Math.max(0, items.findIndex((x) => x.v === value));
+    el.scrollTop = i * H;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const onScroll = () => {
+    if (settle.current) clearTimeout(settle.current);
+    settle.current = setTimeout(() => {
+      const el = ref.current; if (!el) return;
+      const i = Math.max(0, Math.min(items.length - 1, Math.round(el.scrollTop / H)));
+      if (items[i].v !== value) onChange(items[i].v);
+    }, 80);
+  };
+  return (
+    <div className="relative mx-auto w-full max-w-[220px]" style={{ height: H * 5 }}>
+      <div className="pointer-events-none absolute inset-x-4 top-1/2 -translate-y-1/2 rounded-xl bg-primary/10 ring-1 ring-primary/20" style={{ height: H }} />
+      <div ref={ref} onScroll={onScroll} className="h-full snap-y snap-mandatory overflow-y-scroll [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div style={{ height: H * 2 }} />
+        {items.map((it) => (
+          <button key={it.v} onClick={() => { onChange(it.v); const el = ref.current; if (el) el.scrollTo({ top: items.findIndex((x) => x.v === it.v) * H, behavior: "smooth" }); }}
+            className={`flex w-full snap-center items-center justify-center text-[13px] font-semibold tabular-nums transition-colors ${it.v === value ? "text-foreground" : "text-muted-foreground/40"}`} style={{ height: H }}>{it.label}</button>
+        ))}
+        <div style={{ height: H * 2 }} />
+      </div>
+    </div>
+  );
+}
+
+function ProgramSetupSheet({ initial, initialWeeks, onClose, onCreate, lockFocusHidden, hideStyleIds }: {
+  initial: WeekOptions; initialWeeks: number; onClose: () => void; onCreate: (o: WeekOptions, weeks: number) => void;
+  lockFocusHidden?: boolean; hideStyleIds?: string[];
+}) {
   const [objective, setObjective] = useState(initial.objective);
-  const [level, setLevel] = useState<Level | "any">(initial.level);
-  const [focus, setFocus] = useState<Focus[]>(initial.focus);
-  const [minutes, setMinutes] = useState(initial.minutes);
-  const [equip, setEquip] = useState<Equip | "any">(initial.equip);
+  const [level, setLevel] = useState<Level>(initial.level === "any" ? "beginner" : initial.level);
+  const [minutes, setMinutes] = useState(initial.minutes || 20);
   const [styles, setStyles] = useState<string[]>(initial.styles);
   const [problems, setProblems] = useState<string[]>(initial.problems);
-  const [activeDays, setActiveDays] = useState(initial.activeDays);
-  const [len, setLen] = useState<string>(`${Math.min(4, Math.max(1, initialWeeks))}w`);
+  const [days, setDays] = useState<string[]>(initial.days?.length ? initial.days : ["mon", "tue", "wed", "thu", "fri"]);
+  const [weeks, setWeeks] = useState(initialWeeks >= 1 ? initialWeeks : 4);
+  const [equipLabels, setEquipLabels] = useState<string[]>(["No equipment"]);
+  const [step, setStep] = useState(0);
+  const initFocusKeys = () => {
+    const opts = focusChoicesFor(initial.objective).options;
+    return initial.focus.length ? opts.filter((o) => initial.focus.includes(o.focus)).map((o) => o.key) : [];
+  };
+  const [focusKeys, setFocusKeys] = useState<string[]>(initFocusKeys);
+  const [splitMode, setSplitMode] = useState<"mix" | "perday" | "ai">(initial.styleByDay?.length ? "perday" : "mix");
+  const [dayStyles, setDayStyles] = useState<string[]>(initial.styleByDay ?? []);
   const chip = (on: boolean) => `rounded-full px-3 py-1.5 text-[12px] font-semibold ${on ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground/75"}`;
-  const togF = (f: Focus) => setFocus((c) => c.includes(f) ? c.filter((x) => x !== f) : [...c, f]);
-  const togS = (s: string) => setStyles((c) => c.includes(s) ? c.filter((x) => x !== s) : [...c, s]);
+  const togS = (s: string) => { setStyles((c) => c.includes(s) ? c.filter((x) => x !== s) : [...c, s]); setEquipLabels(["No equipment"]); setSplitMode("mix"); setDayStyles([]); };
   const togP = (p: string) => setProblems((c) => c.includes(p) ? c.filter((x) => x !== p) : [...c, p]);
-  const LENGTHS = [{ k: "1d", label: "Just 1 day" }, { k: "1w", label: "1 week" }, { k: "2w", label: "2 weeks" }, { k: "3w", label: "3 weeks" }, { k: "4w", label: "4 weeks ⭐" }];
+  const togDay = (d: string) => setDays((c) => c.includes(d) ? c.filter((x) => x !== d) : [...c, d]);
+  const togFocusKey = (k: string) => setFocusKeys((c) => c.includes(k) ? c.filter((x) => x !== k) : [...c, k]);
+  const togEquipLabel = (label: string) => setEquipLabels((c) => {   // "No equipment" is mutually exclusive
+    if (label === "No equipment") return ["No equipment"];
+    const base = c.filter((x) => x !== "No equipment");
+    return base.includes(label) ? (base.filter((x) => x !== label).length ? base.filter((x) => x !== label) : ["No equipment"]) : [...base, label];
+  });
+  const pickObjective = (id: string) => { setObjective(id); setFocusKeys([]); setStyles([]); };
+  const fc = focusChoicesFor(objective);
+  const sc = styleChoicesFor(objective);
+  const focusHidden = fc.hide || !!lockFocusHidden;
+  const styleOptions = sc.options.filter((o) => !hideStyleIds?.includes(o.id));
+  const equipItems = sc.auto ? equipmentForStyles(["yoga"]) : equipmentForStyles(styles); // auto goals → No equipment only
+  const maxWeeks = objective === "lose-weight" ? 24 : 12;
+  const weekValues = Array.from({ length: maxWeeks }, (_, i) => ({ v: i + 1, label: `${i + 1}` }));
+  const durValues = [5, 10, 15, 20, 25, 30, 35, 40, 45].map((n) => ({ v: n, label: `${n}` }));
+  const activeDays = Math.max(1, days.length);
+  const multiStyle = !sc.auto && styles.length > 1;
+  const styleLabel = (id: string) => STYLE_CHOICES.find((s) => s.id === id)?.label ?? id;
+  const setDayStyle = (i: number, sid: string) => setDayStyles((c) => { const next = c.slice(); next[i] = sid; return next; });
+  const initDayStyles = () => setDayStyles(Array.from({ length: activeDays }, (_, i) => styles[i % styles.length]));
+  const aiDays = multiStyle ? recommendStyleByDay(objective, styles, activeDays) : [];
+
+  // one question per screen; goal → focus → level → weeks → duration → schedule → protect → style → (mix/split) → equipment
+  const steps: string[] = ["goal", ...(focusHidden ? [] : ["focus"]), "level", "length", "duration", "schedule", "protect", ...(sc.auto ? [] : ["style"]), ...(multiStyle ? ["mixsplit"] : []), "equipment"];
+  const cur = steps[Math.min(step, steps.length - 1)];
+  const isLast = step >= steps.length - 1;
+
   const create = () => {
-    const weeks = len === "1d" ? 1 : parseInt(len, 10);
-    const days = len === "1d" ? 1 : activeDays;
-    onCreate({ objective, level, focus, minutes, equip, styles, problems, activeDays: days }, weeks);
+    const focus = Array.from(new Set(focusKeys.map((k) => fc.options.find((o) => o.key === k)?.focus).filter(Boolean))) as Focus[];
+    const equip = coarseEquip(equipItems, equipLabels);
+    const restDay = days.length < 7;   // unscheduled weekdays become rest days
+    const styleByDay = !multiStyle ? undefined
+      : splitMode === "perday" && dayStyles.some(Boolean) ? dayStyles.slice(0, activeDays)
+      : splitMode === "ai" ? aiDays : undefined;
+    onCreate({ objective, level, focus, minutes, equip, styles: sc.auto ? [] : styles, problems, activeDays, restDay, days, styleByDay }, Math.min(weeks, maxWeeks));
+  };
+
+  const TITLES: Record<string, string> = {
+    level: "Your level", goal: "What's your goal?", focus: "Focus area", length: "How many weeks?",
+    duration: "How long each day?", schedule: "Weekly schedule", protect: "Any areas we should protect?",
+    style: "Any preferred style?", mixsplit: "Mix, or choose per day?", equipment: "Which equipment can you use?",
   };
 
   return (
     <Dialog open onOpenChange={(v) => { if (!v) onClose(); }}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle className="font-display">Build your plan</DialogTitle>
-          <DialogDescription>Set what you like — leave anything on "Any". We recommend 4 weeks. Not sure? <Link to="/coach" className="font-semibold text-primary underline">talk to the bot</Link> to get your plan created.</DialogDescription>
+          <DialogTitle className="font-display">Edit your plan</DialogTitle>
+          <DialogDescription>Step {step + 1} of {steps.length} · {TITLES[cur]}</DialogDescription>
         </DialogHeader>
-        <div className="max-h-[62svh] space-y-4 overflow-y-auto pr-1">
-          <Field title="How long?">
-            <div className="flex flex-wrap gap-1.5">{LENGTHS.map((l) => <button key={l.k} onClick={() => setLen(l.k)} className={chip(len === l.k)}>{l.label}</button>)}</div>
-          </Field>
-          <Field title="Objective / goal">
-            <div className="flex flex-wrap gap-1.5">{OBJECTIVES.map((o) => <button key={o.id} onClick={() => setObjective(o.id)} className={chip(objective === o.id)}>{o.label}</button>)}</div>
-          </Field>
-          <Field title="Any problems? (keeps it safe)">
-            <div className="flex flex-wrap gap-1.5">{PROBLEMS.map((p) => <button key={p.id} onClick={() => togP(p.id)} className={chip(problems.includes(p.id))}>{p.label}</button>)}</div>
-          </Field>
-          <Field title="Level">
-            <div className="flex flex-wrap gap-1.5">{([{ id: "any", label: "Any" }, ...LEVELS] as { id: string; label: string }[]).map((l) => <button key={l.id} onClick={() => setLevel(l.id as Level | "any")} className={chip(level === l.id)}>{l.label}</button>)}</div>
-          </Field>
-          <Field title="Session duration">
-            <div className="flex flex-wrap gap-1.5">{[{ v: 0, l: "Any" }, { v: 10, l: "10 min" }, { v: 20, l: "20 min" }, { v: 30, l: "30 min" }, { v: 45, l: "45 min" }].map((d) => <button key={d.v} onClick={() => setMinutes(d.v)} className={chip(minutes === d.v)}>{d.l}</button>)}</div>
-          </Field>
-          <Field title="Equipment">
-            <div className="flex flex-wrap gap-1.5">{([{ id: "any", label: "Any" }, ...EQUIP_ALL] as { id: string; label: string }[]).map((e) => <button key={e.id} onClick={() => setEquip(e.id as Equip | "any")} className={chip(equip === e.id)}>{e.label}</button>)}</div>
-          </Field>
-          <Field title="Muscle group (optional)">
-            <div className="flex flex-wrap gap-1.5">{FOCUS_LIST.map((f) => <button key={f.id} onClick={() => togF(f.id)} className={chip(focus.includes(f.id))}>{f.label}</button>)}</div>
-          </Field>
-          <Field title="Preferred style">
-            <div className="flex flex-wrap gap-1.5">
-              <button onClick={() => setStyles([])} className={chip(styles.length === 0)}>🤖 Let AI pick</button>
-              {STYLE_CHOICES.map((b) => <button key={b.id} onClick={() => togS(b.id)} className={chip(styles.includes(b.id))}>{b.emoji} {b.label}</button>)}
-            </div>
-          </Field>
-          <Field title="Workout days / week">
-            <div className="flex flex-wrap gap-1.5">{[3, 4, 5, 6, 7].map((n) => <button key={n} onClick={() => setActiveDays(n)} className={chip(activeDays === n)}>{n} days</button>)}</div>
-          </Field>
+
+        <div className="flex gap-1">
+          {steps.map((_, i) => <div key={i} className={`h-1 flex-1 rounded-full ${i <= step ? "bg-primary" : "bg-secondary"}`} />)}
         </div>
-        <button onClick={create} className="w-full rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground">Create my plan</button>
+
+        <div className="min-h-[34svh] max-h-[52svh] overflow-y-auto pr-1">
+          {cur === "level" && (
+            <div className="flex flex-wrap gap-1.5">{LEVELS.map((l) => <button key={l.id} onClick={() => setLevel(l.id)} className={chip(level === l.id)}>{l.label}</button>)}</div>
+          )}
+          {cur === "goal" && (
+            <div className="flex flex-wrap gap-1.5">{OBJECTIVES.map((o) => <button key={o.id} onClick={() => pickObjective(o.id)} className={chip(objective === o.id)}>{o.label}</button>)}</div>
+          )}
+          {cur === "focus" && (
+            <div className="flex flex-wrap gap-1.5">{fc.options.map((o) => <button key={o.key} onClick={() => togFocusKey(o.key)} className={chip(focusKeys.includes(o.key))}>{o.label}{o.recommended ? " ⭐" : ""}</button>)}</div>
+          )}
+          {cur === "length" && (
+            <><p className="pb-1 text-center text-[12px] text-muted-foreground">Scroll to pick — up to {maxWeeks} weeks.</p><WheelPicker items={weekValues} value={Math.min(weeks, maxWeeks)} onChange={setWeeks} /><p className="text-center text-[12px] font-semibold text-foreground">{Math.min(weeks, maxWeeks)} week{weeks > 1 ? "s" : ""}</p></>
+          )}
+          {cur === "duration" && (
+            <><p className="pb-1 text-center text-[12px] text-muted-foreground">Up to 45 minutes a day.</p><WheelPicker items={durValues} value={minutes} onChange={setMinutes} /><p className="text-center text-[12px] font-semibold text-foreground">{minutes} min / day</p></>
+          )}
+          {cur === "schedule" && (
+            <div>
+              <p className="pb-2 px-1 text-[11px] text-muted-foreground">Pick the days you'll work out — the rest become rest days.</p>
+              <div className="grid grid-cols-7 gap-1">
+                {WEEKDAYS.map((d) => {
+                  const on = days.includes(d.id);
+                  return (
+                    <button key={d.id} onClick={() => togDay(d.id)} className={`flex h-11 items-center justify-center rounded-xl text-[11px] font-bold ring-1 ${on ? "bg-primary text-primary-foreground ring-primary" : "bg-secondary/40 text-foreground/65 ring-border/60"}`}>{d.label}</button>
+                  );
+                })}
+              </div>
+              <p className="mt-2.5 px-1 text-[11px] text-muted-foreground">{days.length} workout day{days.length !== 1 ? "s" : ""} a week{days.length < 7 ? ` · ${7 - days.length} rest` : ""}.</p>
+            </div>
+          )}
+          {cur === "protect" && (
+            <div className="flex flex-wrap gap-1.5">
+              <button onClick={() => setProblems([])} className={chip(problems.length === 0)}>None</button>
+              {PROBLEMS.map((p) => <button key={p.id} onClick={() => togP(p.id)} className={chip(problems.includes(p.id))}>{p.label}</button>)}
+            </div>
+          )}
+          {cur === "style" && (
+            <div className="flex flex-wrap gap-1.5">
+              <button onClick={() => setStyles([])} className={chip(styles.length === 0)}>Let AI decide</button>
+              {styleOptions.map((b) => <button key={b.id} onClick={() => togS(b.id)} className={chip(styles.includes(b.id))}>{b.label}</button>)}
+            </div>
+          )}
+          {cur === "mixsplit" && (
+            <div className="space-y-3">
+              <p className="px-1 text-[11px] text-muted-foreground">You picked {styles.length} styles. Blend them across the week, or pick what to do on each day?</p>
+              <div className="flex flex-wrap gap-1.5">
+                <button onClick={() => setSplitMode("mix")} className={chip(splitMode === "mix")}>🎛️ Balanced mix</button>
+                <button onClick={() => { if (!dayStyles.some(Boolean)) initDayStyles(); setSplitMode("perday"); }} className={chip(splitMode === "perday")}>📅 Choose per day</button>
+                <button onClick={() => setSplitMode("ai")} className={chip(splitMode === "ai")}>🤖 Let AI decide</button>
+              </div>
+              {splitMode === "perday" && (
+                <div className="space-y-1.5">
+                  {Array.from({ length: activeDays }).map((_, i) => (
+                    <div key={i} className="rounded-2xl bg-secondary/40 p-2.5">
+                      <p className="mb-1 px-0.5 text-[11px] font-bold uppercase tracking-wide text-foreground/55">Day {i + 1}</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {styles.map((sid) => <button key={sid} onClick={() => setDayStyle(i, sid)} className={chip(dayStyles[i] === sid)}>{styleLabel(sid)}</button>)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {splitMode === "ai" && (
+                <div className="space-y-1.5">
+                  <p className="px-1 text-[11px] text-muted-foreground">🤖 Suggested for your goal — you can switch to "Choose per day" to tweak:</p>
+                  {aiDays.map((sid, i) => (
+                    <div key={i} className="flex items-center justify-between rounded-2xl bg-secondary/40 px-3 py-2">
+                      <span className="text-[11px] font-bold uppercase tracking-wide text-foreground/55">Day {i + 1}</span>
+                      <span className="text-[12.5px] font-semibold text-foreground">{styleLabel(sid)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+          {cur === "equipment" && ((sc.auto ? [] : styles).length > 1 ? (
+            <div className="space-y-3">
+              <p className="px-1 text-[11px] text-muted-foreground">Based on your styles — pick what you have.</p>
+              <div className="flex flex-wrap gap-1.5">
+                <button onClick={() => togEquipLabel("No equipment")} className={chip(equipLabels.includes("No equipment"))}>🙅 No equipment</button>
+              </div>
+              {styles.map((sid) => {
+                const meta = STYLE_CHOICES.find((s) => s.id === sid);
+                const items = STYLE_EQUIPMENT[sid] ?? [];
+                if (!meta || !items.length) return null;
+                return (
+                  <div key={sid}>
+                    <p className="mb-1 px-1 text-[11px] font-bold uppercase tracking-wide text-foreground/50">{meta.emoji} {meta.label}</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {items.map((e) => (
+                        <button key={sid + e.label} onClick={() => togEquipLabel(e.label)} className={chip(equipLabels.includes(e.label))}>{e.emoji} {e.label}{e.note ? ` (${e.note})` : ""}</button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <><p className="pb-2 px-1 text-[11px] text-muted-foreground">Based on your style — pick what you have.</p>
+            <div className="flex flex-wrap gap-1.5">
+              {equipItems.map((e) => (
+                <button key={e.label} onClick={() => togEquipLabel(e.label)} className={chip(equipLabels.includes(e.label))}>{e.emoji} {e.label}{e.note ? ` (${e.note})` : ""}</button>
+              ))}
+            </div></>
+          ))}
+        </div>
+
+        <div className="flex gap-2">
+          {step > 0 && <button onClick={() => setStep((s) => s - 1)} className="rounded-2xl bg-secondary px-5 py-3 text-sm font-semibold text-foreground">Back</button>}
+          {isLast
+            ? <button onClick={create} className="flex-1 rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground">Create my plan</button>
+            : <button onClick={() => setStep((s) => s + 1)} className="flex-1 rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground">Next</button>}
+        </div>
       </DialogContent>
     </Dialog>
   );
