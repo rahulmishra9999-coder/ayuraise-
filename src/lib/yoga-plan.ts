@@ -12,12 +12,15 @@ export type YogaPlan = {
   duration: number;      // minutes per session
   protect: string[];     // areas to work around
   updatedAt: number;
+  name?: string;         // display name (e.g. "Hatha") — falls back to the goal when absent
   sourceId?: string;     // template id it was started from (pins that program as a favourite)
   variant?: string;      // program-specific note, e.g. "2nd trimester" or "Pranayam + Mudras"
   poseIds?: string[];    // for bundle-based plans — the exact poses to practise
+  isPrimary?: boolean;   // the one plan shown on the dashboard
+  isFav?: boolean;       // user-marked favourite
 };
 
-export const MAX_PLANS = 1;
+export const MAX_PLANS = 3;   // "My Plans" holds up to 3
 export function newPlanId() { return `yp_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`; }
 
 /* ---- weekday schedule (mirrors the exercise builder) ---- */
@@ -86,32 +89,37 @@ export function removeYogaPlan(id: string): YogaPlan[] {
   return next;
 }
 
-/* ---- saved / favourite plans (My Fav Plans — up to 3, separate from the current plan) ---- */
-export const MAX_FAV = 3;
-const SAVED_KEY = "ayuraise.yogaSaved";
-export function loadSavedPlans(): YogaPlan[] {
+/** Mark one plan as the primary (dashboard) plan; clears the flag on the others. */
+export function setPrimaryPlan(id: string): YogaPlan[] {
+  const next = loadYogaPlans().map((p) => ({ ...p, isPrimary: p.id === id }));
+  saveYogaPlans(next);
+  return next;
+}
+/** The primary plan (flagged, else the first, else null). */
+export function primaryPlan(): YogaPlan | null {
+  const list = loadYogaPlans();
+  return list.find((p) => p.isPrimary) ?? list[0] ?? null;
+}
+export function isBundlePlan(p: YogaPlan) { return !!p.poseIds?.length; }
+
+/* ---- bundles (saved in the pose builder — up to 3; a 4th drops the oldest) ---- */
+export const MAX_BUNDLES = 3;
+const BUNDLES_KEY = "ayuraise.yogaBundles";
+export function loadBundles(): YogaPlan[] {
   try {
     if (typeof window === "undefined") return [];
-    const raw = localStorage.getItem(SAVED_KEY);
+    const raw = localStorage.getItem(BUNDLES_KEY);
     return raw ? (JSON.parse(raw) as YogaPlan[]).map(normalizePlan) : [];
   } catch { return []; }
 }
-/** Save a favourite; one per source (re-saving the same program/bundle replaces it). Capped at 3. */
-export function addSavedPlan(p: YogaPlan): YogaPlan[] {
-  const isBundle = !!p.poseIds?.length;
-  const list = loadSavedPlans().filter((x) => {
-    if (isBundle) return !x.poseIds?.length;          // only ever one bundle — a new bundle replaces the old
-    if (p.sourceId) return x.sourceId !== p.sourceId; // one favourite per ready-made source
-    return x.id !== p.id;
-  });
-  const next = [p, ...list].slice(0, MAX_FAV);
-  try { localStorage.setItem(SAVED_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+export function addBundle(p: YogaPlan): YogaPlan[] {
+  const next = [p, ...loadBundles()].slice(0, MAX_BUNDLES);   // newest first; a 4th drops the oldest
+  try { localStorage.setItem(BUNDLES_KEY, JSON.stringify(next)); } catch { /* ignore */ }
   return next;
 }
-export function isBundlePlan(p: YogaPlan) { return !!p.poseIds?.length; }
-export function removeSavedPlan(id: string): YogaPlan[] {
-  const next = loadSavedPlans().filter((p) => p.id !== id);
-  try { localStorage.setItem(SAVED_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+export function removeBundle(id: string): YogaPlan[] {
+  const next = loadBundles().filter((p) => p.id !== id);
+  try { localStorage.setItem(BUNDLES_KEY, JSON.stringify(next)); } catch { /* ignore */ }
   return next;
 }
 

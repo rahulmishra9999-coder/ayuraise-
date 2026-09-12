@@ -14,13 +14,12 @@ const TITLES: Record<string, string> = {
   time: "How long each session?", protect: "Any areas to protect?", start: "Ready to begin",
 };
 
-/** The short "start a program" flow: a few conditional questions → a 2-day plan → save or activate. */
-export function YogaProgramSheet({ template, activePlans, onClose, onSave, onActivate }: {
+/** The short "customise a program" flow: a few conditional questions → a 3-day plan → save or make primary. */
+export function YogaProgramSheet({ template, onClose, onSave, onMakePrimary }: {
   template: YogaTemplate;
-  activePlans: YogaPlan[];
   onClose: () => void;
-  onSave: (plan: YogaPlan) => void;                       // save & practice → favourite + in Plans
-  onActivate: (plan: YogaPlan, replaceId?: string) => void; // make it a current plan board
+  onSave: (plan: YogaPlan) => void;          // add to My Plans
+  onMakePrimary: (plan: YogaPlan) => void;   // add to My Plans and make it the primary/dashboard plan
 }) {
   const t = template;
   const [level, setLevel] = useState(t.level);
@@ -50,7 +49,7 @@ export function YogaProgramSheet({ template, activePlans, onClose, onSave, onAct
     return { ...base, level: t.noLevel ? base.level : level, duration, protect: t.noProtect ? [] : protect, variant };
   };
   const save = () => onSave(build());
-  const activate = (replaceId?: string) => onActivate(build(), replaceId);
+  const makePrimary = () => onMakePrimary(build());
 
   return (
     <Dialog open onOpenChange={(v) => { if (!v) onClose(); }}>
@@ -87,15 +86,10 @@ export function YogaProgramSheet({ template, activePlans, onClose, onSave, onAct
                 <p className="mt-1 text-[11.5px] leading-snug text-muted-foreground">The next days are generated as you go — shaped by how each session feels. {t.name}{t.noLevel ? "" : ` · ${level}`} · {duration} min{t.trimester ? ` · ${trimester}` : ""}{t.technique ? ` · ${technique}` : ""}.</p>
               </div>
               <div className="mt-3 space-y-2">
-                <button onClick={save} className="w-full rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground">💾 Save &amp; practice</button>
-                <p className="px-1 text-[10.5px] text-muted-foreground">Saved to your ⭐ Fav Plans and opened so you can start practising.</p>
-                {!t.noCurrent && activePlans.length >= 1 && (
-                  <>
-                    <p className="px-1 pt-1 text-[11px] text-muted-foreground">…or replace a current plan instead:</p>
-                    {activePlans.map((p) => (
-                      <button key={p.id} onClick={() => activate(p.id)} className="w-full rounded-2xl bg-secondary px-4 py-3 text-[13.5px] font-semibold text-foreground">🔄 Replace “{p.primary}”</button>
-                    ))}
-                  </>
+                <button onClick={save} className="w-full rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground">💾 Save to my plans</button>
+                <p className="px-1 text-[10.5px] text-muted-foreground">Added to My Plans — edit or delete it anytime.</p>
+                {!t.noCurrent && (
+                  <button onClick={makePrimary} className="w-full rounded-2xl bg-amber-400 px-4 py-3 text-[13.5px] font-bold text-amber-950">★ Make it my primary plan</button>
                 )}
               </div>
             </div>

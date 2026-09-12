@@ -1,14 +1,14 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { BottomNav } from "@/components/BottomNav";
-import { loadYogaPlans, upsertYogaPlan, removeYogaPlan, loadSavedPlans, addSavedPlan, removeSavedPlan, newPlanId, MAX_PLANS, MAX_FAV, WEEKDAYS, themeForWeek, blurbForWeek, dayName, loadYogaProgress, saveYogaProgress, sessionKey, totalSessions, isSessionReady, completeSession, doneToday, DAILY_CAP, BUFFER, type YogaPlan as SavedYogaConfig, type YogaProgress } from "@/lib/yoga-plan";
+import { loadYogaPlans, upsertYogaPlan, removeYogaPlan, setPrimaryPlan, loadBundles, addBundle, removeBundle, newPlanId, MAX_PLANS, WEEKDAYS, themeForWeek, blurbForWeek, dayName, loadYogaProgress, saveYogaProgress, sessionKey, totalSessions, isSessionReady, completeSession, doneToday, DAILY_CAP, BUFFER, type YogaPlan as SavedYogaConfig, type YogaProgress } from "@/lib/yoga-plan";
 import { YogaPlanSheet } from "@/components/YogaPlanSheet";
 import { YogaProgramSheet } from "@/components/YogaProgramSheet";
 import { YOGA_TEMPLATES, CATEGORY_LABELS, CATEGORY_ORDER, templateToPlan, type YogaTemplate } from "@/lib/yoga-templates";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import {
-  ArrowLeft, Play, Pause, ChevronRight, ChevronLeft, X, Trash2, Volume2, VolumeX, History, Bot, Plus, Check, Sliders, Star,
+  ArrowLeft, Play, Pause, ChevronRight, ChevronLeft, X, Trash2, Volume2, VolumeX, History, Bot, Plus, Check, Sliders, Star, MoreHorizontal,
 } from "lucide-react";
 import {
   POSES, DURATIONS, GOALS, DISEASES, generatePlan, posesFor, speak, stopSpeaking,
@@ -55,68 +55,59 @@ function YogaSection() {
   const [prog, setProg] = useState<StyleProgram | null>(null);
   const [week, setWeek] = useState<WeeklyPlan | null>(null);
   const [stylePlay, setStylePlay] = useState<StyleProgram | null>(null);
-  const [yPlans, setYPlans] = useState<SavedYogaConfig[]>([]);
+  const [plans, setPlans] = useState<SavedYogaConfig[]>([]);                  // My Plans (max 3)
+  const [bundles, setBundles] = useState<SavedYogaConfig[]>([]);              // saved bundles (Poses tab)
   const [planSheet, setPlanSheet] = useState(false);
-  const [sheetInit, setSheetInit] = useState<SavedYogaConfig | null>(null);   // null → brand-new; else edit/template
-  const [decision, setDecision] = useState<SavedYogaConfig | null>(null);     // incoming new plan awaiting keep-both/replace
-  const [deletePlan, setDeletePlan] = useState<SavedYogaConfig | null>(null); // plan awaiting delete confirmation
+  const [sheetInit, setSheetInit] = useState<SavedYogaConfig | null>(null);   // null → brand-new; else edit
   const [program, setProgram] = useState<YogaTemplate | null>(null);         // a program being customised
   const [preview, setPreview] = useState<YogaTemplate | null>(null);         // a ready-made plan being previewed
-  const [saved, setSaved] = useState<SavedYogaConfig[]>([]);                  // ⭐ My Fav Plans
-  const [confirmCurrent, setConfirmCurrent] = useState<SavedYogaConfig | null>(null); // confirm before replacing current plan
-  const [openPlan, setOpenPlan] = useState<SavedYogaConfig | null>(null); // "opened" saved plan detail
-  useEffect(() => { setYPlans(loadYogaPlans()); setSaved(loadSavedPlans()); }, []);
+  const [deletePlan, setDeletePlan] = useState<SavedYogaConfig | null>(null); // plan awaiting delete confirmation
+  const [sameGoal, setSameGoal] = useState<{ incoming: SavedYogaConfig; existing: SavedYogaConfig } | null>(null);
+  const [fullMsg, setFullMsg] = useState(false);                             // tried to add a 4th plan
+  useEffect(() => { setPlans(loadYogaPlans()); setBundles(loadBundles()); }, []);
 
+  const primId = plans.find((p) => p.isPrimary)?.id ?? plans[0]?.id;
 
   const openNew = () => { setSheetInit(null); setPlanSheet(true); };
   const openEdit = (p: SavedYogaConfig) => { setSheetInit(p); setPlanSheet(true); };
-  const commit = (p: SavedYogaConfig, id?: string) => { const plan = { ...p, id: id ?? (p.id || newPlanId()) }; setYPlans(upsertYogaPlan(plan)); };
-  const makeCurrent = (plan: SavedYogaConfig) => {   // replace the single current plan
+  const closeSheet = () => { setPlanSheet(false); setSheetInit(null); };
+  const handleCreate = () => { if (plans.length >= MAX_PLANS) setFullMsg(true); else openNew(); };
+  const makePrimary = (p: SavedYogaConfig) => { setPlans(setPrimaryPlan(p.id)); toast.success(`“${p.name ?? p.primary}” is now your primary plan ★`); };
+  const toggleFav = (p: SavedYogaConfig) => { setPlans(upsertYogaPlan({ ...p, isFav: !p.isFav })); };
+  const confirmDelete = () => { if (deletePlan) { setPlans(removeYogaPlan(deletePlan.id)); toast.success("Plan deleted"); } setDeletePlan(null); };
+
+  /** Add a plan to My Plans (optionally primary); blocks at 3 with a message. */
+  const addPlan = (p: SavedYogaConfig, makePrim = false): boolean => {
     const cur = loadYogaPlans();
-    if (cur[0]) removeYogaPlan(cur[0].id);
-    setYPlans(upsertYogaPlan({ ...plan, id: newPlanId() }));
+    if (!cur.some((x) => x.id === p.id) && cur.length >= MAX_PLANS) { setFullMsg(true); return false; }
+    let next = upsertYogaPlan(p);
+    if (makePrim) next = setPrimaryPlan(p.id);
+    setPlans(next);
+    return true;
   };
 
-  // Customise flow (from a ready-made): Save & practice → ⭐ favourite (no replace) and open the plan; Replace → becomes current plan.
-  const onSaveProgram = (plan: SavedYogaConfig) => { setSaved(addSavedPlan(plan)); setProgram(null); setPreview(null); setOpenPlan(plan); toast.success("Saved to ⭐ My Fav Plans"); };
-  const onActivateProgram = (plan: SavedYogaConfig, replaceId?: string) => {
-    if (replaceId) removeYogaPlan(replaceId);
-    setYPlans(upsertYogaPlan(plan));
-    setProgram(null); setPreview(null);
-    toast.success(replaceId ? "Plan replaced 🧘" : "Plan started — first 3 days are ready 🌱");
+  // Builder (New plan / Edit)
+  const onSheetSave = (p: SavedYogaConfig) => {
+    const cur = loadYogaPlans();
+    if (p.id && cur.some((x) => x.id === p.id)) { setPlans(upsertYogaPlan(p)); closeSheet(); toast.success("Plan saved 🧘"); return; }  // edit in place
+    const incoming = { ...p, id: newPlanId() };
+    const existing = cur.find((x) => x.primary === incoming.primary);
+    if (existing) { setPlanSheet(false); setSheetInit(null); setSameGoal({ incoming, existing }); return; }   // same goal → warn
+    if (addPlan(incoming)) { closeSheet(); toast.success("Plan created — first 3 days are ready 🌱"); } else closeSheet();
   };
+  const replaceSameGoal = () => { if (sameGoal) { removeYogaPlan(sameGoal.existing.id); addPlan(sameGoal.incoming); toast.success("Plan replaced 🧘"); } setSameGoal(null); };
+  const editSameGoal = () => { const ex = sameGoal?.existing; setSameGoal(null); if (ex) openEdit(ex); };
 
-  // Save & practice a ready-made as-is → add to favs and open it.
-  const addFav = (t: YogaTemplate) => { const plan = templateToPlan(t); setSaved(addSavedPlan(plan)); setPreview(null); setOpenPlan(plan); toast.success("Saved to ⭐ My Fav Plans"); };
-  const unfav = (id: string) => { setSaved(removeSavedPlan(id)); toast.success("Removed from favourites"); };
-  // Save a built bundle as a fav plan (daily practice) and open it.
+  // Ready-made: customise (sheet) or save as-is (preview)
+  const onSaveProgram = (plan: SavedYogaConfig) => { if (addPlan(plan)) toast.success("Added to My Plans 🧘"); setProgram(null); setPreview(null); };
+  const onMakePrimaryProgram = (plan: SavedYogaConfig) => { if (addPlan(plan, true)) toast.success("Now your primary plan ★"); setProgram(null); setPreview(null); };
+
+  // Bundles (Poses tab) — up to 3, newest first; a 4th drops the oldest
   const saveBundle = (poseIds: string[]) => {
     if (!poseIds.length) return;
-    const plan: SavedYogaConfig = { id: newPlanId(), sourceId: "my-bundle", primary: "My Bundle", secondary: null, level: "Beginner", weeks: 1, daysPerWeek: 7, days: WEEKDAYS.map((w) => w.id), duration: Math.max(5, poseIds.length * 2), protect: [], updatedAt: Date.now(), poseIds };
-    setSaved(addSavedPlan(plan)); setOpenPlan(plan); toast.success("Bundle saved to ⭐ My Fav Plans");
+    const plan: SavedYogaConfig = { id: newPlanId(), primary: "My Bundle", secondary: null, level: "Beginner", weeks: 1, daysPerWeek: 7, days: WEEKDAYS.map((w) => w.id), duration: Math.max(5, poseIds.length * 2), protect: [], updatedAt: Date.now(), poseIds };
+    setBundles(addBundle(plan)); toast.success("Bundle saved");
   };
-  const favoriteIds = [...saved, ...yPlans].map((p) => p.sourceId).filter(Boolean) as string[];
-  const closeSheet = () => { setPlanSheet(false); setSheetInit(null); };
-
-  const onSheetSave = (p: SavedYogaConfig) => {
-    const plans = loadYogaPlans();
-    const editing = p.id ? plans.find((x) => x.id === p.id) : undefined;
-    // editing with the same goal → just update that plan in place
-    if (editing && editing.primary === p.primary) { commit(p); closeSheet(); toast.success("Yoga plan saved 🧘"); return; }
-
-    const incoming = { ...p, id: newPlanId() };   // otherwise it's effectively a new plan
-    const sameGoalOther = plans.find((x) => x.primary === incoming.primary && x.id !== editing?.id);
-    if (sameGoalOther) { commit(incoming, sameGoalOther.id); closeSheet(); toast.success(`Updated your ${p.primary} plan 🧘`); return; }  // same goal as another plan → replace it
-
-    if (editing) {   // editing but goal changed → keep the original, add the new one below
-      if (plans.length < MAX_PLANS) { commit(incoming); closeSheet(); toast.success("Added as a second plan 🧘"); return; }
-      setPlanSheet(false); setSheetInit(null); setDecision(incoming); return;   // no room → ask which to replace
-    }
-    if (plans.length === 0) { commit(incoming); closeSheet(); toast.success("Yoga plan saved 🧘"); return; }  // first plan
-    setPlanSheet(false); setSheetInit(null); setDecision(incoming);   // brand-new + different goal → ask keep-both / replace
-  };
-  const replaceWith = (oldId: string) => { if (decision) { removeYogaPlan(oldId); commit(decision); toast.success("Plan replaced 🧘"); } setDecision(null); };
-  const confirmDelete = () => { if (deletePlan) { setYPlans(removeYogaPlan(deletePlan.id)); toast.success("Plan deleted"); } setDeletePlan(null); };
 
   return (
     <div className="min-h-svh pb-28" style={{ background: "var(--gradient-hero)" }}>
@@ -136,31 +127,35 @@ function YogaSection() {
       </div>
 
       <div className="mx-auto max-w-xl px-5">
-        {/* active yoga plans (up to 2) — or the create entry point */}
-        {yPlans.length > 0 ? (
-          <>
-            {yPlans.map((p) => <YogaPlanBoard key={p.id} plan={p} onEdit={() => openEdit(p)} onDelete={() => setDeletePlan(p)} onPlay={setSession} />)}
-          </>
-        ) : (
-          <button onClick={openNew} className="group mt-4 block w-full overflow-hidden rounded-3xl p-5 text-left text-primary-foreground shadow-[var(--shadow-glow)] transition active:scale-[0.985]" style={{ background: "var(--gradient-violet)" }}>
-            <div className="flex items-center gap-3">
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/20 text-xl">✨</span>
-              <div className="min-w-0 flex-1">
-                <p className="font-display text-[16px] font-bold leading-tight">Create Your Personalized Yoga Plan</p>
-                <p className="mt-1.5 text-[12px] leading-relaxed opacity-90">A yoga journey tailored to your body, goals, and lifestyle — with optional real-time feedback from your AI Yoga Instructor.</p>
-              </div>
+        {/* Create your personalized plan — always on top */}
+        <button onClick={handleCreate} className="group mt-4 block w-full overflow-hidden rounded-3xl p-5 text-left text-primary-foreground shadow-[var(--shadow-glow)] transition active:scale-[0.985]" style={{ background: "var(--gradient-violet)" }}>
+          <div className="flex items-center gap-3">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/20 text-xl">✨</span>
+            <div className="min-w-0 flex-1">
+              <p className="font-display text-[16px] font-bold leading-tight">Create Your Personalized Yoga Plan</p>
+              <p className="mt-1.5 text-[12px] leading-relaxed opacity-90">A yoga journey tailored to your body, goals and lifestyle — with optional real-time feedback from your AI Yoga Instructor.</p>
             </div>
-            <span className="mt-3.5 inline-flex items-center gap-1.5 rounded-full bg-white px-4 py-2 text-[12.5px] font-bold text-violet-700 shadow-sm transition group-active:gap-2.5">
-              Get started <ChevronRight size={15} />
-            </span>
-          </button>
+          </div>
+          <span className="mt-3.5 inline-flex items-center gap-1.5 rounded-full bg-white px-4 py-2 text-[12.5px] font-bold text-violet-700 shadow-sm transition group-active:gap-2.5">Get started <ChevronRight size={15} /></span>
+        </button>
+
+        {/* My Plans (up to 3; one ★ primary shows on the dashboard) */}
+        {plans.length > 0 && (
+          <section className="mt-4">
+            <div className="flex items-baseline justify-between px-1">
+              <h2 className="font-display text-[15px] font-bold text-foreground">My Plans</h2>
+              <span className="text-[11px] text-muted-foreground">{plans.length}/{MAX_PLANS} · you can have up to {MAX_PLANS}</span>
+            </div>
+            <div className="mt-2 space-y-2">
+              {plans.map((p) => (
+                <PlanCard key={p.id} plan={p} isPrimary={p.id === primId} onEdit={() => openEdit(p)} onDelete={() => setDeletePlan(p)} onMakePrimary={() => makePrimary(p)} onToggleFav={() => toggleFav(p)} onPlay={setSession} />
+              ))}
+            </div>
+          </section>
         )}
 
-        {/* ⭐ My Fav Plans — above the tabs */}
-        <MyFavPlans saved={saved} onOpen={setOpenPlan} onUnstar={(p) => { setSaved(removeSavedPlan(p.id)); toast.success("Moved back to Ready-made"); }} onDelete={(p) => { setSaved(removeSavedPlan(p.id)); toast.success("Deleted"); }} />
-
         {/* main tabs */}
-        <div className="sticky top-0 z-30 -mx-5 mt-3 flex gap-1.5 overflow-x-auto bg-background/85 px-5 py-2.5 backdrop-blur-xl [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="sticky top-0 z-30 -mx-5 mt-4 flex gap-1.5 overflow-x-auto bg-background/85 px-5 py-2.5 backdrop-blur-xl [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {([["popular", "🧘‍♀️ Ready-made Plans"], ["know", "🧘 Select Poses & Practice"], ["learn", "🎓 Learn"]] as const).map(([id, label]) => (
             <button key={id} onClick={() => setTab(id)}
               className={`shrink-0 rounded-full px-3.5 py-1.5 text-[12.5px] font-semibold transition ${tab === id ? "bg-primary text-primary-foreground shadow-[var(--shadow-glow)]" : "bg-card text-foreground/70 ring-1 ring-border/60"}`}>
@@ -169,8 +164,8 @@ function YogaSection() {
           ))}
         </div>
 
-        {tab === "popular" && <PopularPlans favoriteIds={favoriteIds} onPreview={setPreview} />}
-        {tab === "know" && <KnowTab onPractise={(title, plan) => setSession({ title, plan, feedback: true })} onSaveBundle={saveBundle} />}
+        {tab === "popular" && <PopularPlans favoriteIds={plans.map((p) => p.sourceId).filter(Boolean) as string[]} onPreview={setPreview} />}
+        {tab === "know" && <KnowTab onPractise={(title, plan) => setSession({ title, plan, feedback: true })} bundles={bundles} onSaveBundle={saveBundle} onPlayBundle={(p) => setSession({ title: p.primary, plan: buildBundleSession(p.poseIds ?? []), feedback: false })} onDeleteBundle={(id) => setBundles(removeBundle(id))} />}
         {tab === "learn" && <LearnTab onPractise={(title, plan) => setSession({ title, plan, feedback: true })} />}
       </div>
 
@@ -190,46 +185,35 @@ function YogaSection() {
           template={preview}
           onClose={() => setPreview(null)}
           onCustomize={(t) => { setPreview(null); setProgram(t); }}
-          onAddFav={addFav}
+          onSave={(t) => onSaveProgram(templateToPlan(t))}
+          onMakePrimary={(t) => onMakePrimaryProgram(templateToPlan(t))}
           onPlay={(t) => setSession({ title: t.name, plan: generatePlan("none", toYogaGoal(t.primary), t.duration), feedback: false })}
         />
       )}
       {program && (
-        <YogaProgramSheet template={program} activePlans={yPlans} onClose={() => setProgram(null)} onSave={onSaveProgram} onActivate={onActivateProgram} />
+        <YogaProgramSheet template={program} onClose={() => setProgram(null)} onSave={onSaveProgram} onMakePrimary={onMakePrimaryProgram} />
       )}
-      {openPlan && (
-        <PlanDetail
-          plan={openPlan}
-          isCurrent={yPlans.some((p) => p.id === openPlan.id)}
-          onClose={() => setOpenPlan(null)}
-          onPlay={setSession}
-          onMakeCurrent={() => { setConfirmCurrent(openPlan); }}
-        />
-      )}
-      {confirmCurrent && (
-        <Dialog open onOpenChange={(v) => { if (!v) setConfirmCurrent(null); }}>
+      {sameGoal && (
+        <Dialog open onOpenChange={(v) => { if (!v) setSameGoal(null); }}>
           <DialogContent className="max-w-sm">
             <DialogHeader>
-              <DialogTitle className="font-display">Replace your current plan?</DialogTitle>
-              <DialogDescription>{yPlans[0] ? `Your current “${yPlans[0].primary}” plan will be replaced with “${confirmCurrent.primary}”.` : `Start “${confirmCurrent.primary}” as your current plan?`}</DialogDescription>
+              <DialogTitle className="font-display">You already have a {sameGoal.existing.primary} plan</DialogTitle>
+              <DialogDescription>Creating another plan for the same goal will replace it — or you can just edit the one you have.</DialogDescription>
             </DialogHeader>
-            <button onClick={() => { makeCurrent(confirmCurrent); setConfirmCurrent(null); toast.success("Now your current plan 🧘"); }} className="w-full rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground">Yes, make it current</button>
-            <button onClick={() => setConfirmCurrent(null)} className="w-full rounded-2xl bg-secondary px-4 py-3 text-[13px] font-semibold text-foreground">Cancel</button>
+            <button onClick={replaceSameGoal} className="w-full rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground">🔄 Replace my {sameGoal.existing.primary} plan</button>
+            <button onClick={editSameGoal} className="w-full rounded-2xl bg-secondary px-4 py-3 text-[13.5px] font-semibold text-foreground">✏️ Edit my existing plan instead</button>
+            <button onClick={() => setSameGoal(null)} className="w-full rounded-2xl px-4 py-1.5 text-[12.5px] font-semibold text-muted-foreground">Cancel</button>
           </DialogContent>
         </Dialog>
       )}
-      {decision && (
-        <Dialog open onOpenChange={(v) => { if (!v) setDecision(null); }}>
+      {fullMsg && (
+        <Dialog open onOpenChange={(v) => { if (!v) setFullMsg(false); }}>
           <DialogContent className="max-w-sm">
             <DialogHeader>
-              <DialogTitle className="font-display">Replace, or save separately?</DialogTitle>
-              <DialogDescription>You're practising “{yPlans[0]?.primary}”. Replace it with “{decision.primary}”, or keep it and save this one to My Fav Plans?</DialogDescription>
+              <DialogTitle className="font-display">You have {MAX_PLANS} plans</DialogTitle>
+              <DialogDescription>Delete one from My Plans to create a new one.</DialogDescription>
             </DialogHeader>
-            {yPlans.map((p) => (
-              <button key={p.id} onClick={() => replaceWith(p.id)} className="w-full rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground">🔄 Replace with “{decision.primary}”</button>
-            ))}
-            <button onClick={() => { setSaved(addSavedPlan(decision)); setDecision(null); toast.success("Saved to ⭐ My Fav Plans"); }} className="w-full rounded-2xl bg-secondary px-4 py-3 text-[13.5px] font-semibold text-foreground">💾 Save &amp; practice (keep current)</button>
-            <button onClick={() => setDecision(null)} className="w-full rounded-2xl px-4 py-1.5 text-[12.5px] font-semibold text-muted-foreground">Cancel</button>
+            <button onClick={() => setFullMsg(false)} className="w-full rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground">Got it</button>
           </DialogContent>
         </Dialog>
       )}
@@ -237,10 +221,11 @@ function YogaSection() {
         <Dialog open onOpenChange={(v) => { if (!v) setDeletePlan(null); }}>
           <DialogContent className="max-w-sm">
             <DialogHeader>
-              <DialogTitle className="font-display">Delete this plan?</DialogTitle>
-              <DialogDescription>“{deletePlan.primary}” and its progress will be removed. This can't be undone.</DialogDescription>
+              <DialogTitle className="font-display">Delete “{deletePlan.name ?? deletePlan.primary}”?</DialogTitle>
+              <DialogDescription>This plan and its progress will be removed. You can delete it, or replace it with a new plan.</DialogDescription>
             </DialogHeader>
-            <button onClick={confirmDelete} className="w-full rounded-2xl bg-rose-500 px-4 py-3 text-sm font-semibold text-white">Delete plan</button>
+            <button onClick={() => { const d = deletePlan; confirmDelete(); if (d) { setSheetInit(null); setPlanSheet(true); } }} className="w-full rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground">🔄 Replace with a new plan</button>
+            <button onClick={confirmDelete} className="w-full rounded-2xl bg-rose-500 px-4 py-3 text-sm font-semibold text-white">🗑 Delete plan</button>
             <button onClick={() => setDeletePlan(null)} className="w-full rounded-2xl bg-secondary px-4 py-2.5 text-[13px] font-semibold text-foreground">Cancel</button>
           </DialogContent>
         </Dialog>
@@ -279,25 +264,27 @@ function toYogaGoal(primary: string): Goal {
   return "general-wellness";
 }
 
-function YogaPlanBoard({ plan, onEdit, onDelete, onPlay }: {
-  plan: SavedYogaConfig; onEdit: () => void; onDelete: () => void; onPlay: (s: Session) => void;
+function PlanCard({ plan, isPrimary, onEdit, onDelete, onMakePrimary, onToggleFav, onPlay }: {
+  plan: SavedYogaConfig; isPrimary: boolean; onEdit: () => void; onDelete: () => void; onMakePrimary: () => void; onToggleFav: () => void; onPlay: (s: Session) => void;
 }) {
   const [progress, setProgress] = useState<YogaProgress>({ done: [], feedback: {} });
   const [showAll, setShowAll] = useState(false);
   const [capOpen, setCapOpen] = useState(false);
+  const [menu, setMenu] = useState(false);
   useEffect(() => { setProgress(loadYogaProgress(plan.id)); }, [plan.id]);
 
   const goal = toYogaGoal(plan.primary);
   const N = totalSessions(plan);
   const doneN = progress.done.length;
+  const bundle = !!plan.poseIds?.length;
+  const label = plan.name ?? plan.primary;
   const isDone = (i: number) => progress.done.includes(sessionKey(i));
 
-  // Play a session → auto-logs cal + feedback screen; completing marks it done and opens the next.
   const play = (i: number) => {
     if (!isDone(i) && doneToday(progress) >= DAILY_CAP) { setCapOpen(true); return; }
     onPlay({
-      title: `Day ${i}`,
-      plan: plan.poseIds?.length ? buildBundleSession(plan.poseIds) : generatePlan("none", goal, plan.duration),
+      title: `${label} · Day ${i}`,
+      plan: bundle ? buildBundleSession(plan.poseIds!) : generatePlan("none", goal, plan.duration),
       feedback: false,
       onDone: (choice) => {
         setProgress((p) => {
@@ -312,90 +299,56 @@ function YogaPlanBoard({ plan, onEdit, onDelete, onPlay }: {
     });
   };
 
-  // the open window: next up-to-3 sessions that aren't done yet
   const open: number[] = [];
   for (let i = 1; i <= N && open.length < BUFFER; i++) if (!isDone(i) && isSessionReady(progress, i)) open.push(i);
   const complete = doneN >= N;
-
-  // the arc: each phase spans one "week" of days, shown by day-range (no "week" wording)
-  const dpw = plan.daysPerWeek;
-  const nextSession = Math.min(doneN + 1, N);
-  const phase = Math.max(1, Math.ceil(nextSession / dpw));
-  const phaseStart = (phase - 1) * dpw + 1;
-  const phaseEnd = Math.min(phase * dpw, N);
-
-  const sessionRow = (i: number, locked = false) => {
-    const done = isDone(i);
-    return (
-      <div key={i} className={`flex items-center gap-2.5 rounded-2xl p-2 ${!locked ? "bg-card ring-1 ring-border/60" : "bg-secondary/15"}`}>
-        <span className={`flex h-8 w-9 shrink-0 flex-col items-center justify-center rounded-lg text-[11px] font-bold leading-none ${done ? "bg-primary text-primary-foreground" : locked ? "bg-secondary text-muted-foreground/70" : "bg-accent/60 text-foreground/70"}`}><span className="text-[7px] opacity-70">DAY</span>{i}</span>
-        <div className="min-w-0 flex-1">
-          <p className={`truncate text-[12.5px] font-semibold ${locked ? "text-muted-foreground" : "text-foreground"}`}>Day {i}</p>
-          <p className="truncate text-[10.5px] text-muted-foreground">{done ? "✓ Done" : locked ? "🔒 Opens as you go" : `${plan.duration} min · ${plan.level}`}</p>
-        </div>
-        {!done && !locked && <button onClick={() => play(i)} className="flex shrink-0 items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-[11.5px] font-bold text-primary-foreground"><Play size={12} /> Play</button>}
-        {done && (
-          <div className="flex shrink-0 items-center gap-1.5">
-            <button onClick={() => play(i)} title="Practise again" className="flex h-6 w-6 items-center justify-center rounded-full bg-secondary text-foreground/70"><Play size={11} /></button>
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-white"><Check size={12} strokeWidth={3} /></span>
-          </div>
-        )}
-      </div>
-    );
-  };
+  const next = open[0];
+  const menuBtn = "rounded-lg px-2.5 py-1.5 text-[11px] font-semibold text-foreground/80 ring-1 ring-border/60 active:scale-[0.97]";
 
   return (
-    <section className="pt-4">
-      <div className="flex items-start justify-between gap-2 px-1">
-        <div className="min-w-0">
-          <h2 className="truncate font-display text-[16px] font-bold text-foreground">Current Yoga Plan</h2>
-          <p className="text-[11.5px] font-semibold text-foreground/70">Primary Goal: {plan.primary}{plan.secondary ? <> · Secondary Goal: {plan.secondary}</> : ""}</p>
-        </div>
-        <div className="flex shrink-0 items-center gap-1.5">
-          <button onClick={onEdit} className="flex items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-[11.5px] font-bold text-primary-foreground"><Sliders size={12} /> Edit</button>
-          <button onClick={onDelete} title="Delete plan" className="flex h-7 w-7 items-center justify-center rounded-full bg-secondary text-muted-foreground"><Trash2 size={13} /></button>
-        </div>
+    <div className="rounded-2xl bg-card ring-1 ring-border/60">
+      <div className="flex items-center gap-2.5 p-2.5">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent/50 text-[16px]">{bundle ? "🧺" : "🧘"}</span>
+        <button onClick={() => (next ? play(next) : setShowAll(true))} className="min-w-0 flex-1 text-left">
+          <div className="flex items-center gap-1.5">
+            <p className="truncate text-[12.5px] font-bold text-foreground">{label}</p>
+            {isPrimary && <span className="shrink-0 rounded-full bg-amber-400 px-1.5 py-0.5 text-[8.5px] font-bold text-amber-950">★ PRIMARY</span>}
+            {plan.isFav && <Star size={12} className="shrink-0 text-amber-500" fill="currentColor" />}
+          </div>
+          <p className="truncate text-[10.5px] text-muted-foreground">{plan.level} · {plan.duration} min · {N} days · {plan.daysPerWeek}/week · {complete ? "done" : `${doneN}/${N}`}</p>
+        </button>
+        {!complete && next && <button onClick={() => play(next)} className="flex shrink-0 items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-[11px] font-bold text-primary-foreground"><Play size={11} /> Day {next}</button>}
+        <button onClick={() => setMenu((m) => !m)} title="More" className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-secondary"><MoreHorizontal size={16} /></button>
       </div>
-      <p className="mt-0.5 px-1 text-[11px] leading-snug text-muted-foreground">{plan.level} · {plan.duration} min/day · {N} days · {plan.weeks} weeks · {doneN} done{doneToday(progress) > 0 ? ` · ${doneToday(progress)}/${DAILY_CAP} today` : ""}</p>
 
-      {/* broad arc header for the current phase (day-range, no "week") */}
-      {!complete && (
-        <div className="mt-2 rounded-2xl bg-accent/30 px-3 py-2.5 ring-1 ring-border/50">
-          <p className="text-[12.5px] font-bold text-foreground">{themeForWeek(phase)} <span className="font-semibold text-muted-foreground">· Days {phaseStart}–{phaseEnd}</span></p>
-          <p className="mt-0.5 text-[10.5px] leading-snug text-muted-foreground">{blurbForWeek(phase)}</p>
+      {menu && (
+        <div className="flex flex-wrap gap-1.5 border-t border-border/60 p-2.5">
+          <button onClick={() => { setMenu(false); onEdit(); }} className={menuBtn}>✏️ Edit</button>
+          <button onClick={() => { setMenu(false); setShowAll(true); }} className={menuBtn}>📋 All sessions</button>
+          {!isPrimary && <button onClick={() => { setMenu(false); onMakePrimary(); }} className={menuBtn}>★ Make primary</button>}
+          <button onClick={() => { setMenu(false); onToggleFav(); }} className={menuBtn}>{plan.isFav ? "★ Favourited" : "☆ Mark fav"}</button>
+          <button onClick={() => { setMenu(false); onDelete(); }} className={`${menuBtn} text-rose-500`}>🗑 Delete</button>
         </div>
       )}
-
-      <div className="mt-2 rounded-2xl bg-primary/5 px-3 py-2.5 ring-1 ring-primary/15">
-        <p className="text-[11px] leading-relaxed text-foreground/75">We have generated your first sessions and keep building the next ones as you progress — shaped by your feedback. To see the outline, <button onClick={() => setShowAll(true)} className="font-bold text-primary underline underline-offset-2">see the whole plan</button>.</p>
-      </div>
-
-      <div className="mt-2 space-y-1.5">
-        {complete
-          ? <div className="rounded-2xl bg-emerald-50 p-4 text-center ring-1 ring-emerald-200 dark:bg-emerald-900/20 dark:ring-emerald-800"><p className="text-[13px] font-bold text-emerald-700 dark:text-emerald-300">🎉 Plan complete — all {N} sessions done!</p></div>
-          : open.map((i) => sessionRow(i))}
-      </div>
-
-      <button onClick={() => setShowAll(true)} className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-2xl bg-secondary/40 py-2.5 text-[12px] font-bold text-foreground/75 ring-1 ring-border/60">See whole plan <ChevronRight size={13} /></button>
 
       {showAll && (
         <Dialog open onOpenChange={(v) => { if (!v) setShowAll(false); }}>
           <DialogContent className="max-w-sm">
             <DialogHeader>
-              <DialogTitle className="font-display">Your whole plan</DialogTitle>
-              <DialogDescription>{N} days over {plan.weeks} weeks. The next few are open now — we generate the rest as you progress.</DialogDescription>
+              <DialogTitle className="font-display">{label} · all sessions</DialogTitle>
+              <DialogDescription>{N} sessions · {plan.daysPerWeek}/week. The next few are open now — we generate the rest as you progress.</DialogDescription>
             </DialogHeader>
-            <div className="max-h-[62svh] space-y-3 overflow-y-auto pr-1">
-              {Array.from({ length: plan.weeks }, (_, pi) => pi + 1).map((ph) => {
-                const start = (ph - 1) * dpw + 1, end = Math.min(ph * dpw, N);
-                if (start > N) return null;
+            <div className="max-h-[62svh] space-y-1.5 overflow-y-auto pr-1">
+              {Array.from({ length: N }, (_, k) => k + 1).map((i) => {
+                const done = isDone(i);
+                const locked = !done && !isSessionReady(progress, i);
                 return (
-                  <div key={ph}>
-                    <p className="px-1 text-[12px] font-bold text-foreground">{themeForWeek(ph)} <span className="font-semibold text-muted-foreground">· Days {start}–{end}</span></p>
-                    <p className="mb-1 px-1 text-[10px] text-muted-foreground">{blurbForWeek(ph)}</p>
-                    <div className="space-y-1.5">
-                      {Array.from({ length: end - start + 1 }, (_, k) => start + k).map((i) => sessionRow(i, !isDone(i) && !isSessionReady(progress, i)))}
-                    </div>
+                  <div key={i} className={`flex items-center gap-2.5 rounded-xl p-2 ${locked ? "bg-secondary/15" : "bg-card ring-1 ring-border/60"}`}>
+                    <span className={`flex h-7 w-9 shrink-0 flex-col items-center justify-center rounded-md text-[10px] font-bold leading-none ${done ? "bg-primary text-primary-foreground" : locked ? "bg-secondary text-muted-foreground/70" : "bg-accent/60 text-foreground/70"}`}><span className="text-[6px] opacity-70">DAY</span>{i}</span>
+                    <span className={`flex-1 truncate text-[12px] font-semibold ${locked ? "text-muted-foreground" : "text-foreground"}`}>Day {i}</span>
+                    {done ? <span className="text-[10.5px] font-semibold text-emerald-600">✓ Done</span>
+                      : locked ? <span className="text-[10px] text-muted-foreground">🔒 Opens as you go</span>
+                      : <button onClick={() => play(i)} className="flex items-center gap-1 rounded-full bg-primary px-2.5 py-1 text-[11px] font-bold text-primary-foreground"><Play size={11} /> Play</button>}
                   </div>
                 );
               })}
@@ -415,7 +368,7 @@ function YogaPlanBoard({ plan, onEdit, onDelete, onPlay }: {
           </DialogContent>
         </Dialog>
       )}
-    </section>
+    </div>
   );
 }
 
@@ -491,9 +444,16 @@ function VideoCard({ label }: { label: string }) {
 
 /* ================= Know Yoga Techniques & Practice ================= */
 
-function KnowTab({ onPractise, onSaveBundle }: { onPractise: (title: string, plan: YogaPlan) => void; onSaveBundle: (poseIds: string[]) => void }) {
-  const [bundle, setBundle] = useState<string[]>([]);
+function KnowTab({ onPractise, bundles, onSaveBundle, onPlayBundle, onDeleteBundle }: {
+  onPractise: (title: string, plan: YogaPlan) => void;
+  bundles: SavedYogaConfig[];
+  onSaveBundle: (poseIds: string[]) => void;
+  onPlayBundle: (p: SavedYogaConfig) => void;
+  onDeleteBundle: (id: string) => void;
+}) {
+  const [bundle, setBundle] = useState<string[]>(() => { try { return JSON.parse(localStorage.getItem("ayuraise.bundleDraft") || "[]"); } catch { return []; } });
   const [showAll, setShowAll] = useState<Record<string, boolean>>({});
+  useEffect(() => { try { localStorage.setItem("ayuraise.bundleDraft", JSON.stringify(bundle)); } catch { /* ignore */ } }, [bundle]);
   const toggleBundle = (id: string) => setBundle((b) => b.includes(id) ? b.filter((x) => x !== id) : [...b, id]);
 
   const group = (id: string, title: string, intro: string, list: Technique[], videoLabel: string) => {
@@ -562,12 +522,32 @@ function KnowTab({ onPractise, onSaveBundle }: { onPractise: (title: string, pla
               <button onClick={() => onPractise("My Bundle", buildBundleSession(bundle))} className="flex w-full items-center justify-center gap-1.5 rounded-full bg-primary px-3 py-2 text-[12.5px] font-bold text-primary-foreground"><Play size={13} /> Practise</button>
               <div className="flex items-center gap-2">
                 <button onClick={() => setBundle([])} className="rounded-full bg-secondary px-3 py-2 text-[11.5px] font-semibold text-foreground/70">Clear</button>
-                <button onClick={() => onSaveBundle(bundle)} className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-amber-400 px-3 py-2 text-[12px] font-bold text-amber-950"><Star size={13} /> Save to My Fav Plans</button>
+                <button onClick={() => { onSaveBundle(bundle); setBundle([]); }} className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-amber-400 px-3 py-2 text-[12px] font-bold text-amber-950"><Star size={13} /> Save bundle</button>
               </div>
             </div>
           </>
         )}
       </div>
+
+      {/* saved bundles (up to 3) */}
+      {bundles.length > 0 && (
+        <div className="mt-3">
+          <h3 className="px-1 text-[12.5px] font-bold text-foreground">🧺 My Bundles</h3>
+          <div className="mt-1.5 space-y-1.5">
+            {bundles.map((b) => (
+              <div key={b.id} className="flex items-center gap-2.5 rounded-2xl bg-card p-2.5 ring-1 ring-border/60">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent/50 text-[14px]">🧺</span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[12px] font-bold text-foreground">{b.primary}</p>
+                  <p className="truncate text-[10px] text-muted-foreground">{b.poseIds?.length ?? 0} poses · practise daily</p>
+                </div>
+                <button onClick={() => onPlayBundle(b)} className="flex items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-[11px] font-bold text-primary-foreground"><Play size={11} /> Practise</button>
+                <button onClick={() => onDeleteBundle(b.id)} title="Delete bundle" className="rounded-full p-1.5 text-muted-foreground hover:text-rose-500"><Trash2 size={13} /></button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <SubTabs tabs={[{ id: "asanas", label: "🧘 Asanas" }, { id: "pranayam", label: "🌬️ Pranayam" }, { id: "bandh", label: "🔒 Bandh" }, { id: "mudra", label: "🙏 Mudras" }]} />
       {group("asanas", "Yoga Asanas", TECH_INTRO.asana, ASANAS, "About yoga — 2 min")}
@@ -628,39 +608,6 @@ function TemplateCard({ t, favorite, onStart }: { t: YogaTemplate; favorite?: bo
   );
 }
 
-function MyFavPlans({ saved, onOpen, onUnstar, onDelete }: {
-  saved: SavedYogaConfig[];
-  onOpen: (p: SavedYogaConfig) => void;
-  onUnstar: (p: SavedYogaConfig) => void;
-  onDelete: (p: SavedYogaConfig) => void;
-}) {
-  if (!saved.length) return null;
-  return (
-    <section className="mt-4">
-      <h2 className="px-1 font-display text-[15px] font-bold text-foreground">⭐ My Fav Plans</h2>
-      <p className="mt-0.5 px-1 text-[11px] text-muted-foreground">Tap to open and practise. Up to {MAX_FAV}.</p>
-      <div className="mt-2 space-y-2">
-        {saved.map((p) => {
-          const bundle = !!p.poseIds?.length;
-          return (
-            <div key={p.id} className="flex items-center gap-2.5 rounded-2xl bg-card p-2.5 ring-1 ring-amber-400/70">
-              <button onClick={() => onOpen(p)} className="flex min-w-0 flex-1 items-center gap-2.5 text-left">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent/50 text-[16px]">{bundle ? "🧺" : "🧘"}</span>
-                <div className="min-w-0">
-                  <p className="truncate text-[12.5px] font-bold text-foreground">{p.primary}{p.variant ? ` · ${p.variant}` : ""}</p>
-                  <p className="truncate text-[10.5px] text-muted-foreground">{p.level} · {p.duration} min · {totalSessions(p)} sessions</p>
-                </div>
-              </button>
-              {!bundle && <button onClick={() => onUnstar(p)} title="Unstar — back to Ready-made" className="shrink-0 rounded-full p-1.5 text-amber-500"><Star size={15} fill="currentColor" /></button>}
-              <button onClick={() => onDelete(p)} title={bundle ? "Delete bundle" : "Delete"} className="shrink-0 rounded-full p-1.5 text-muted-foreground hover:text-rose-500"><Trash2 size={14} /></button>
-            </div>
-          );
-        })}
-      </div>
-    </section>
-  );
-}
-
 function PopularPlans({ favoriteIds, onPreview }: { favoriteIds: string[]; onPreview: (t: YogaTemplate) => void }) {
   const isFav = (t: YogaTemplate) => favoriteIds.includes(t.id);
   return (
@@ -682,16 +629,18 @@ function PopularPlans({ favoriteIds, onPreview }: { favoriteIds: string[]; onPre
 }
 
 /** Preview a ready-made plan: all sessions shown (unlocked), then Customise or add to Favourites. */
-function ReadyMadePreview({ template, onClose, onCustomize, onAddFav, onPlay }: {
+function ReadyMadePreview({ template, onClose, onCustomize, onSave, onMakePrimary, onPlay }: {
   template: YogaTemplate;
   onClose: () => void;
   onCustomize: (t: YogaTemplate) => void;
-  onAddFav: (t: YogaTemplate) => void;
+  onSave: (t: YogaTemplate) => void;
+  onMakePrimary: (t: YogaTemplate) => void;
   onPlay: (t: YogaTemplate, w: number, d: number) => void;
 }) {
   const base = templateToPlan(template);
-  const days = Array.from({ length: base.daysPerWeek }, (_, j) => j + 1);
+  const N = totalSessions(base);
   const kcal = yogaKcal(base.duration, bodyWeight());
+  const shown = Math.min(3, N);
   return (
     <Dialog open onOpenChange={(v) => { if (!v) onClose(); }}>
       <DialogContent className="max-w-sm">
@@ -700,110 +649,33 @@ function ReadyMadePreview({ template, onClose, onCustomize, onAddFav, onPlay }: 
           <DialogDescription>{template.blurb}</DialogDescription>
         </DialogHeader>
         <div className="flex flex-wrap gap-1.5 text-[10.5px] font-semibold">
-          <span className="rounded-full bg-secondary px-2.5 py-1 text-foreground/70">{base.weeks} weeks</span>
-          <span className="rounded-full bg-secondary px-2.5 py-1 text-foreground/70">{base.daysPerWeek} days/week</span>
+          <span className="rounded-full bg-secondary px-2.5 py-1 text-foreground/70">{N} days total</span>
           <span className="rounded-full bg-secondary px-2.5 py-1 text-foreground/70">{base.duration} min</span>
           <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">~{kcal} kcal/day</span>
         </div>
-        <div className="max-h-[48svh] space-y-3 overflow-y-auto pr-1">
-          {Array.from({ length: base.weeks }, (_, i) => i + 1).map((w) => (
-            <div key={w}>
-              <p className="mb-1 px-1 text-[12px] font-bold text-foreground">Week {w} · {themeForWeek(w)}</p>
-              <div className="space-y-1">
-                {days.map((d) => (
-                  <div key={d} className="flex items-center gap-2.5 rounded-xl bg-secondary/15 px-2.5 py-1.5">
-                    <span className="flex h-6 w-8 shrink-0 flex-col items-center justify-center rounded-md bg-accent/50 text-[9px] font-bold leading-none text-foreground/70"><span className="text-[6px] opacity-70">DAY</span>{(w - 1) * base.daysPerWeek + d}</span>
-                    <span className="flex-1 truncate text-[11.5px] font-medium text-foreground/80">{dayName(base, d)}</span>
-                    <span className="text-[10px] text-muted-foreground">{base.duration} min · ~{kcal} kcal</span>
-                    <button onClick={() => onPlay(template, w, d)} className="rounded-full bg-primary/10 p-1 text-primary"><Play size={11} /></button>
-                  </div>
-                ))}
-              </div>
+        <div className="space-y-1">
+          {Array.from({ length: shown }, (_, k) => k + 1).map((i) => (
+            <div key={i} className="flex items-center gap-2.5 rounded-xl bg-secondary/15 px-2.5 py-1.5">
+              <span className="flex h-6 w-8 shrink-0 flex-col items-center justify-center rounded-md bg-accent/50 text-[9px] font-bold leading-none text-foreground/70"><span className="text-[6px] opacity-70">DAY</span>{i}</span>
+              <span className="flex-1 truncate text-[11.5px] font-medium text-foreground/80">Day {i}</span>
+              <span className="text-[10px] text-muted-foreground">{base.duration} min · ~{kcal} kcal</span>
+              <button onClick={() => onPlay(template, 1, i)} className="rounded-full bg-primary/10 p-1 text-primary"><Play size={11} /></button>
             </div>
           ))}
+          {N > shown && <p className="px-1 text-[10px] text-muted-foreground">+ {N - shown} more — the next sessions are created as you progress.</p>}
         </div>
-        <p className="px-1 text-[10.5px] leading-snug text-muted-foreground">“Save &amp; practice” keeps this plan in your ⭐ Fav Plans. “Customise” makes it adaptive (first 3 days now, the rest built from your feedback).</p>
+        <p className="px-1 text-[10.5px] leading-snug text-muted-foreground">“Save to my plans” adds it as-is. “Customise” tailors it (you pick the schedule; first 3 sessions now, the rest built from your feedback).</p>
         <div className="flex gap-2">
-          <button onClick={() => onAddFav(template)} className="flex-1 rounded-2xl bg-primary px-4 py-3 text-[13px] font-semibold text-primary-foreground">💾 Save &amp; practice</button>
+          <button onClick={() => onSave(template)} className="flex-1 rounded-2xl bg-primary px-4 py-3 text-[13px] font-semibold text-primary-foreground">💾 Save to my plans</button>
           <button onClick={() => onCustomize(template)} className="flex-1 rounded-2xl bg-secondary px-4 py-3 text-[13px] font-semibold text-foreground">⚙ Customise</button>
         </div>
+        {!template.noCurrent && <button onClick={() => onMakePrimary(template)} className="w-full rounded-2xl bg-amber-400 px-4 py-3 text-[13px] font-bold text-amber-950">★ Make it my primary plan</button>}
       </DialogContent>
     </Dialog>
   );
 }
 
-/** "Opened" saved plan: session queue (next 3 open), whole-plan list, make current (not for bundles). */
-function PlanDetail({ plan, isCurrent, onClose, onPlay, onMakeCurrent }: {
-  plan: SavedYogaConfig; isCurrent: boolean; onClose: () => void; onPlay: (s: Session) => void; onMakeCurrent: () => void;
-}) {
-  const [progress, setProgress] = useState<YogaProgress>({ done: [], feedback: {} });
-  const [showAll, setShowAll] = useState(false);
-  const [capOpen, setCapOpen] = useState(false);
-  useEffect(() => { setProgress(loadYogaProgress(plan.id)); }, [plan.id]);
-  const bundle = !!plan.poseIds?.length;
-  const noCurrent = bundle || YOGA_TEMPLATES.find((t) => t.id === plan.sourceId)?.noCurrent;   // bundles & Quick can't be the current plan
-  const goal = toYogaGoal(plan.primary);
-  const N = totalSessions(plan);
-  const kcal = yogaKcal(plan.duration, bodyWeight());
-  const isDone = (i: number) => progress.done.includes(sessionKey(i));
-  const play = (i: number) => {
-    if (!isDone(i) && doneToday(progress) >= DAILY_CAP) { setCapOpen(true); return; }
-    onPlay({
-      title: `${plan.primary} · Day ${i}`,
-      plan: bundle ? buildBundleSession(plan.poseIds!) : generatePlan("none", goal, plan.duration),
-      feedback: false,
-      onDone: (choice) => {
-        setProgress((p) => { const np = p.done.includes(sessionKey(i)) ? { ...p, feedback: choice ? { ...p.feedback, [sessionKey(i)]: choice } : p.feedback } : completeSession(p, i, choice); saveYogaProgress(plan.id, np); return np; });
-        if (choice && choice !== "good") toast.success("Noted — your sessions will adapt 🌱");
-      },
-    });
-  };
-  const open: number[] = [];
-  for (let i = 1; i <= N && open.length < BUFFER; i++) if (!isDone(i) && isSessionReady(progress, i)) open.push(i);
-
-  const row = (i: number, locked = false) => {
-    const done = isDone(i);
-    return (
-      <div key={i} className={`flex items-center gap-2.5 rounded-xl px-2.5 py-1.5 ${!locked ? "bg-secondary/15" : "bg-secondary/10"}`}>
-        <span className={`flex h-6 w-8 shrink-0 flex-col items-center justify-center rounded-md text-[9px] font-bold leading-none ${done ? "bg-primary text-primary-foreground" : locked ? "bg-secondary text-muted-foreground/60" : "bg-accent/50 text-foreground/70"}`}><span className="text-[6px] opacity-70">DAY</span>{i}</span>
-        <span className={`flex-1 truncate text-[11.5px] font-medium ${locked ? "text-muted-foreground" : "text-foreground/80"}`}>Day {i}</span>
-        {!done && !locked && <button onClick={() => play(i)} className="flex items-center gap-1 rounded-full bg-primary px-2.5 py-1 text-[11px] font-bold text-primary-foreground"><Play size={11} /> Play</button>}
-        {done && <span className="text-[10px] font-semibold text-emerald-600">✓ Done</span>}
-        {locked && <span className="text-[10px] text-muted-foreground">🔒</span>}
-      </div>
-    );
-  };
-
-  return (
-    <Dialog open onOpenChange={(v) => { if (!v) onClose(); }}>
-      <DialogContent className="max-w-sm">
-        <DialogHeader>
-          <DialogTitle className="font-display">{plan.primary}{plan.variant ? ` · ${plan.variant}` : ""}</DialogTitle>
-          <DialogDescription>⭐ Saved in your Fav Plans — practise it anytime.</DialogDescription>
-        </DialogHeader>
-        <div className="flex flex-wrap gap-1.5 text-[10.5px] font-semibold">
-          <span className="rounded-full bg-secondary px-2.5 py-1 text-foreground/70">{N} sessions</span>
-          <span className="rounded-full bg-secondary px-2.5 py-1 text-foreground/70">{plan.duration} min</span>
-          <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">~{kcal} kcal/day</span>
-        </div>
-        <div className="space-y-1">{open.length ? open.map((i) => row(i)) : <p className="rounded-xl bg-secondary/30 p-3 text-center text-[12px] text-muted-foreground">All sessions done 🎉</p>}</div>
-        <button onClick={() => setShowAll((s) => !s)} className="text-[11.5px] font-bold text-primary">{showAll ? "Hide" : "Show whole plan"}</button>
-        {showAll && (
-          <>
-            <p className="px-1 text-[10.5px] text-muted-foreground">We create the next sessions as you progress.</p>
-            <div className="max-h-[34svh] space-y-1 overflow-y-auto pr-1">
-              {Array.from({ length: N }, (_, k) => k + 1).map((i) => row(i, !isDone(i) && !isSessionReady(progress, i)))}
-            </div>
-          </>
-        )}
-        {!noCurrent && !isCurrent && <button onClick={onMakeCurrent} className="w-full rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground">Make it my current plan</button>}
-        {!noCurrent && isCurrent && <p className="rounded-2xl bg-secondary/40 px-4 py-2.5 text-center text-[12px] font-semibold text-foreground/70">This is your current plan</p>}
-        {bundle && <p className="rounded-2xl bg-secondary/40 px-4 py-2.5 text-center text-[12px] font-semibold text-foreground/70">🧺 Your saved bundle — practise it daily</p>}
-      </DialogContent>
-    </Dialog>
-  );
-}
-
+/** "Opened" saved plan: session queue (next 3 open), whole-plan list, adjust, make current (not for bundles). */
 function PlansTab({ plans, onEdit, onDelete }: {
   plans: SavedYogaConfig[];
   onEdit: (p: SavedYogaConfig) => void;

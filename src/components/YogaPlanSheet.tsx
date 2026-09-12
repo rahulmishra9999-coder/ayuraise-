@@ -64,8 +64,10 @@ export function YogaPlanSheet({ initial, onClose, onSave }: { initial: YogaPlan 
   const [duration, setDuration] = useState(initial?.duration ?? 20);
   const [protect, setProtect] = useState<string[]>(initial?.protect ?? []);
 
-  const cur = STEPS[step];
-  const isLast = step === STEPS.length - 1;
+  const editing = !!initial;   // Adjust = tune-only (no goal step); goal is set only when creating
+  const steps: Step[] = editing ? STEPS.filter((s) => s !== "goal") : STEPS;
+  const cur = steps[step];
+  const isLast = step === steps.length - 1;
   const chip = (on: boolean) => `rounded-full px-3.5 py-2 text-[12px] font-semibold transition ${on ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground/75"}`;
   const goalChip = (c: string) => `rounded-full px-3 py-2 text-[12px] font-semibold transition ${c === primary ? "bg-primary text-primary-foreground" : c === secondary ? "bg-primary/10 text-primary ring-2 ring-primary" : "bg-secondary text-foreground/75"}`;
 
@@ -83,19 +85,19 @@ export function YogaPlanSheet({ initial, onClose, onSave }: { initial: YogaPlan 
     if (!primary || !days.length) return;
     const ord = WEEKDAYS.map((w) => w.id);
     const sorted = [...days].sort((a, b) => ord.indexOf(a) - ord.indexOf(b));
-    onSave({ id: initial?.id ?? "", primary, secondary, level, weeks, daysPerWeek: sorted.length, days: sorted, duration, protect, updatedAt: Date.now() });
+    onSave({ ...(initial ?? {}), id: initial?.id ?? "", primary, secondary, level, weeks, daysPerWeek: sorted.length, days: sorted, duration, protect, updatedAt: Date.now() });
   };
 
   return (
     <Dialog open onOpenChange={(v) => { if (!v) onClose(); }}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle className="font-display">{initial ? "Edit your yoga plan" : "Build your yoga plan"}</DialogTitle>
-          <DialogDescription>Step {step + 1} of {STEPS.length} · {TITLES[cur]}</DialogDescription>
+          <DialogTitle className="font-display">{editing ? "Adjust your plan" : "Build your yoga plan"}</DialogTitle>
+          <DialogDescription>Step {step + 1} of {steps.length} · {TITLES[cur]}{editing ? " · (goal stays the same)" : ""}</DialogDescription>
         </DialogHeader>
 
         <div className="flex gap-1">
-          {STEPS.map((_, i) => <div key={i} className={`h-1 flex-1 rounded-full ${i <= step ? "bg-primary" : "bg-secondary"}`} />)}
+          {steps.map((_, i) => <div key={i} className={`h-1 flex-1 rounded-full ${i <= step ? "bg-primary" : "bg-secondary"}`} />)}
         </div>
 
         <div className="min-h-[38svh] max-h-[54svh] overflow-y-auto pr-1">

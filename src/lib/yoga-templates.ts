@@ -39,6 +39,7 @@ export interface YogaTemplate {
 export function templateToPlan(t: YogaTemplate): YogaPlan {
   return {
     id: newPlanId(),
+    name: t.name,
     sourceId: t.id,
     primary: t.primary,
     secondary: t.secondary ?? null,
@@ -73,11 +74,11 @@ export const YOGA_TEMPLATES: YogaTemplate[] = [
   { id: "restorative", name: "Restorative", emoji: "🛋️", blurb: "Fully supported rest poses for deep recovery.", category: "calm", primary: "Stress & Anxiety Relief", secondary: "Better Sleep", level: "Beginner", weeks: 4, daysCount: 3, duration: 20, noLevel: true, noProtect: true },
   { id: "pranayam", name: "Pranayam", emoji: "🌬️", blurb: "Daily breathwork to steady energy and the mind.", category: "calm", primary: "Breathwork / Pranayama", level: "Beginner", weeks: 4, daysCount: 6, duration: 15, noLevel: true, noProtect: true },
 
-  // ---------- Quick (1 session, ask duration only, can't be made current) ----------
-  { id: "quick-office", name: "Office Yoga", emoji: "💻", blurb: "Desk resets for posture, neck and shoulders.", category: "quick", primary: "Better Posture", secondary: "Neck & Shoulder", level: "Beginner", weeks: 1, daysCount: 1, duration: 2, noLevel: true, noProtect: true, noCurrent: true },
-  { id: "quick-before-bed", name: "Before Bed", emoji: "🛏️", blurb: "A short nightly stretch to unwind body and mind.", category: "quick", primary: "Better Sleep", level: "Beginner", weeks: 1, daysCount: 1, duration: 5, noLevel: true, noProtect: true, noCurrent: true },
-  { id: "quick-wakeup", name: "Wake-up Yoga", emoji: "☀️", blurb: "A short morning wake-up to shake off sleep.", category: "quick", primary: "Beat Fatigue", level: "Beginner", weeks: 1, daysCount: 1, duration: 5, noLevel: true, noProtect: true, noCurrent: true },
-  { id: "quick-evening", name: "Evening Relaxation", emoji: "🌆", blurb: "Decompress after the day.", category: "quick", primary: "Stress & Anxiety Relief", level: "Beginner", weeks: 1, daysCount: 1, duration: 10, noLevel: true, noProtect: true, noCurrent: true },
+  // ---------- Quick (short daily sessions; ask duration only) ----------
+  { id: "quick-office", name: "Office Yoga", emoji: "💻", blurb: "Desk resets for posture, neck and shoulders.", category: "quick", primary: "Better Posture", secondary: "Neck & Shoulder", level: "Beginner", weeks: 1, daysCount: 5, duration: 2, noLevel: true, noProtect: true },
+  { id: "quick-before-bed", name: "Before Bed", emoji: "🛏️", blurb: "A short nightly stretch to unwind body and mind.", category: "quick", primary: "Better Sleep", level: "Beginner", weeks: 1, daysCount: 7, duration: 5, noLevel: true, noProtect: true },
+  { id: "quick-wakeup", name: "Wake-up Yoga", emoji: "☀️", blurb: "A short morning wake-up to shake off sleep.", category: "quick", primary: "Beat Fatigue", level: "Beginner", weeks: 1, daysCount: 7, duration: 5, noLevel: true, noProtect: true },
+  { id: "quick-evening", name: "Evening Relaxation", emoji: "🌆", blurb: "Decompress after the day.", category: "quick", primary: "Stress & Anxiety Relief", level: "Beginner", weeks: 1, daysCount: 7, duration: 10, noLevel: true, noProtect: true },
 
   // ---------- Specific needs (not in your 4 categories — kept here; tell me to drop/move) ----------
   { id: "sr-fitness", name: "Sr. Fitness", emoji: "🧓", blurb: "Safe, gentle practice for strength, balance and mobility.", category: "specific", primary: "Sr. Fitness", secondary: "Balance & Stability", level: "Beginner", weeks: 4, daysCount: 3, duration: 20 },
