@@ -4,6 +4,7 @@ import {
   ArrowLeft, Sparkles, ChevronRight, AlertCircle, Leaf, Sun, Moon, FlaskConical, Clock,
 } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
+import { AyuBot } from "@/components/AyuBot";
 import {
   DETOX_BENEFITS, DETOX_TYPES, DETOX_GOALS, DETOX_CAUTION,
   buildDetoxPlan, saveDetoxPlan, recommendTypesFor,
@@ -148,6 +149,7 @@ function DetoxSection() {
       </div>
 
       {showPlan && <PlanFlow onClose={() => setShowPlan(false)} />}
+      <AyuBot />
       <BottomNav />
     </div>
   );

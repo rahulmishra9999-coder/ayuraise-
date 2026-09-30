@@ -1263,7 +1263,6 @@ export const OBJECTIVES: { id: string; label: string; buckets: string[]; focus: 
   { id: "posture", label: "Better Posture", buckets: ["pilates", "yoga", "stretching", "somatic"], focus: [] },
   { id: "stress-relief", label: "Stress Relief", buckets: ["somatic", "yoga", "stretching"], focus: [] },
   { id: "senior", label: "Senior Fitness", buckets: ["senior", "walking", "stretching"], focus: [] },
-  { id: "joint-relief", label: "Joint & Pain Relief", buckets: ["senior", "stretching", "somatic"], focus: [] },
   { id: "diabetic", label: "Diabetes-Friendly", buckets: ["diabetic", "cardio", "walking"], focus: ["endurance"] },
 ];
 const GENTLE_OBJ = new Set(["flexibility", "posture", "diabetic", "senior", "joint-relief", "stress-relief"]);

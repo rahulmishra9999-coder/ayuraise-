@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { BottomNav } from "@/components/BottomNav";
+import { AyuBot } from "@/components/AyuBot";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { WLPipelineBanner, WLPipelineNext } from "@/components/WLPipeline";
 import { DiseasePipelineBanner, DiseasePipelineNext } from "@/components/DiseasePipeline";
@@ -142,6 +143,7 @@ function WorkoutsPage() {
       )}
       {player && <Player src={player} onClose={() => setPlayer(null)} />}
 
+      <AyuBot />
       <BottomNav />
     </div>
   );

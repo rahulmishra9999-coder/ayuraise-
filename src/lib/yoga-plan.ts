@@ -18,6 +18,7 @@ export type YogaPlan = {
   poseIds?: string[];    // for bundle-based plans — the exact poses to practise
   isPrimary?: boolean;   // the one plan shown on the dashboard
   isFav?: boolean;       // user-marked favourite
+  wizard?: Record<string, unknown>; // saved Create-my-plan answers, so the plan can be re-edited
 };
 
 export const MAX_PLANS = 3;   // "My Plans" holds up to 3

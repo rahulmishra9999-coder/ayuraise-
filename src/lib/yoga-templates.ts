@@ -65,6 +65,13 @@ export const YOGA_TEMPLATES: YogaTemplate[] = [
   { id: "weight-loss", name: "Weight Loss", emoji: "🔥", blurb: "Active, calorie-burning flows to support fat loss.", category: "fitness", primary: "Weight Loss", secondary: "Metabolic Health", level: "Beginner", weeks: 8, daysCount: 5, duration: 20 },
   { id: "surya-namaskar", name: "Surya Namaskar", emoji: "🌅", blurb: "Build up to a flowing daily sun-salutation practice.", category: "fitness", primary: "General Wellness", secondary: "Strength", level: "Beginner", weeks: 4, daysCount: 6, duration: 20 },
   { id: "advanced-yoga", name: "Advanced Yoga", emoji: "🤸", blurb: "Arm balances, inversions and deep backbends — for experienced yogis.", category: "fitness", primary: "Flexibility", secondary: "Strength", level: "Beginner", weeks: 6, daysCount: 5, duration: 20 },
+  { id: "flexibility", name: "Flexibility", emoji: "🤸", blurb: "Open tight hips, hamstrings and shoulders with deep, safe stretches.", category: "fitness", primary: "Flexibility", level: "Beginner", weeks: 4, daysCount: 4, duration: 20 },
+  { id: "mobility", name: "Mobility", emoji: "🔄", blurb: "Free, well-oiled joints — move with ease through a full range.", category: "fitness", primary: "Mobility", level: "Beginner", weeks: 4, daysCount: 4, duration: 20 },
+  { id: "strength-yoga", name: "Strength", emoji: "💪", blurb: "Hold-based flows that build real, functional yoga strength.", category: "fitness", primary: "Strength", secondary: "General Wellness", level: "Beginner", weeks: 6, daysCount: 4, duration: 20 },
+  { id: "balance", name: "Balance & Stability", emoji: "⚖️", blurb: "Steady the body and mind with balancing poses and a strong core.", category: "fitness", primary: "Balance & Stability", level: "Beginner", weeks: 4, daysCount: 4, duration: 20 },
+  { id: "posture", name: "Better Posture", emoji: "🧍", blurb: "Undo the slouch — open the chest, wake the back, stand tall.", category: "fitness", primary: "Better Posture", secondary: "Neck & Shoulder", level: "Beginner", weeks: 4, daysCount: 5, duration: 20 },
+  { id: "energy", name: "Boost Energy", emoji: "⚡", blurb: "Energising flows and breath to shake off fatigue and dullness.", category: "fitness", primary: "Beat Fatigue", level: "Beginner", weeks: 4, daysCount: 5, duration: 20 },
+  { id: "healthy-ageing", name: "Healthy Ageing", emoji: "🌳", blurb: "Stay supple, strong and independent through the years.", category: "fitness", primary: "Healthy Ageing", secondary: "Balance & Stability", level: "Beginner", weeks: 4, daysCount: 4, duration: 20 },
 
   // ---------- Calm & Sleep ----------
   { id: "stress-relief", name: "Stress Relief", emoji: "🧘", blurb: "Calming movement and breath to ease tension and worry.", category: "calm", primary: "Stress & Anxiety Relief", level: "Beginner", weeks: 4, daysCount: 3, duration: 20, noLevel: true, noProtect: true },
@@ -73,6 +80,7 @@ export const YOGA_TEMPLATES: YogaTemplate[] = [
   { id: "yin", name: "Yin", emoji: "🧊", blurb: "Long, passive holds that open connective tissue and joints.", category: "calm", primary: "Flexibility", level: "Beginner", weeks: 4, daysCount: 3, duration: 20, noLevel: true, noProtect: true },
   { id: "restorative", name: "Restorative", emoji: "🛋️", blurb: "Fully supported rest poses for deep recovery.", category: "calm", primary: "Stress & Anxiety Relief", secondary: "Better Sleep", level: "Beginner", weeks: 4, daysCount: 3, duration: 20, noLevel: true, noProtect: true },
   { id: "pranayam", name: "Pranayam", emoji: "🌬️", blurb: "Daily breathwork to steady energy and the mind.", category: "calm", primary: "Breathwork / Pranayama", level: "Beginner", weeks: 4, daysCount: 6, duration: 15, noLevel: true, noProtect: true },
+  { id: "lift-mood", name: "Lift Mood", emoji: "😊", blurb: "Heart-opening flows and breath to brighten a low or heavy mood.", category: "calm", primary: "Lift Mood", secondary: "Stress & Anxiety Relief", level: "Beginner", weeks: 4, daysCount: 4, duration: 20, noLevel: true },
 
   // ---------- Quick (short daily sessions; ask duration only) ----------
   { id: "quick-office", name: "Office Yoga", emoji: "💻", blurb: "Desk resets for posture, neck and shoulders.", category: "quick", primary: "Better Posture", secondary: "Neck & Shoulder", level: "Beginner", weeks: 1, daysCount: 5, duration: 2, noLevel: true, noProtect: true },
@@ -86,6 +94,5 @@ export const YOGA_TEMPLATES: YogaTemplate[] = [
   { id: "kids-3-6", name: "Kids 3–6", emoji: "🧒", blurb: "Playful animal poses and games — best done with a grown-up.", category: "specific", primary: "General Wellness", level: "Beginner", weeks: 4, daysCount: 3, duration: 20 },
   { id: "teen", name: "Teen", emoji: "🧑", blurb: "Energy, focus and calm for busy teenage days.", category: "specific", primary: "General Wellness", secondary: "Stress & Anxiety Relief", level: "Beginner", weeks: 4, daysCount: 4, duration: 20 },
   { id: "pregnancy", name: "Pregnancy", emoji: "🤰", blurb: "Gentle, trimester-safe movement — with your doctor's okay.", category: "specific", primary: "Pregnancy", level: "Beginner", weeks: 6, daysCount: 3, duration: 20, noLevel: true, trimester: true },
-  { id: "diabetic-friendly", name: "Diabetic-Friendly", emoji: "🩺", blurb: "Gentle, supportive practice to complement diabetes care.", category: "specific", primary: "Diabetes", level: "Beginner", weeks: 8, daysCount: 5, duration: 20 },
-  { id: "gut-rest", name: "One Gut Rest", emoji: "🌿", blurb: "Soothing twists and folds to ease bloating and digestion.", category: "specific", primary: "Gut", level: "Beginner", weeks: 4, daysCount: 4, duration: 20 },
+  { id: "post-natal", name: "Post-natal", emoji: "👶", blurb: "Gentle rebuild for core, back and calm in the months after birth.", category: "specific", primary: "Post-natal", level: "Beginner", weeks: 6, daysCount: 3, duration: 20, noLevel: true },
 ];

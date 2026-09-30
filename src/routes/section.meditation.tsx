@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { BottomNav } from "@/components/BottomNav";
+import { AyuBot } from "@/components/AyuBot";
 import { toast } from "sonner";
 import { ArrowLeft, Bot, Play, Pause, X, Heart, ChevronRight, Clock } from "lucide-react";
 import {
@@ -72,6 +73,7 @@ function MeditationSection() {
       </div>
 
       {now && <Player track={now} onClose={() => setNow(null)} />}
+      <AyuBot />
       <BottomNav />
     </div>
   );

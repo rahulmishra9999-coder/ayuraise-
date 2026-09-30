@@ -6,6 +6,7 @@ import {
   Droplet, Moon, Footprints, Music,
 } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
+import { AyuBot } from "@/components/AyuBot";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   IF_WINDOWS, FAST_TIMELINE, IF_BENEFITS, IF_CAUTION, IF_RULES,
@@ -102,6 +103,7 @@ function FastingSection() {
         <PlanFlow kind={showPlan} onClose={() => setShowPlan(null)} />
       )}
 
+      <AyuBot />
       <BottomNav />
     </div>
   );

@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { BottomNav } from "@/components/BottomNav";
+import { AyuBot } from "@/components/AyuBot";
 import { loadYogaPlans, upsertYogaPlan, removeYogaPlan, setPrimaryPlan, loadBundles, addBundle, removeBundle, newPlanId, MAX_PLANS, WEEKDAYS, themeForWeek, blurbForWeek, dayName, loadYogaProgress, saveYogaProgress, sessionKey, totalSessions, isSessionReady, completeSession, doneToday, DAILY_CAP, BUFFER, type YogaPlan as SavedYogaConfig, type YogaProgress } from "@/lib/yoga-plan";
 import { YogaPlanSheet } from "@/components/YogaPlanSheet";
 import { YogaProgramSheet } from "@/components/YogaProgramSheet";
@@ -247,6 +248,7 @@ function YogaSection() {
         <StylePlayer prog={stylePlay} onClose={() => setStylePlay(null)} />
       )}
 
+      <AyuBot />
       <BottomNav />
     </div>
   );

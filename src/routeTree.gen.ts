@@ -16,11 +16,13 @@ import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as MyPlansRouteImport } from './routes/my-plans'
 import { Route as MyDataRouteImport } from './routes/my-data'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as LifestyleRouteImport } from './routes/lifestyle'
 import { Route as LearnRouteImport } from './routes/learn'
 import { Route as HomeRouteImport } from './routes/home'
 import { Route as HealRouteImport } from './routes/heal'
 import { Route as DiseaseBotRouteImport } from './routes/disease-bot'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as CreateRouteImport } from './routes/create'
 import { Route as CombinedPlanRouteImport } from './routes/combined-plan'
 import { Route as CoachRouteImport } from './routes/coach'
 import { Route as IndexRouteImport } from './routes/index'
@@ -34,7 +36,9 @@ import { Route as SectionDiseaseRouteImport } from './routes/section.disease'
 import { Route as SectionDietRouteImport } from './routes/section.diet'
 import { Route as SectionDetoxRouteImport } from './routes/section.detox'
 import { Route as SectionSlugRouteImport } from './routes/section.$slug'
+import { Route as MyplanIdRouteImport } from './routes/myplan.$id'
 import { Route as HealSlugRouteImport } from './routes/heal.$slug'
+import { Route as GoalIdRouteImport } from './routes/goal.$id'
 import { Route as DiseaseSlugRouteImport } from './routes/disease.$slug'
 import { Route as DietAcademyRouteImport } from './routes/diet.academy'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
@@ -75,6 +79,11 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LifestyleRoute = LifestyleRouteImport.update({
+  id: '/lifestyle',
+  path: '/lifestyle',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LearnRoute = LearnRouteImport.update({
   id: '/learn',
   path: '/learn',
@@ -98,6 +107,11 @@ const DiseaseBotRoute = DiseaseBotRouteImport.update({
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CreateRoute = CreateRouteImport.update({
+  id: '/create',
+  path: '/create',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CombinedPlanRoute = CombinedPlanRouteImport.update({
@@ -165,10 +179,20 @@ const SectionSlugRoute = SectionSlugRouteImport.update({
   path: '/section/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MyplanIdRoute = MyplanIdRouteImport.update({
+  id: '/myplan/$id',
+  path: '/myplan/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const HealSlugRoute = HealSlugRouteImport.update({
   id: '/$slug',
   path: '/$slug',
   getParentRoute: () => HealRoute,
+} as any)
+const GoalIdRoute = GoalIdRouteImport.update({
+  id: '/goal/$id',
+  path: '/goal/$id',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const DiseaseSlugRoute = DiseaseSlugRouteImport.update({
   id: '/disease/$slug',
@@ -195,11 +219,13 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/coach': typeof CoachRoute
   '/combined-plan': typeof CombinedPlanRoute
+  '/create': typeof CreateRoute
   '/dashboard': typeof DashboardRoute
   '/disease-bot': typeof DiseaseBotRoute
   '/heal': typeof HealRouteWithChildren
   '/home': typeof HomeRoute
   '/learn': typeof LearnRoute
+  '/lifestyle': typeof LifestyleRoute
   '/login': typeof LoginRoute
   '/my-data': typeof MyDataRoute
   '/my-plans': typeof MyPlansRoute
@@ -210,7 +236,9 @@ export interface FileRoutesByFullPath {
   '/api/chat': typeof ApiChatRoute
   '/diet/academy': typeof DietAcademyRoute
   '/disease/$slug': typeof DiseaseSlugRoute
+  '/goal/$id': typeof GoalIdRoute
   '/heal/$slug': typeof HealSlugRoute
+  '/myplan/$id': typeof MyplanIdRoute
   '/section/$slug': typeof SectionSlugRoute
   '/section/detox': typeof SectionDetoxRoute
   '/section/diet': typeof SectionDietRoute
@@ -227,11 +255,13 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/coach': typeof CoachRoute
   '/combined-plan': typeof CombinedPlanRoute
+  '/create': typeof CreateRoute
   '/dashboard': typeof DashboardRoute
   '/disease-bot': typeof DiseaseBotRoute
   '/heal': typeof HealRouteWithChildren
   '/home': typeof HomeRoute
   '/learn': typeof LearnRoute
+  '/lifestyle': typeof LifestyleRoute
   '/login': typeof LoginRoute
   '/my-data': typeof MyDataRoute
   '/my-plans': typeof MyPlansRoute
@@ -242,7 +272,9 @@ export interface FileRoutesByTo {
   '/api/chat': typeof ApiChatRoute
   '/diet/academy': typeof DietAcademyRoute
   '/disease/$slug': typeof DiseaseSlugRoute
+  '/goal/$id': typeof GoalIdRoute
   '/heal/$slug': typeof HealSlugRoute
+  '/myplan/$id': typeof MyplanIdRoute
   '/section/$slug': typeof SectionSlugRoute
   '/section/detox': typeof SectionDetoxRoute
   '/section/diet': typeof SectionDietRoute
@@ -260,11 +292,13 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/coach': typeof CoachRoute
   '/combined-plan': typeof CombinedPlanRoute
+  '/create': typeof CreateRoute
   '/dashboard': typeof DashboardRoute
   '/disease-bot': typeof DiseaseBotRoute
   '/heal': typeof HealRouteWithChildren
   '/home': typeof HomeRoute
   '/learn': typeof LearnRoute
+  '/lifestyle': typeof LifestyleRoute
   '/login': typeof LoginRoute
   '/my-data': typeof MyDataRoute
   '/my-plans': typeof MyPlansRoute
@@ -275,7 +309,9 @@ export interface FileRoutesById {
   '/api/chat': typeof ApiChatRoute
   '/diet/academy': typeof DietAcademyRoute
   '/disease/$slug': typeof DiseaseSlugRoute
+  '/goal/$id': typeof GoalIdRoute
   '/heal/$slug': typeof HealSlugRoute
+  '/myplan/$id': typeof MyplanIdRoute
   '/section/$slug': typeof SectionSlugRoute
   '/section/detox': typeof SectionDetoxRoute
   '/section/diet': typeof SectionDietRoute
@@ -294,11 +330,13 @@ export interface FileRouteTypes {
     | '/'
     | '/coach'
     | '/combined-plan'
+    | '/create'
     | '/dashboard'
     | '/disease-bot'
     | '/heal'
     | '/home'
     | '/learn'
+    | '/lifestyle'
     | '/login'
     | '/my-data'
     | '/my-plans'
@@ -309,7 +347,9 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/diet/academy'
     | '/disease/$slug'
+    | '/goal/$id'
     | '/heal/$slug'
+    | '/myplan/$id'
     | '/section/$slug'
     | '/section/detox'
     | '/section/diet'
@@ -326,11 +366,13 @@ export interface FileRouteTypes {
     | '/'
     | '/coach'
     | '/combined-plan'
+    | '/create'
     | '/dashboard'
     | '/disease-bot'
     | '/heal'
     | '/home'
     | '/learn'
+    | '/lifestyle'
     | '/login'
     | '/my-data'
     | '/my-plans'
@@ -341,7 +383,9 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/diet/academy'
     | '/disease/$slug'
+    | '/goal/$id'
     | '/heal/$slug'
+    | '/myplan/$id'
     | '/section/$slug'
     | '/section/detox'
     | '/section/diet'
@@ -358,11 +402,13 @@ export interface FileRouteTypes {
     | '/'
     | '/coach'
     | '/combined-plan'
+    | '/create'
     | '/dashboard'
     | '/disease-bot'
     | '/heal'
     | '/home'
     | '/learn'
+    | '/lifestyle'
     | '/login'
     | '/my-data'
     | '/my-plans'
@@ -373,7 +419,9 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/diet/academy'
     | '/disease/$slug'
+    | '/goal/$id'
     | '/heal/$slug'
+    | '/myplan/$id'
     | '/section/$slug'
     | '/section/detox'
     | '/section/diet'
@@ -391,11 +439,13 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CoachRoute: typeof CoachRoute
   CombinedPlanRoute: typeof CombinedPlanRoute
+  CreateRoute: typeof CreateRoute
   DashboardRoute: typeof DashboardRoute
   DiseaseBotRoute: typeof DiseaseBotRoute
   HealRoute: typeof HealRouteWithChildren
   HomeRoute: typeof HomeRoute
   LearnRoute: typeof LearnRoute
+  LifestyleRoute: typeof LifestyleRoute
   LoginRoute: typeof LoginRoute
   MyDataRoute: typeof MyDataRoute
   MyPlansRoute: typeof MyPlansRoute
@@ -406,6 +456,8 @@ export interface RootRouteChildren {
   ApiChatRoute: typeof ApiChatRoute
   DietAcademyRoute: typeof DietAcademyRoute
   DiseaseSlugRoute: typeof DiseaseSlugRoute
+  GoalIdRoute: typeof GoalIdRoute
+  MyplanIdRoute: typeof MyplanIdRoute
   SectionSlugRoute: typeof SectionSlugRoute
   SectionDetoxRoute: typeof SectionDetoxRoute
   SectionDietRoute: typeof SectionDietRoute
@@ -470,6 +522,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/lifestyle': {
+      id: '/lifestyle'
+      path: '/lifestyle'
+      fullPath: '/lifestyle'
+      preLoaderRoute: typeof LifestyleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/learn': {
       id: '/learn'
       path: '/learn'
@@ -503,6 +562,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/create': {
+      id: '/create'
+      path: '/create'
+      fullPath: '/create'
+      preLoaderRoute: typeof CreateRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/combined-plan': {
@@ -596,12 +662,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SectionSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/myplan/$id': {
+      id: '/myplan/$id'
+      path: '/myplan/$id'
+      fullPath: '/myplan/$id'
+      preLoaderRoute: typeof MyplanIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/heal/$slug': {
       id: '/heal/$slug'
       path: '/$slug'
       fullPath: '/heal/$slug'
       preLoaderRoute: typeof HealSlugRouteImport
       parentRoute: typeof HealRoute
+    }
+    '/goal/$id': {
+      id: '/goal/$id'
+      path: '/goal/$id'
+      fullPath: '/goal/$id'
+      preLoaderRoute: typeof GoalIdRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/disease/$slug': {
       id: '/disease/$slug'
@@ -648,11 +728,13 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CoachRoute: CoachRoute,
   CombinedPlanRoute: CombinedPlanRoute,
+  CreateRoute: CreateRoute,
   DashboardRoute: DashboardRoute,
   DiseaseBotRoute: DiseaseBotRoute,
   HealRoute: HealRouteWithChildren,
   HomeRoute: HomeRoute,
   LearnRoute: LearnRoute,
+  LifestyleRoute: LifestyleRoute,
   LoginRoute: LoginRoute,
   MyDataRoute: MyDataRoute,
   MyPlansRoute: MyPlansRoute,
@@ -663,6 +745,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiChatRoute: ApiChatRoute,
   DietAcademyRoute: DietAcademyRoute,
   DiseaseSlugRoute: DiseaseSlugRoute,
+  GoalIdRoute: GoalIdRoute,
+  MyplanIdRoute: MyplanIdRoute,
   SectionSlugRoute: SectionSlugRoute,
   SectionDetoxRoute: SectionDetoxRoute,
   SectionDietRoute: SectionDietRoute,

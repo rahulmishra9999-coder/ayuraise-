@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft, Sparkles, GraduationCap, BookOpen, ChevronRight, Salad } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
+import { AyuBot } from "@/components/AyuBot";
 import { JOURNEYS } from "@/lib/nutrition-journeys";
 import { DiseasePipelineBanner, DiseasePipelineNext } from "@/components/DiseasePipeline";
 
@@ -141,6 +142,7 @@ function DietHome() {
         <DiseasePipelineNext currentSlug="diet" />
       </div>
 
+      <AyuBot />
       <BottomNav />
     </div>
   );
