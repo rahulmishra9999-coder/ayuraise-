@@ -2,7 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { SECTIONS } from "@/lib/sections";
 import { HOME_GOAL_TILES, ALL_GOALS, PRACTICE_SLUGS, PRACTICE_LABELS } from "@/lib/goals";
-import { loadYogaPlans, removeYogaPlan, type YogaPlan } from "@/lib/yoga-plan";
+import { loadYogaPlans, type YogaPlan } from "@/lib/yoga-plan";
+import { clearPersonalPlan } from "@/lib/personalPlan";
 import { BottomNav } from "@/components/BottomNav";
 import { AyuBot } from "@/components/AyuBot";
 import { ProfileSwitcher } from "@/components/ProfileSwitcher";
@@ -54,9 +55,11 @@ function HomePage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [plans, setPlans] = useState<YogaPlan[]>([]);
   const [openUmbrella, setOpenUmbrella] = useState<string | null>(null);
+  const [hasPersonalPlan, setHasPersonalPlan] = useState(false);
 
   useEffect(() => {
     try { const p = localStorage.getItem("ayuraise.profile"); if (p) setProfile(JSON.parse(p)); } catch { /* ignore */ }
+    try { setHasPersonalPlan(!!localStorage.getItem("ayuraise.personalPlan")); } catch { /* ignore */ }
     setPlans(loadYogaPlans());
   }, []);
   const firstName = profile?.name?.split(" ")[0];
@@ -75,52 +78,47 @@ function HomePage() {
           <ProfileSwitcher />
         </header>
 
-        {/* Create my plan — slim CTA on top */}
-        <Link to="/create" className="mt-4 flex items-center gap-2.5 rounded-2xl px-3.5 py-2.5 text-primary-foreground shadow-[var(--shadow-glow)] active:scale-[0.99]" style={{ background: "var(--gradient-violet)" }}>
-          <Sparkles size={16} className="shrink-0" />
-          <span className="min-w-0 flex-1 text-[13px] font-bold leading-tight">Create my personalized plan</span>
-          <span className="shrink-0 rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-semibold">Pick up to 2 goals</span>
-          <ChevronRight size={15} className="shrink-0 opacity-80" />
-        </Link>
+        {/* Create / adjust CTA — create goes to the wizard; adjust goes to the edit menu */}
+        {hasPersonalPlan
+          ? <Link to="/edit-plan" className="mt-4 flex items-center gap-2.5 rounded-2xl px-3.5 py-2.5 text-primary-foreground shadow-[var(--shadow-glow)] active:scale-[0.99]" style={{ background: "var(--gradient-violet)" }}>
+              <Sparkles size={16} className="shrink-0" />
+              <span className="min-w-0 flex-1 text-[13px] font-bold leading-tight">Adjust / edit my personalized plan</span>
+              <ChevronRight size={15} className="shrink-0 opacity-80" />
+            </Link>
+          : <Link to="/lifestyle" search={{ mode: "unified" }} className="mt-4 flex items-center gap-2.5 rounded-2xl px-3.5 py-2.5 text-primary-foreground shadow-[var(--shadow-glow)] active:scale-[0.99]" style={{ background: "var(--gradient-violet)" }}>
+              <Sparkles size={16} className="shrink-0" />
+              <span className="min-w-0 flex-1 text-[13px] font-bold leading-tight">Create my personalized plan</span>
+              <ChevronRight size={15} className="shrink-0 opacity-80" />
+            </Link>}
 
-        {/* Complete your profile */}
+        {/* Create my profile — full lifestyle flow (basics + picker); moves into onboarding later */}
         <Link to="/lifestyle" className="mt-2 flex items-center gap-2.5 rounded-2xl bg-card px-3.5 py-2.5 ring-1 ring-border/60 active:scale-[0.99]">
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-accent/50 text-[15px]">🪷</span>
           <div className="min-w-0 flex-1">
-            <p className="text-[12.5px] font-bold text-foreground">Complete your profile</p>
+            <p className="text-[12.5px] font-bold text-foreground">Create my profile</p>
             <p className="text-[10.5px] text-muted-foreground">A few lifestyle questions so every plan fits you.</p>
           </div>
           <ChevronRight size={15} className="shrink-0 text-muted-foreground" />
         </Link>
 
-        {/* My Plans */}
-        {plans.length > 0 && (
+        {/* My Plans — the ONE personalized plan (opens the full plan with every tool) */}
+        {hasPersonalPlan && (
           <section className="mt-4">
             <div className="flex items-baseline justify-between px-1">
-              <h2 className="font-display text-[15px] font-bold text-foreground">My Plans</h2>
-              <span className="text-[11px] text-muted-foreground">{plans.length}/3</span>
+              <h2 className="font-display text-[15px] font-bold text-foreground">My Plan</h2>
             </div>
-            <div className="mt-2 space-y-2">
-              {plans.slice(0, 3).map((p) => (
-                <div key={p.id} className="flex items-center gap-2.5 rounded-2xl bg-card p-2.5 ring-1 ring-border/60">
-                  <Link to="/myplan/$id" params={{ id: p.id }} className="flex min-w-0 flex-1 items-center gap-2.5 active:opacity-80">
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent/50 text-[16px]">{p.poseIds ? "🧺" : "🌿"}</span>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5">
-                        <p className="truncate text-[12.5px] font-bold text-foreground">{p.name ?? p.primary}</p>
-                        {p.id === primId && <span className="shrink-0 rounded-full bg-amber-400 px-1.5 py-0.5 text-[8.5px] font-bold text-amber-950">★ PRIMARY</span>}
-                      </div>
-                      <p className="truncate text-[10.5px] text-muted-foreground">{p.variant ?? `${p.level} · ${p.duration} min`}</p>
-                    </div>
-                  </Link>
-                  <div className="flex shrink-0 items-center gap-1">
-                    <Link to="/create" search={{ edit: p.id }} className="rounded-full bg-secondary px-2.5 py-1 text-[10.5px] font-bold text-foreground active:opacity-70">Edit</Link>
-                    <button
-                      onClick={() => { if (typeof window !== "undefined" && window.confirm(`Delete "${p.name ?? p.primary}"?`)) setPlans(removeYogaPlan(p.id)); }}
-                      aria-label="Delete plan" className="rounded-full bg-secondary px-2.5 py-1 text-[11px] active:opacity-70">🗑</button>
-                  </div>
+            <div className="mt-2 flex items-center gap-2.5 rounded-2xl bg-card p-3 ring-1 ring-border/60">
+              <Link to="/myplan/$id" params={{ id: "me" }} className="flex min-w-0 flex-1 items-center gap-2.5 active:opacity-80">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent/50 text-[18px]">🌿</span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[13px] font-bold text-foreground">My personalized plan</p>
+                  <p className="truncate text-[10.5px] text-muted-foreground">Yoga · diet · exercise · detox · fasting · herbs & more</p>
                 </div>
-              ))}
+              </Link>
+              <div className="flex shrink-0 items-center gap-1">
+                <Link to="/edit-plan" className="rounded-full bg-secondary px-2.5 py-1 text-[10.5px] font-bold text-foreground active:opacity-70">Edit</Link>
+                <button onClick={() => { if (typeof window !== "undefined" && window.confirm("Delete your personalized plan?")) { clearPersonalPlan(); setHasPersonalPlan(false); } }} aria-label="Delete plan" className="rounded-full bg-secondary px-2.5 py-1 text-[11px] active:opacity-70">🗑</button>
+              </div>
             </div>
           </section>
         )}

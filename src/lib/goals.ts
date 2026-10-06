@@ -45,6 +45,7 @@ export const GOAL_GROUPS: GoalGroup[] = [
       { id: "healthy-ageing", label: "Healthy Ageing", emoji: "🌳" },
       { id: "mood", label: "Lift Mood", emoji: "😊" },
       { id: "pranayam", label: "Breathwork / Pranayam", emoji: "🌬️" },
+      { id: "muscle-building", label: "Muscle Building", emoji: "🏋️" },
     ],
   },
   {
@@ -55,6 +56,8 @@ export const GOAL_GROUPS: GoalGroup[] = [
       { id: "post-natal", label: "Post-Natal", emoji: "👶" },
       { id: "pcos-pcod", label: "PCOS / PCOD", emoji: "🌸" },
       { id: "menopause", label: "Menopause", emoji: "🌼" },
+      { id: "premenopause", label: "Pre-menopause", emoji: "🌷" },
+      { id: "postmenopause", label: "Post-menopause", emoji: "🌺" },
     ],
   },
   {
@@ -102,6 +105,9 @@ export const GOAL_GROUPS: GoalGroup[] = [
       { id: "ibs", label: "IBS", emoji: "💢" },
       { id: "constipation", label: "Constipation", emoji: "🚽" },
       { id: "indigestion", label: "Indigestion", emoji: "🤢" },
+      { id: "autoimmune", label: "Auto-immune", emoji: "🛡️" },
+      { id: "hernia", label: "Hernia", emoji: "🩹" },
+      { id: "hair-fall", label: "Hair fall / scalp", emoji: "💇" },
     ],
   },
 ];
@@ -126,33 +132,16 @@ export type HomeTile =
   | { kind: "goal"; id: string }
   | { kind: "umbrella"; id: string; label: string; emoji: string; gradient: string; goalIds: string[] };
 
+// Browse-by-goals: five groups, each a tap-to-open umbrella listing all its items.
 export const HOME_GOAL_TILES: HomeTile[] = [
-  // ---- open / featured goals (don't fall under an umbrella) ----
-  { kind: "goal", id: "weight-loss" },
-  { kind: "goal", id: "better-sleep" },
-  { kind: "goal", id: "stress" },
-  { kind: "goal", id: "metabolic" },
-  { kind: "goal", id: "diabetes" },
-  { kind: "goal", id: "thyroid" },
-  { kind: "goal", id: "obesity" },
-  { kind: "goal", id: "migraine" },
-  // ---- umbrellas (tap to expand) ----
-  { kind: "umbrella", id: "u-fitness", label: "Fitness & Wellness", emoji: "💪", gradient: "var(--gradient-gold)",
-    goalIds: ["general-wellness", "strength", "flexibility", "mobility", "balance", "posture", "healthy-ageing", "sr-fitness", "mood", "pranayam"] },
-  { kind: "umbrella", id: "u-womens", label: "Women's Health", emoji: "🌸", gradient: "var(--gradient-violet)",
-    goalIds: ["pregnancy", "post-natal", "pcos-pcod", "menopause"] },
-  { kind: "umbrella", id: "u-joints", label: "Joint & Spine", emoji: "🦴", gradient: "var(--gradient-clay)",
-    goalIds: ["knee-pain", "hip-pain", "back-pain", "neck-pain", "sciatica", "arthritis", "osteoarthritis", "osteoporosis", "gout", "bones-joints"] },
-  { kind: "umbrella", id: "u-gut", label: "Gut & Digestion", emoji: "🌀", gradient: "var(--gradient-sage)",
-    goalIds: ["gut", "acidity-gerd", "ibs", "constipation", "indigestion"] },
-  { kind: "umbrella", id: "u-liver", label: "Liver Health", emoji: "🟠", gradient: "var(--gradient-leaf)",
-    goalIds: ["liver", "fatty-liver"] },
-  { kind: "umbrella", id: "u-heart", label: "Heart & BP", emoji: "❤️", gradient: "var(--gradient-clay)",
-    goalIds: ["heart", "hypertension", "cholesterol"] },
-  { kind: "umbrella", id: "u-lungs", label: "Lungs & Breathing", emoji: "🫁", gradient: "var(--gradient-water)",
-    goalIds: ["lungs", "asthma"] },
-  { kind: "umbrella", id: "u-organs", label: "Organ Health", emoji: "🫀", gradient: "var(--gradient-leaf)",
-    goalIds: ["kidney", "brain", "pancreas", "prostate", "skin", "hair", "muscles", "eyes", "immunity"] },
+  { kind: "umbrella", id: "u-manage", label: "Manage health conditions", emoji: "🩺", gradient: "var(--gradient-water)",
+    goalIds: ["diabetes", "hypertension", "thyroid", "cholesterol", "fatty-liver", "asthma", "migraine", "gout", "autoimmune", "hernia", "knee-pain", "hip-pain", "back-pain", "neck-pain", "sciatica", "arthritis", "osteoporosis", "acidity-gerd", "ibs", "constipation", "indigestion"] },
+  { kind: "umbrella", id: "u-fitness", label: "Fitness goals", emoji: "💪", gradient: "var(--gradient-gold)",
+    goalIds: ["weight-loss", "general-wellness", "strength", "muscle-building", "flexibility", "mobility"] },
+  { kind: "umbrella", id: "u-womens", label: "Women's health", emoji: "🌸", gradient: "var(--gradient-violet)",
+    goalIds: ["pregnancy", "post-natal", "premenopause", "postmenopause", "pcos-pcod"] },
+  { kind: "umbrella", id: "u-improve", label: "Improve & strengthen", emoji: "🫀", gradient: "var(--gradient-leaf)",
+    goalIds: ["heart", "liver", "gut", "lungs", "brain", "pancreas", "bones-joints", "prostate", "hair-fall", "skin", "eyes", "immunity", "better-sleep", "stress"] },
 ];
 
 export interface ResolvedGoal { id: string; label: string; emoji: string; areas: Area[]; group: string; groupId: string }

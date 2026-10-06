@@ -7,10 +7,11 @@ import { loadYogaPlans, newPlanId, upsertYogaPlan, WEEKDAYS, type YogaPlan } fro
 import { SUPPORT } from "@/lib/support";
 
 export const Route = createFileRoute("/create")({
-  validateSearch: (s: Record<string, unknown>): { goal?: string; edit?: string; goals?: string } => ({
+  validateSearch: (s: Record<string, unknown>): { goal?: string; edit?: string; goals?: string; tool?: string } => ({
     goal: typeof s.goal === "string" ? s.goal : undefined,
     edit: typeof s.edit === "string" ? s.edit : undefined,
     goals: typeof s.goals === "string" ? s.goals : undefined,
+    tool: typeof s.tool === "string" ? s.tool : undefined,
   }),
   component: CreatePlan,
 });
@@ -165,13 +166,14 @@ function Q({ title, hint, children }: { title: string; hint?: string; children: 
 
 function CreatePlan() {
   const navigate = useNavigate();
-  const { goal: preGoal, edit: editId, goals: preGoals } = Route.useSearch();
+  const { goal: preGoal, edit: editId, goals: preGoals, tool: preTool } = Route.useSearch();
+  const editTool = preTool && SELECTABLE.includes(preTool as IvKey) ? (preTool as IvKey) : null; // "edit one tool" deep-link
 
   const seedGoals = preGoals ? preGoals.split(",").filter((id) => ALL_GOALS[id]).slice(0, 2) : (preGoal && ALL_GOALS[preGoal] ? [preGoal] : []);
   // came from the profile with goals already chosen → skip the goal page (start at "what to personalize")
   const [step, setStep] = useState(preGoals && seedGoals.length && !editId ? 1 : 0);
   const [goals, setGoals] = useState<string[]>(seedGoals);
-  const [ivs, setIvs] = useState<IvKey[]>(["yoga", "diet"]); // default: yoga + diet
+  const [ivs, setIvs] = useState<IvKey[]>(editTool ? [editTool] : ["yoga", "diet"]); // tool deep-link → just that tool
   const [openU, setOpenU] = useState<string | null>(null);
 
   // shared / yoga
@@ -242,6 +244,15 @@ function CreatePlan() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [goals, ivs, dietIF]);
   const key = stepKeys[Math.min(step, stepKeys.length - 1)];
+
+  // "Edit one tool" deep-link → jump straight to that tool's first question screen
+  const jumpedTool = useRef(false);
+  useEffect(() => {
+    if (jumpedTool.current || !editTool) return;
+    const first = editTool === "yoga" ? "yoga-time" : editTool === "exercise" ? "ex-level" : "diet-meals";
+    const i = stepKeys.indexOf(first);
+    if (i >= 0) { jumpedTool.current = true; setStep(i); }
+  }, [editTool, stepKeys]);
 
   const toggleGoal = (id: string) => setGoals((c) => c.includes(id) ? c.filter((x) => x !== id) : c.length >= 2 ? c : [...c, id]);
   const toggleIv = (k: IvKey) => setIvs((c) => c.includes(k) ? c.filter((x) => x !== k) : [...c, k]);

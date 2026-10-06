@@ -20,6 +20,7 @@ import { Route as LifestyleRouteImport } from './routes/lifestyle'
 import { Route as LearnRouteImport } from './routes/learn'
 import { Route as HomeRouteImport } from './routes/home'
 import { Route as HealRouteImport } from './routes/heal'
+import { Route as EditPlanRouteImport } from './routes/edit-plan'
 import { Route as DiseaseBotRouteImport } from './routes/disease-bot'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as CreateRouteImport } from './routes/create'
@@ -97,6 +98,11 @@ const HomeRoute = HomeRouteImport.update({
 const HealRoute = HealRouteImport.update({
   id: '/heal',
   path: '/heal',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EditPlanRoute = EditPlanRouteImport.update({
+  id: '/edit-plan',
+  path: '/edit-plan',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DiseaseBotRoute = DiseaseBotRouteImport.update({
@@ -222,6 +228,7 @@ export interface FileRoutesByFullPath {
   '/create': typeof CreateRoute
   '/dashboard': typeof DashboardRoute
   '/disease-bot': typeof DiseaseBotRoute
+  '/edit-plan': typeof EditPlanRoute
   '/heal': typeof HealRouteWithChildren
   '/home': typeof HomeRoute
   '/learn': typeof LearnRoute
@@ -258,6 +265,7 @@ export interface FileRoutesByTo {
   '/create': typeof CreateRoute
   '/dashboard': typeof DashboardRoute
   '/disease-bot': typeof DiseaseBotRoute
+  '/edit-plan': typeof EditPlanRoute
   '/heal': typeof HealRouteWithChildren
   '/home': typeof HomeRoute
   '/learn': typeof LearnRoute
@@ -295,6 +303,7 @@ export interface FileRoutesById {
   '/create': typeof CreateRoute
   '/dashboard': typeof DashboardRoute
   '/disease-bot': typeof DiseaseBotRoute
+  '/edit-plan': typeof EditPlanRoute
   '/heal': typeof HealRouteWithChildren
   '/home': typeof HomeRoute
   '/learn': typeof LearnRoute
@@ -333,6 +342,7 @@ export interface FileRouteTypes {
     | '/create'
     | '/dashboard'
     | '/disease-bot'
+    | '/edit-plan'
     | '/heal'
     | '/home'
     | '/learn'
@@ -369,6 +379,7 @@ export interface FileRouteTypes {
     | '/create'
     | '/dashboard'
     | '/disease-bot'
+    | '/edit-plan'
     | '/heal'
     | '/home'
     | '/learn'
@@ -405,6 +416,7 @@ export interface FileRouteTypes {
     | '/create'
     | '/dashboard'
     | '/disease-bot'
+    | '/edit-plan'
     | '/heal'
     | '/home'
     | '/learn'
@@ -442,6 +454,7 @@ export interface RootRouteChildren {
   CreateRoute: typeof CreateRoute
   DashboardRoute: typeof DashboardRoute
   DiseaseBotRoute: typeof DiseaseBotRoute
+  EditPlanRoute: typeof EditPlanRoute
   HealRoute: typeof HealRouteWithChildren
   HomeRoute: typeof HomeRoute
   LearnRoute: typeof LearnRoute
@@ -548,6 +561,13 @@ declare module '@tanstack/react-router' {
       path: '/heal'
       fullPath: '/heal'
       preLoaderRoute: typeof HealRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/edit-plan': {
+      id: '/edit-plan'
+      path: '/edit-plan'
+      fullPath: '/edit-plan'
+      preLoaderRoute: typeof EditPlanRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/disease-bot': {
@@ -731,6 +751,7 @@ const rootRouteChildren: RootRouteChildren = {
   CreateRoute: CreateRoute,
   DashboardRoute: DashboardRoute,
   DiseaseBotRoute: DiseaseBotRoute,
+  EditPlanRoute: EditPlanRoute,
   HealRoute: HealRouteWithChildren,
   HomeRoute: HomeRoute,
   LearnRoute: LearnRoute,

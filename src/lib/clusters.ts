@@ -163,7 +163,6 @@ export const CONDITIONS_META: Record<string, ConditionMeta> = {
   posture: { label: "Posture", cluster: "fitness", collapsible: true, tier: 1, yogaProtocols: ["spine-care", "strength-flex"] },
 
   // ---- Safety-only modifiers (never a focus, always applied) ----
-  kidney: { label: "Kidney disease", cluster: null, collapsible: false, role: "safety", mods: { safety: ["Avoid nephrotoxic herbs; clear all herbs / supplements with your doctor", "Low added salt; moderate protein"] } },
   hernia: { label: "Hernia", cluster: null, collapsible: false, role: "safety", yogaAvoid: ["core-pressure", "deep-twist", "retention", "inversion", "high-impact"], mods: { safety: ["No heavy lifting or strong core work; hiatal → reflux diet"] } },
   autoimmune: { label: "Auto-immune", cluster: null, collapsible: false, role: "safety", flips: "flare", yogaProtocols: ["calm", "joint-mobility"], mods: { diet: ["Anti-inflammatory; gluten-free if celiac"], safety: ["Gentle-only during a flare; on immunosuppressants → caution"] } },
 
@@ -188,6 +187,9 @@ export const CONDITIONS_META: Record<string, ConditionMeta> = {
   pancreas: { label: "Pancreas / blood sugar", cluster: "metabolic", collapsible: true, tier: 1, yogaProtocols: ["metabolic-flow"], detoxProtocol: "kapha-reset", mods: { herbs: ["Methi water", "Gudmar"] } },
   "bones-joints": { label: "Bones & joints", cluster: "joint", collapsible: true, tier: 2, yogaProtocols: ["joint-mobility", "bone-strength"], mods: { diet: ["Calcium, vitamin D, sesame"] } },
   muscles: { label: "Muscles", cluster: "fitness", collapsible: true, tier: 1, yogaProtocols: ["strength-flex"] },
+  "muscle-building": { label: "Muscle building", cluster: "fitness", collapsible: true, tier: 1, yogaProtocols: ["strength-flex"] },
+  premenopause: { label: "Pre-menopause", cluster: "womens", collapsible: true, tier: 1, yogaProtocols: ["cool", "pelvic-hormonal"], mods: { herbs: ["Shatavari"] } },
+  postmenopause: { label: "Post-menopause", cluster: "womens", secondary: "joint", collapsible: true, tier: 1, yogaProtocols: ["cool", "bone-strength", "pelvic-hormonal"], mods: { diet: ["Phytoestrogens (flax / soy)"], herbs: ["Shatavari", "Ashwagandha"] } },
   "sr-fitness": { label: "Senior fitness", cluster: "fitness", collapsible: true, tier: 1, yogaProtocols: ["joint-mobility", "bone-strength", "strength-flex"] },
   balance: { label: "Balance & stability", cluster: "fitness", collapsible: true, tier: 1, yogaProtocols: ["bone-strength", "strength-flex"] },
   mood: { label: "Lift mood", cluster: "calm", collapsible: true, tier: 1, yogaProtocols: ["energize", "calm"], mods: { herbs: ["Ashwagandha", "Brahmi"] } },
@@ -252,7 +254,8 @@ export interface ResolveCtx {
   pregnant?: boolean;
   frail?: boolean;            // underweight / depleted → detox suppressed
   stressed?: boolean;         // assessed from the Mind step → light auto calm layer
-  poorSleep?: boolean;        // assessed from the Sleep step → light auto sleep layer
+  poorSleep?: boolean;        // waking tired (Groggy/Exhausted) → light auto sleep layer
+  sleepHours?: number;        // actual hours slept — decides extend-duration vs improve-quality advice
 }
 
 export interface RootFocus {
@@ -463,7 +466,19 @@ export function resolvePlan(ids: string[], ctx: ResolveCtx = {}, background: str
   // chose them as a headline goal, in which case they're already the (deeper) focus.
   const layers: SupportLayer[] = [];
   if (ctx.stressed && !ids.includes("stress") && !ids.includes("mood")) layers.push(AUTO_LAYERS.calm);
-  if (ctx.poorSleep && !ids.includes("better-sleep")) layers.push(AUTO_LAYERS.sleep);
+  if (ctx.poorSleep && !ids.includes("better-sleep")) {
+    // waking tired on short sleep → extend duration; waking tired despite enough hours → a quality problem
+    const short = typeof ctx.sleepHours === "number" && ctx.sleepHours > 0 && ctx.sleepHours < 6.5;
+    layers.push({
+      ...AUTO_LAYERS.sleep,
+      note: short
+        ? "Added because you're waking tired on short sleep — let's gently extend it."
+        : "Added because you're waking tired even with enough hours — let's work on sleep quality.",
+      practices: short
+        ? ["Aim to add 30–60 min of sleep", "A calming wind-down routine", "Legs-up-the-wall before bed"]
+        : ["Keep a steady sleep & wake time", "A calming wind-down routine", "Legs-up-the-wall before bed"],
+    });
+  }
 
   return {
     focus: c.rootFoci,

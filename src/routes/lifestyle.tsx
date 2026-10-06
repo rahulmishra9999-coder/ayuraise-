@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
 import { conditionSeverity, conditionMeta, resolveConflicts } from "@/lib/clusters";
+import { savePersonalPlan } from "@/lib/personalPlan";
 
 /** Ease-out count-up for the calorie number — a small premium touch, no deps. */
 function CountUp({ to, className }: { to: number; className?: string }) {
@@ -190,11 +191,6 @@ const CONDITIONS: { g: string; items: { id: string; label: string; emoji: string
       { key: "meds", q: "On uric-acid medication?", opts: YESNO },
       { key: "since", q: "How long have you had this?", opts: ["<1 yr", "1–5 yrs", "5+ yrs"] },
     ] },
-    { id: "kidney", label: "Kidney disease", emoji: "🫘", subs: [
-      { key: "stage", q: "Stage (if known)?", opts: ["Early", "Moderate", "Advanced", "Not sure"] },
-      { key: "dialysis", q: "On dialysis?", opts: YESNO },
-      FAMILY("kidney disease"),
-    ] },
     { id: "autoimmune", label: "Auto-immune", emoji: "🛡️", subs: [
       { key: "which", q: "Which one?", opts: ["Rheumatoid arthritis", "Hashimoto's", "Psoriasis", "Celiac"] },
       // Rheumatoid arthritis
@@ -221,6 +217,7 @@ const CONDITIONS: { g: string; items: { id: string; label: string; emoji: string
     ] },
     { id: "hernia", label: "Hernia", emoji: "🩹", note: "Only if you currently have one.", subs: [
       { key: "type", q: "Which type?", opts: ["Inguinal", "Hiatal", "Umbilical"] },
+      { key: "surgery", q: "Had surgery?", opts: ["No, hasn't needed", "Advised, not done yet", "Done, still recovering", "Done, fully recovered", "Done, but it came back"] },
     ] },
   ] },
   { g: "Joint & Spine", items: [
@@ -259,7 +256,7 @@ const CONDITIONS: { g: string; items: { id: string; label: string; emoji: string
       { key: "since", q: "How long have you had this?", opts: ["<3 months", "3–12 months", "1+ year"] },
     ] },
   ] },
-  { g: "Women's health", items: [
+  { g: "Women's health & life stages", items: [
     { id: "pcos-pcod", label: "PCOS / PCOD", emoji: "🌸", subs: [
       { key: "cycle", q: "Your cycle?", opts: ["Regular", "Irregular", "Absent"] },
       { key: "symptoms", q: "Symptoms?", multi: true, opts: ["Acne", "Excess hair", "Scalp hair fall", "Weight gain"] },
@@ -272,24 +269,53 @@ const CONDITIONS: { g: string; items: { id: string; label: string; emoji: string
       { key: "symptoms", q: "Symptoms?", multi: true, opts: ["Hot flashes", "Night sweats", "Sleep issues", "Mood"] },
       { key: "hrt", q: "On HRT?", opts: YESNO },
     ] },
+    { id: "pregnancy", label: "Pregnancy", emoji: "🤰", note: "If this applies to you now." },
+    { id: "post-natal", label: "Post-natal", emoji: "👶", note: "In the months after delivery." },
   ] },
   { g: "Hair & scalp", items: [
     { id: "hair-fall", label: "Hair fall / scalp", emoji: "💇", subs: HAIR_SUBS },
   ] },
 ];
 const COND_LABEL: Record<string, string> = (() => { const m: Record<string, string> = {}; for (const g of CONDITIONS) for (const it of g.items) m[it.id] = it.label; return m; })();
+// On the unified Create page these groups collapse into a single tap-to-open icon.
+const UMBRELLA_GROUPS = new Set(["Joint & Spine", "Gut & Digestion", "Women's health & life stages"]);
+const GROUP_EMOJI: Record<string, string> = { "Joint & Spine": "🦴", "Gut & Digestion": "🌀", "Women's health & life stages": "🌸" };
 const FITNESS_GOALS = [
   { id: "weight-loss", label: "Weight Loss", emoji: "🔥" }, { id: "general-wellness", label: "General Wellness", emoji: "🌿" },
+  { id: "strength", label: "Strength", emoji: "💪" }, { id: "muscle-building", label: "Muscle Building", emoji: "🏋️" },
+  { id: "flexibility", label: "Flexibility", emoji: "🤸" }, { id: "mobility", label: "Mobility", emoji: "🔄" },
+];
+// Create-wizard pages: organs (prevention, pick ≤2), everyday concerns, women's life stages.
+const PREVENTION_ORGANS: { id: string; label: string; emoji: string; hint?: string }[] = [
+  { id: "heart", label: "Heart", emoji: "❤️" }, { id: "liver", label: "Liver", emoji: "🟠" },
+  { id: "gut", label: "Gut", emoji: "🌀" }, { id: "lungs", label: "Lungs", emoji: "🫁" },
+  { id: "brain", label: "Brain & nervous system", emoji: "🧠" }, { id: "pancreas", label: "Pancreas", emoji: "🩸", hint: "Blood sugar & insulin resistance — helps prevent diabetes" },
+  { id: "bones-joints", label: "Bones & Joints", emoji: "🦴" }, { id: "prostate", label: "Prostate", emoji: "🚹" },
+];
+// A selected condition already strengthens its organ — so we show that organ as auto-covered.
+const CONDITION_ORGAN: Record<string, string> = {
+  diabetes: "pancreas", "fatty-liver": "liver", cholesterol: "heart", hypertension: "heart",
+  asthma: "lungs", "acidity-gerd": "gut", ibs: "gut", constipation: "gut", indigestion: "gut", migraine: "brain",
+  gout: "bones-joints", "knee-pain": "bones-joints", "hip-pain": "bones-joints", "back-pain": "bones-joints",
+  "neck-pain": "bones-joints", sciatica: "bones-joints", arthritis: "bones-joints", osteoporosis: "bones-joints",
+};
+const EVERYDAY_ITEMS = [
+  { id: "hair-fall", label: "Hair Fall", emoji: "💇" }, { id: "skin", label: "Skin / Glow", emoji: "✨" },
+  { id: "eyes", label: "Eyesight", emoji: "👁️" },
+];
+const REST_CALM = [
   { id: "better-sleep", label: "Better Sleep", emoji: "🌙" }, { id: "stress", label: "Stress Relief", emoji: "🧘" },
-  { id: "strength", label: "Strength", emoji: "💪" }, { id: "flexibility", label: "Flexibility", emoji: "🤸" },
-  { id: "mobility", label: "Mobility", emoji: "🔄" }, { id: "metabolic", label: "Metabolic Health", emoji: "🍽️" },
-  { id: "posture", label: "Better Posture", emoji: "🧍" }, { id: "healthy-ageing", label: "Healthy Ageing", emoji: "🌳" },
+];
+const WOMEN_ITEMS = [
+  { id: "pregnancy", label: "Pregnancy", emoji: "🤰" }, { id: "post-natal", label: "Post-natal", emoji: "👶" },
+  { id: "premenopause", label: "Pre-menopause", emoji: "🌼" }, { id: "postmenopause", label: "Post-menopause", emoji: "🌺" },
+  { id: "pcos-pcod", label: "PCOD", emoji: "🌸" },
 ];
 
 const HEAD: Record<string, string> = {
   about: "A few basics", movement: "How active are you?",
   eating: "Your food & meals", habits: "Your eating habits", "eat-text": "Describe your meals",
-  sleep: "Let's start with your sleep", digestion: "Your digestion", mind: "Mental wellbeing", conditions: "Any health conditions?", seniors: "Seeing & moving", cycle: "Your cycle", goals: "Your focus",
+  sleep: "Let's start with your sleep", digestion: "Your digestion", mind: "Mental wellbeing", gate: "How would you like to begin?", areas: "Pick your focus areas", conditions: "Any health conditions?", disease: "Manage a condition?", prevention: "Improve & strengthen", women: "Women's health & life stages", everyday: "Hair & skin care", fitness: "Fitness goal", seniors: "Seeing & moving", cycle: "Your cycle", goals: "Your focus for building plan",
 };
 
 function chip(on: boolean) {
@@ -338,9 +364,15 @@ function smChip(on: boolean) {
 
 function LifestylePage() {
   const navigate = useNavigate();
+  const { start, mode, preselect, only } = Route.useSearch();
+  const onlyOne = only === "1"; // "Make this a focus area" — just this one screen + focus
+  const unified = mode === "unified";                 // Create flow: full wizard, no basics
+  const planFlow = unified || start === "conditions"; // skip basics, start at the health screen
+  const wizard = unified || !planFlow;                // wizard-style focus page (Create + profile picker); not the short start=conditions flow
   const [a, setA] = useState<Record<string, any>>({ main: "3", mini: "1", sleep: 7, heightUnit: "cm", weightUnit: "kg", habits: [], workouts: [], mobility: {}, habitDetail: {}, openHabit: null, conditions: [], condDetail: {}, openCond: null, chosenGoals: [], pickOwn: false });
   const set = (k: string, v: any) => setA((p) => ({ ...p, [k]: v }));
   const togIn = (k: string, v: string) => setA((p) => { const cur = (p[k] as string[]) ?? []; return { ...p, [k]: cur.includes(v) ? cur.filter((x) => x !== v) : [...cur, v] }; });
+  const togCap = (k: string, v: string, cap: number) => setA((p) => { const cur = (p[k] as string[]) ?? []; if (cur.includes(v)) return { ...p, [k]: cur.filter((x) => x !== v) }; return { ...p, [k]: cur.length >= cap ? [...cur.slice(1), v] : [...cur, v] }; });
   const setMob = (k: string, v: string) => setA((p) => ({ ...p, mobility: { ...(p.mobility as Record<string, string>), [k]: v } }));
   const setSub = (hid: string, sk: string, v: string) => setA((p) => { const hd = (p.habitDetail as Record<string, Record<string, string>>) ?? {}; return { ...p, habitDetail: { ...hd, [hid]: { ...(hd[hid] ?? {}), [sk]: v } } }; });
   const clickHabit = (h: { id: string; subs?: unknown }) => {
@@ -349,7 +381,12 @@ function LifestylePage() {
   };
   const clickCond = (c: { id: string; subs?: unknown }) => {
     if (!c.subs) { togIn("conditions", c.id); return; }
-    setA((p) => { const open = p.openCond === c.id; const cur = p.conditions as string[]; if (open) return { ...p, openCond: null, conditions: cur.filter((x) => x !== c.id) }; return { ...p, openCond: c.id, conditions: cur.includes(c.id) ? cur : [...cur, c.id] }; });
+    // One tap toggles selection: selected → deselect (+ close its panel); unselected → select (+ open).
+    setA((p) => {
+      const cur = (p.conditions as string[]) ?? [];
+      if (cur.includes(c.id)) return { ...p, conditions: cur.filter((x) => x !== c.id), openCond: p.openCond === c.id ? null : p.openCond };
+      return { ...p, conditions: [...cur, c.id], openCond: c.id };
+    });
   };
   const setCondSub = (cid: string, sk: string, v: string) => setA((p) => { const cd = (p.condDetail as Record<string, Record<string, string>>) ?? {}; return { ...p, condDetail: { ...cd, [cid]: { ...(cd[cid] ?? {}), [sk]: v } } }; });
   // multi-select sub-question — value stored as a comma-joined string
@@ -358,16 +395,53 @@ function LifestylePage() {
   const setClusterPrimary = (cid: string, condId: string) => setA((p) => ({ ...p, clusterPrimary: { ...((p.clusterPrimary as Record<string, string>) ?? {}), [cid]: condId } }));
   const [step, setStep] = useState(0);
 
+  // Load any saved profile once (so returning / editing pre-fills every answer), then apply a
+  // preselect from Browse ("Customize / Personalize this goal") — disease → conditions, else fitness.
+  useEffect(() => {
+    let base: Record<string, any> = {};
+    try { const raw = localStorage.getItem("ayuraise.lifestyle"); if (raw) base = JSON.parse(raw); } catch { /* ignore */ }
+    setA((p) => {
+      const merged = { ...p, ...base };
+      if (preselect) {
+        const add = (k: string) => { merged[k] = Array.from(new Set([...((merged[k] as string[]) ?? []), preselect])); };
+        if (PREVENTION_ORGANS.some((o) => o.id === preselect)) add("prevention");
+        else if (WOMEN_ITEMS.some((o) => o.id === preselect)) add("women");
+        else if (EVERYDAY_ITEMS.some((o) => o.id === preselect) || REST_CALM.some((o) => o.id === preselect)) add("everyday");
+        else if (COND_LABEL[preselect]) add("conditions");
+        else add("chosenGoals");
+      }
+      return merged;
+    });
+    // No setStep needed: the Create wizard reorders so the clicked category's page is first (step 0).
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const older = Number(a.age) >= 60;
   const female = a.sex === "Female";
   const omad = a.main === "1" && a.mini === "0";
 
-  const stepKeys = useMemo(() => [
-    "about", "movement", "sleep", "eating", "habits", "eat-text", "digestion", "mind", "conditions",
-    ...(older ? ["seniors"] : []),
-    ...(female ? ["cycle"] : []),
-    "goals",
-  ], [older, female]);
+  // Two entry modes, ONE set of question screens: the plan flow jumps straight to the disease
+  // list → focus → fitness goal (basics are captured in onboarding); full flow runs everything.
+  const showWomen = female || (((a.women as string[]) ?? []).length > 0); // show if female, or a women's item was picked (e.g. from Browse)
+  const stepKeys = useMemo(() => unified
+    ? (() => { // Create wizard — the clicked category (preselect) leads, the rest follow, focus last
+        const base = ["disease", "prevention", ...(showWomen ? ["women"] : []), "fitness"];
+        const tk = !preselect ? null
+          : WOMEN_ITEMS.some((o) => o.id === preselect) ? "women"
+          : COND_LABEL[preselect] ? "disease"
+          : FITNESS_GOALS.some((o) => o.id === preselect) ? "fitness"
+          : "prevention"; // organs, hair/skin/eyes, sleep & stress all live on Improve & strengthen
+        if (onlyOne && tk) return [tk, "goals"]; // single-screen customize: just this part + focus
+        const ordered = tk && base.includes(tk) ? [tk, ...base.filter((p) => p !== tk)] : base;
+        return [...ordered, "goals"];
+      })()
+    : planFlow
+    ? ["conditions", ...(female ? ["cycle"] : []), "goals"]          // disease-first short flow
+    : [ // profile: basics → gate → the 3 core screens → focus
+        "about", "movement", "sleep", "eating", "habits", "eat-text", "digestion", "mind", "gate",
+        "disease", "prevention", ...(showWomen ? ["women"] : []), "fitness",
+        ...(older ? ["seniors"] : []),
+        "goals",
+      ], [older, female, planFlow, unified, showWomen, preselect, onlyOne]);
   const key = stepKeys[Math.min(step, stepKeys.length - 1)];
 
   const cm = a.heightUnit === "ft" ? ((parseFloat(a.heightFt) || 0) * 30.48 + (parseFloat(a.heightIn) || 0) * 2.54) : (parseFloat(a.heightCm) || 0);
@@ -382,28 +456,39 @@ function LifestylePage() {
   // `chosen` now holds only the optional wellness goals the user adds — conditions
   // are all auto-included and shown as clusters (no hard 2-cap, nothing dropped).
   const chosen = (a.chosenGoals as string[]) ?? [];
+  // Create-wizard selections (prevention organs ≤2, women's life stages, everyday concerns)
+  const prevention = (a.prevention as string[]) ?? [];
+  const women = (a.women as string[]) ?? [];
+  const everyday = (a.everyday as string[]) ?? [];
+  // organs that your chosen conditions already strengthen (shown as auto-covered on the prevention page)
+  const autoOrgans = Array.from(new Set(conds.map((id) => CONDITION_ORGAN[id]).filter(Boolean)));
+  const orgCap = conds.length > 0 ? 1 : 2; // with conditions, add at most 1 more; otherwise up to 2
+  const healthIds = Array.from(new Set([...conds, ...prevention, ...women, ...everyday])); // the "health" side for focus ranking
 
   // ---- active-focus model: diseases (by severity) + indirect signals; top 2, cross-cluster ----
   const cdet = (a.condDetail as Record<string, Record<string, string>>) ?? {};
-  const stressedLf = a.mood === "Low" || a.anxiety === "Often" || a.unwind === "Rarely";
-  const poorSleepLf = (Number(a.sleep) > 0 && Number(a.sleep) < 6.5) || Number(a.waking) >= 4;
-  const habitList = (a.habits as string[]) ?? [];
-  const junky = ["fried", "packaged", "sweets", "sugarydrinks", "eatout"].some((h) => habitList.includes(h));
+  const stressedLf = a.mood === "Low" || a.anxiety === "Often" || a.anxiety === "Sometimes" || a.unwind === "Rarely";
+  const poorSleepLf = Number(a.waking) >= 4; // how they FEEL waking up (Groggy/foggy or Exhausted) — not hours; hours drive the recommendation
   const indirect: { id: string; label: string; pri: number }[] = [];
   if (stressedLf) indirect.push({ id: "stress", label: "Stress", pri: 0.95 });
   if (poorSleepLf) indirect.push({ id: "better-sleep", label: "Better sleep", pri: 0.9 });
-  if (junky) indirect.push({ id: "weight-loss", label: "Healthier eating", pri: 0.85 });
+  const focusPool = wizard ? healthIds : conds; // wizard ranks all health selections; short flow ranks conditions
   const candidates = [
-    ...conds.map((id) => ({ id, label: COND_LABEL[id] ?? id, pri: conditionSeverity(id, cdet[id] ?? {}) })),
-    ...indirect.filter((x) => !conds.includes(x.id)),
+    ...focusPool.map((id) => ({ id, label: COND_LABEL[id] ?? conditionMeta(id)?.label ?? id, pri: conditionSeverity(id, cdet[id] ?? {}) })),
+    ...indirect.filter((x) => !focusPool.includes(x.id)),
   ].sort((x, y) => y.pri - x.pri);
   const autoActive = candidates.slice(0, 2).map((cc) => cc.id);
   const ovAF = (a.activeFocus as string[]) ?? [];
   const activeFocus = ovAF.length ? ovAF.filter((id) => candidates.some((cc) => cc.id === id)) : autoActive;
   const togActive = (id: string) => setA((p) => { const base = (p.activeFocus as string[])?.length ? (p.activeFocus as string[]) : autoActive; const cur = base.includes(id) ? base.filter((x) => x !== id) : base.length >= 2 ? [...base.slice(1), id] : [...base, id]; return { ...p, activeFocus: cur }; });
-  const activeClusters = new Set(activeFocus.map((id) => conditionMeta(id)?.cluster).filter(Boolean) as string[]);
-  const goalSlots = activeFocus.length ? 1 : 2;
-  const pickGoal = (id: string) => setA((p) => { const cur = (p.chosenGoals as string[]) ?? []; if (cur.includes(id)) return { ...p, chosenGoals: cur.filter((x) => x !== id) }; return { ...p, chosenGoals: cur.length >= goalSlots ? [...cur.slice(1), id] : [...cur, id] }; });
+  const pickGoal = (id: string) => setA((p) => { const cur = (p.chosenGoals as string[]) ?? []; return { ...p, chosenGoals: cur.includes(id) ? [] : [id] }; }); // only one common goal at a time
+  // goals the user explicitly added become focus areas too — but in the Create flow fitness stays
+  // its OWN section, never mixed into the primary health focus.
+  const pickedCands = wizard ? [] : chosen.filter((id) => !candidates.some((cc) => cc.id === id)).map((id) => ({ id, label: COND_LABEL[id] ?? FITNESS_GOALS.find((x) => x.id === id)?.label ?? id, pri: 1 }));
+  const allCands = [...candidates, ...pickedCands];
+  const topIds = wizard ? new Set(activeFocus) : new Set([...activeFocus, ...chosen]);
+  const toggleFocus = (id: string) => { if (chosen.includes(id)) pickGoal(id); else togActive(id); };
+  const activeClusters = new Set(Array.from(topIds).map((id) => conditionMeta(id)?.cluster).filter(Boolean) as string[]);
 
   // lifestyle-based habit nudges (shown when no conditions selected)
   const habitSuggestions = useMemo(() => {
@@ -429,11 +514,22 @@ function LifestylePage() {
   const save = () => { persist(); navigate({ to: "/home" }); };
   const buildPlan = () => {
     persist();
-    const g = Array.from(new Set([...conds, ...activeFocus, ...chosen])); // conditions + active indirect signals + chosen goals
-    if (g.length) navigate({ to: "/create", search: () => ({ goal: g[0], goals: g.join(","), edit: undefined }) });
+    const g = Array.from(new Set([...conds, ...prevention, ...women, ...everyday, ...activeFocus, ...chosen])); // everything selected
+    setStep(0); // so returning here lands on the start, not a stale goals page
+    if (g.length) { savePersonalPlan(g); navigate({ to: "/create", search: () => ({ goal: g[0], goals: g.join(","), edit: undefined }) }); } // earlier post-goal flow
     else navigate({ to: "/home" });
   };
   const label = (id: string) => COND_LABEL[id] ?? FITNESS_GOALS.find((x) => x.id === id)?.label ?? id;
+  // Hair fall: tell the user what's realistic from their answers, rather than asking their goal.
+  const hairOutlook = (d: Record<string, string>): string | null => {
+    if (!d.pattern) return null;
+    if (d.pattern === "Patches") return "⚠ Patchy loss should be seen by a dermatologist — we'll keep your plan gentle meanwhile.";
+    const genetic = d.pattern === "Hairline / crown" || d.pattern === "Widening parting" || d.family === "Yes";
+    if (genetic) return "This looks like a genetic pattern — we can slow it and support your scalp & nutrition, but full regrowth usually needs a dermatologist's help.";
+    if (d.timeline === "Recent (under 6 months)" || (d.trigger && d.trigger.split(",").filter(Boolean).length > 0)) return "This looks like temporary shedding — it usually regrows in 6–12 months with good nutrition, less stress and scalp care. Give it ~3 months.";
+    if (d.pattern === "Mostly scalp / flaking") return "This looks scalp-driven — treating the scalp (and cooling pitta) should help noticeably.";
+    return "With the right nutrition and scalp care this should improve over ~3 months. Hair is slow — be patient.";
+  };
   const renderGoal = (g: { id: string; label: string; emoji: string }) => {
     const on = (a.chosenGoals as string[]).includes(g.id);
     return <button key={g.id} onClick={() => togGoal(g.id)} className={`lf-chip rounded-full px-3 py-1.5 text-[12px] font-semibold ${on ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground/75"}`}>{g.emoji} {g.label}</button>;
@@ -441,6 +537,47 @@ function LifestylePage() {
   // goal-vs-condition conflict check (uses the profile we already have here)
   const focusCtx = { thyroid: cdet.thyroid?.kind === "Hypo" ? "hypo" as const : cdet.thyroid?.kind === "Hyper" ? "hyper" as const : undefined, frail: cm > 0 && kg > 0 && kg / ((cm / 100) ** 2) < 18.5 };
   const conflicts = resolveConflicts(Array.from(new Set([...conds, ...activeFocus, ...chosen])), focusCtx);
+  const bmiHigh = cm > 0 && kg > 0 && kg / ((cm / 100) ** 2) >= 25;
+  const metabolicWeightNote = bmiHigh && [...conds, ...activeFocus].some((id) => conditionMeta(id)?.cluster === "metabolic");
+
+  // Reusable condition-group body (chips + the tapped item's sub-questions) — shared by the
+  // profile step and the Create "disease" page (where Joint/Gut open from a small icon).
+  const condGroupBody = (grp: (typeof CONDITIONS)[number], compact = false) => {
+    const openC = grp.items.find((c) => c.id === a.openCond);
+    const cd = openC ? ((a.condDetail as Record<string, Record<string, string>>)[openC.id] ?? {}) : {};
+    return (
+      <>
+        <div className="grid grid-cols-2 gap-1.5">
+          {grp.items.map((c) => { const on = conds.includes(c.id); const open = a.openCond === c.id; return (
+            <button key={c.id} onClick={() => clickCond(c)} className={`lf-chip flex items-center gap-1.5 rounded-xl py-1.5 pl-1.5 pr-2 ${compact ? "text-[11px]" : "text-[11.5px]"} font-semibold ring-1 ${on ? "bg-primary/10 ring-primary" : "bg-card text-foreground/85 ring-border/60"}`}>
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[12px]" style={{ background: "var(--gradient-water)" }}>{c.emoji}</span>
+              <span className="min-w-0 flex-1 truncate text-left">{c.label}</span>
+              {c.subs ? <span className="text-[9px] text-muted-foreground">{open ? "▾" : "▸"}</span> : null}
+            </button>
+          ); })}
+        </div>
+        {openC && openC.subs && (
+          <div className="mt-1.5 space-y-2 rounded-2xl bg-card/70 p-3 ring-1 ring-border/60">
+            <p className="text-[11.5px] font-bold text-foreground">{openC.emoji} {openC.label}</p>
+            {openC.note && <p className="-mt-1 text-[10.5px] text-muted-foreground">{openC.note}</p>}
+            {openC.subs.filter((s) => !s.showIf || s.showIf(cd)).map((s) => (
+              <div key={s.key}>
+                <p className="mb-1 text-[11px] font-semibold text-muted-foreground">{s.q}</p>
+                {s.input
+                  ? <input value={cd[s.key] ?? ""} onChange={(e) => setCondSub(openC.id, s.key, e.target.value)} placeholder={s.ph} className="w-full rounded-xl bg-card px-3 py-2 text-[12px] font-semibold ring-1 ring-border/60 placeholder:text-muted-foreground/50" />
+                  : s.multi
+                    ? <div className="flex flex-wrap gap-1.5">{(s.opts ?? []).map((o) => { const sel = (cd[s.key] ?? "").split(",").filter(Boolean).includes(o); return <button key={o} onClick={() => toggleCondMulti(openC.id, s.key, o)} className={`lf-chip rounded-full px-3 py-1.5 text-[11.5px] font-semibold ${sel ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground/75"}`}>{o}</button>; })}</div>
+                    : <div className="flex flex-wrap gap-1.5">{(s.opts ?? []).map((o) => <button key={o} onClick={() => setCondSub(openC.id, s.key, o)} className={`lf-chip rounded-full px-3 py-1.5 text-[11.5px] font-semibold ${cd[s.key] === o ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground/75"}`}>{o}</button>)}</div>}
+              </div>
+            ))}
+            {openC.id === "hair-fall" && hairOutlook(cd) && <p className="rounded-xl bg-primary/10 px-3 py-2 text-[11px] leading-snug text-foreground/85 ring-1 ring-primary/20">{hairOutlook(cd)}</p>}
+          </div>
+        )}
+      </>
+    );
+  };
+
+  const capHint = key === "fitness" ? "Pick any 1" : null;
 
   return (
     <div className="min-h-svh pb-28" style={{ background: "var(--gradient-hero)" }}>
@@ -449,8 +586,8 @@ function LifestylePage() {
         <div className="relative flex items-center gap-2.5 text-primary-foreground">
           <button onClick={back} className="lf-btn inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/15"><ArrowLeft size={15} /></button>
           <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-semibold uppercase tracking-wide opacity-80">Complete your profile</p>
             <h1 className="truncate font-display text-[17px] font-extrabold leading-tight">{HEAD[key]}</h1>
+            {capHint && <p className="text-[10px] font-semibold uppercase tracking-wide opacity-80">{capHint}</p>}
           </div>
         </div>
         <div className="relative mt-3 h-1.5 overflow-hidden rounded-full bg-white/20">
@@ -623,47 +760,157 @@ function LifestylePage() {
         {/* WOMEN */}
         {key === "cycle" && <div className="flex flex-wrap gap-1.5">{CYCLE.map((c) => <button key={c} onClick={() => set("cycle", c)} className={chip(a.cycle === c)}>{c}</button>)}</div>}
 
-        {/* CONDITIONS — grid, expand panel below the group */}
+        {/* GATE — personalized plan vs explore ready-made (same question flow continues for personalized) */}
+        {key === "gate" && (
+          <div className="space-y-3">
+            {/* tools listed once as plain text (not tappable) — both paths revolve around these */}
+            <p className="px-1 text-[11.5px] leading-relaxed text-muted-foreground"><b className="text-foreground/80">What's inside:</b> 🧘 Yoga · 🏋️ Exercise · 🥗 Diet · 🕉️ Meditation · ✨ Detox · ⏱️ Fasting · 🌱 Herbs</p>
+            <button onClick={() => { set("planMode", "personalized"); next(); }} className="lf-btn block w-full rounded-2xl bg-card p-4 text-left shadow-sm ring-1 ring-primary/40 active:scale-[0.99]">
+              <p className="flex items-center gap-2 text-[14px] font-extrabold text-foreground">✨ Build my personalized plan</p>
+              <p className="mt-1.5 text-[12px] font-semibold text-foreground">Tailored to what you want</p>
+              <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">Lose weight, build muscle, de-stress, or manage conditions like diabetes, BP &amp; gut health etc.</p>
+              <p className="mt-2 text-[11px] font-bold text-primary">Let's pick your goals →</p>
+            </button>
+            <button onClick={() => { set("planMode", "explore"); persist(); navigate({ to: "/home" }); }} className="lf-btn block w-full rounded-2xl bg-card p-4 text-left shadow-sm ring-1 ring-primary/40 active:scale-[0.99]">
+              <p className="flex items-center gap-2 text-[14px] font-extrabold text-foreground">🧭 Explore ready-made plans</p>
+              <p className="mt-1.5 text-[12px] font-semibold text-foreground">Browse by section</p>
+              <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">Explore ready-made plans in each section. You can create your personalized plan later.</p>
+              <p className="mt-2 text-[11px] font-bold text-primary">Show me the sections →</p>
+            </button>
+          </div>
+        )}
+
+        {/* CONDITIONS grid — profile step: all groups, flat */}
         {key === "conditions" && (
           <div className="space-y-3">
             <p className="px-1 text-[12px] text-muted-foreground">Select any you have — tap for a couple of quick details. Skip if none.</p>
-            {CONDITIONS.map((grp) => {
-              const openC = grp.items.find((c) => c.id === a.openCond);
-              const cd = openC ? ((a.condDetail as Record<string, Record<string, string>>)[openC.id] ?? {}) : {};
-              return (
-                <div key={grp.g}>
-                  <p className="mb-1.5 px-1 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">{grp.g}</p>
-                  <div className="grid grid-cols-2 gap-1.5">
-                    {grp.items.map((c) => {
-                      const on = conds.includes(c.id); const open = a.openCond === c.id;
-                      return (
-                        <button key={c.id} onClick={() => clickCond(c)} className={`lf-chip flex items-center gap-1.5 rounded-xl py-1.5 pl-1.5 pr-2 text-[11.5px] font-semibold ring-1 ${on ? "bg-primary/10 ring-primary" : "bg-card text-foreground/85 ring-border/60"}`}>
-                          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[12px]" style={{ background: "var(--gradient-water)" }}>{c.emoji}</span>
-                          <span className="min-w-0 flex-1 truncate text-left">{c.label}</span>
-                          {c.subs ? <span className="text-[9px] text-muted-foreground">{open ? "▾" : "▸"}</span> : null}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  {openC && openC.subs && (
-                    <div className="mt-1.5 space-y-2 rounded-2xl bg-card/70 p-3 ring-1 ring-border/60">
-                      <p className="text-[11.5px] font-bold text-foreground">{openC.emoji} {openC.label}</p>
-                      {openC.note && <p className="-mt-1 text-[10.5px] text-muted-foreground">{openC.note}</p>}
-                      {openC.subs.filter((s) => !s.showIf || s.showIf(cd)).map((s) => (
-                        <div key={s.key}>
-                          <p className="mb-1 text-[11px] font-semibold text-muted-foreground">{s.q}</p>
-                          {s.input
-                            ? <input value={cd[s.key] ?? ""} onChange={(e) => setCondSub(openC.id, s.key, e.target.value)} placeholder={s.ph} className="w-full rounded-xl bg-card px-3 py-2 text-[12px] font-semibold ring-1 ring-border/60 placeholder:text-muted-foreground/50" />
-                            : s.multi
-                              ? <div className="flex flex-wrap gap-1.5">{(s.opts ?? []).map((o) => { const sel = (cd[s.key] ?? "").split(",").filter(Boolean).includes(o); return <button key={o} onClick={() => toggleCondMulti(openC.id, s.key, o)} className={`lf-chip rounded-full px-3 py-1.5 text-[11.5px] font-semibold ${sel ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground/75"}`}>{o}</button>; })}</div>
-                              : <div className="flex flex-wrap gap-1.5">{(s.opts ?? []).map((o) => <button key={o} onClick={() => setCondSub(openC.id, s.key, o)} className={`lf-chip rounded-full px-3 py-1.5 text-[11.5px] font-semibold ${cd[s.key] === o ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground/75"}`}>{o}</button>)}</div>}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+            {CONDITIONS.map((grp) => (
+              <div key={grp.g}>
+                <p className="mb-1.5 px-1 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">{grp.g}</p>
+                {condGroupBody(grp)}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* DISEASE — Create wizard: flat conditions, with Joint & Spine / Gut & Digestion as two small icons */}
+        {key === "disease" && (() => {
+          const hc = CONDITIONS.find((g) => g.g === "Health conditions")!;
+          const openGrp = a.openGroup === "Joint & Spine" || a.openGroup === "Gut & Digestion"
+            ? CONDITIONS.find((g) => g.g === a.openGroup) : undefined;
+          return (
+            <div className="space-y-3">
+              <p className="px-1 text-[12px] text-muted-foreground">Select if it applies to you — or skip.</p>
+              {condGroupBody(hc, true)}
+              <div className="grid grid-cols-2 gap-1.5">
+                {["Joint & Spine", "Gut & Digestion"].map((gname) => {
+                  const grp = CONDITIONS.find((g) => g.g === gname)!;
+                  const sel = grp.items.filter((c) => conds.includes(c.id)).length;
+                  const open = a.openGroup === gname;
+                  return (
+                    <button key={gname} onClick={() => set("openGroup", open ? null : gname)} className={`lf-chip flex items-center gap-1.5 rounded-xl py-1.5 pl-1.5 pr-2 text-[11px] font-semibold ring-1 ${open ? "bg-primary/10 ring-primary" : "bg-card text-foreground/85 ring-border/60"}`}>
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[12px]" style={{ background: "var(--gradient-water)" }}>{GROUP_EMOJI[gname]}</span>
+                      <span className="min-w-0 flex-1 truncate text-left">{gname}</span>
+                      {sel > 0 && <span className="shrink-0 rounded-full bg-primary px-1 text-[8px] font-bold text-primary-foreground">{sel}</span>}
+                      <span className="shrink-0 text-[9px] text-muted-foreground">{open ? "▾" : "▸"}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              {openGrp && condGroupBody(openGrp, true)}
+            </div>
+          );
+        })()}
+
+        {/* IMPROVE & STRENGTHEN — organs + hair/skin/eyes + rest & calm, all on one page */}
+        {key === "prevention" && (
+          <div className="space-y-4">
+            {/* Organs */}
+            <div className="space-y-2">
+              <p className="font-display text-[13px] font-bold text-foreground">Organs</p>
+              {autoOrgans.length > 0
+                ? <p className="rounded-2xl bg-primary/10 px-3 py-2.5 text-[11px] leading-snug text-foreground/85 ring-1 ring-primary/20">Based on the conditions you picked, your <b>{autoOrgans.map((id) => PREVENTION_ORGANS.find((o) => o.id === id)?.label ?? id).join(", ")}</b> will strengthen automatically. Add more if you like — but keep to <b>1–2 focus areas</b>; picking too many dilutes your plan.</p>
+                : <p className="px-1 text-[11.5px] leading-snug text-muted-foreground">Strengthen what matters — keep it to <b className="text-foreground">1–2 focus areas</b>; picking too many will dilute your plan. Skip if none.</p>}
+              <div className="grid grid-cols-2 gap-1.5">
+                {PREVENTION_ORGANS.map((o) => {
+                  const auto = autoOrgans.includes(o.id);
+                  const on = prevention.includes(o.id);
+                  if (auto) return (
+                    <span key={o.id} className="flex items-center gap-1.5 rounded-xl bg-primary/10 py-1.5 pl-1.5 pr-2 text-[11.5px] font-semibold text-foreground/70 ring-1 ring-primary/30">
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[12px]" style={{ background: "var(--gradient-leaf)" }}>{o.emoji}</span>
+                      <span className="min-w-0 flex-1 truncate text-left">{o.label}</span>
+                      <span className="shrink-0 text-[8.5px] font-bold uppercase text-primary/70">auto</span>
+                    </span>
+                  );
+                  return (
+                    <button key={o.id} onClick={() => togIn("prevention", o.id)} className={`lf-chip flex items-center gap-1.5 rounded-xl py-1.5 pl-1.5 pr-2 text-[11.5px] font-semibold ring-1 ${on ? "bg-primary/10 ring-primary" : "bg-card text-foreground/85 ring-border/60"}`}>
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[12px]" style={{ background: "var(--gradient-leaf)" }}>{o.emoji}</span>
+                      <span className="min-w-0 flex-1 truncate text-left">{o.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              {PREVENTION_ORGANS.filter((o) => o.hint).map((o) => (
+                <p key={o.id} className="px-1 text-[10.5px] leading-snug text-muted-foreground">{o.emoji} <b className="text-foreground/80">{o.label}</b> — {o.hint}</p>
+              ))}
+            </div>
+            {/* Hair, skin & eyes */}
+            <div className="space-y-2">
+              <p className="font-display text-[13px] font-bold text-foreground">Hair, skin &amp; eyes</p>
+              <div className="grid grid-cols-2 gap-1.5">
+                {EVERYDAY_ITEMS.map((o) => { const on = everyday.includes(o.id); return (
+                  <button key={o.id} onClick={() => togIn("everyday", o.id)} className={`lf-chip flex items-center gap-1.5 rounded-xl py-1.5 pl-1.5 pr-2 text-[11.5px] font-semibold ring-1 ${on ? "bg-primary/10 ring-primary" : "bg-card text-foreground/85 ring-border/60"}`}>
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[12px]" style={{ background: "var(--gradient-gold)" }}>{o.emoji}</span>
+                    <span className="min-w-0 flex-1 truncate text-left">{o.label}</span>
+                  </button>
+                ); })}
+              </div>
+            </div>
+            {/* Rest & calm */}
+            <div className="space-y-2">
+              <p className="font-display text-[13px] font-bold text-foreground">Rest &amp; calm</p>
+              <p className="px-1 text-[10.5px] leading-snug text-muted-foreground">We support these along the way anyway — select one only if you want it as a focus.</p>
+              <div className="grid grid-cols-2 gap-1.5">
+                {REST_CALM.map((o) => { const on = everyday.includes(o.id); return (
+                  <button key={o.id} onClick={() => togIn("everyday", o.id)} className={`lf-chip flex items-center gap-1.5 rounded-xl py-1.5 pl-1.5 pr-2 text-[11.5px] font-semibold ring-1 ${on ? "bg-primary/10 ring-primary" : "bg-card text-foreground/85 ring-border/60"}`}>
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[12px]" style={{ background: "var(--gradient-violet)" }}>{o.emoji}</span>
+                    <span className="min-w-0 flex-1 truncate text-left">{o.label}</span>
+                  </button>
+                ); })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* WOMEN — life stages (women only) */}
+        {key === "women" && (
+          <div className="space-y-3">
+            <p className="px-1 text-[12px] leading-snug text-muted-foreground">Select if anything below applies to you.</p>
+            <div className="grid grid-cols-2 gap-1.5">
+              {WOMEN_ITEMS.map((o) => { const on = women.includes(o.id); return (
+                <button key={o.id} onClick={() => togIn("women", o.id)} className={`lf-chip flex items-center gap-1.5 rounded-xl py-1.5 pl-1.5 pr-2 text-[11.5px] font-semibold ring-1 ${on ? "bg-primary/10 ring-primary" : "bg-card text-foreground/85 ring-border/60"}`}>
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[12px]" style={{ background: "var(--gradient-violet)" }}>{o.emoji}</span>
+                  <span className="min-w-0 flex-1 truncate text-left">{o.label}</span>
+                </button>
+              ); })}
+            </div>
+          </div>
+        )}
+
+        {/* FITNESS GOALS — pick just 1 */}
+        {key === "fitness" && (
+          <div className="space-y-3">
+            {conds.length >= 2
+              ? <p className="rounded-2xl bg-primary/10 px-3 py-2.5 text-[11px] leading-snug text-foreground/85 ring-1 ring-primary/20">With the health conditions you're already managing, you'll naturally <b>lose some weight</b> along the way. If you'd still like a fitness goal as a <b>top priority</b>, pick <b>one</b> below.</p>
+              : <p className="px-1 text-[12px] leading-snug text-muted-foreground">Pick <b className="text-foreground">any 1</b> — optional.</p>}
+            <div className="grid grid-cols-2 gap-1.5">
+              {FITNESS_GOALS.map((gg) => { const on = chosen.includes(gg.id); return (
+                <button key={gg.id} onClick={() => togCap("chosenGoals", gg.id, 1)} className={`lf-chip flex items-center gap-1.5 rounded-xl py-1.5 pl-1.5 pr-2 text-[11.5px] font-semibold ring-1 ${on ? "bg-primary/10 ring-primary" : "bg-card text-foreground/85 ring-border/60"}`}>
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[12px]" style={{ background: "var(--gradient-gold)" }}>{gg.emoji}</span>
+                  <span className="min-w-0 flex-1 truncate text-left">{gg.label}</span>
+                </button>
+              ); })}
+            </div>
           </div>
         )}
 
@@ -685,14 +932,32 @@ function LifestylePage() {
                 ))}
               </div>
             )}
-            {candidates.length > 0 ? (
+            {allCands.length > 0 ? (
               <>
                 <div className="rounded-2xl bg-card p-3.5 ring-1 ring-border/60">
-                  <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Your focus <span className="text-[9.5px] font-semibold normal-case text-muted-foreground/70">· tap up to 2</span></p>
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    {candidates.map((cc) => { const on = activeFocus.includes(cc.id); return <button key={cc.id} onClick={() => togActive(cc.id)} className={`lf-chip rounded-full px-3 py-1.5 text-[12px] font-semibold ${on ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground/70"}`}>{cc.label}</button>; })}
+                  <p className="font-display text-[14px] font-bold text-foreground">Health focus</p>
+                  <p className="mt-2 px-0.5 text-[10px] font-bold uppercase tracking-wide text-primary">Primary focus <span className="font-semibold normal-case tracking-normal text-primary/70">(up to 2)</span></p>
+                  <div className="mt-1 flex flex-wrap gap-1.5">
+                    {allCands.filter((cc) => topIds.has(cc.id)).map((cc) => <button key={cc.id} onClick={() => toggleFocus(cc.id)} className="lf-chip rounded-full bg-primary px-3 py-1.5 text-[12px] font-semibold text-primary-foreground">{cc.label}</button>)}
                   </div>
-                  <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">We'll build <b className="text-foreground">one plan</b> — your focus leads, everything else is supported. <b className="text-foreground">Nothing's dropped.</b></p>
+                  {allCands.some((cc) => !topIds.has(cc.id)) && (
+                    <>
+                      <p className="mt-2.5 px-0.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Also covered <span className="font-semibold normal-case tracking-normal text-muted-foreground/60">· tap to mark as primary</span></p>
+                      <div className="mt-1 flex flex-wrap gap-1.5">
+                        {allCands.filter((cc) => !topIds.has(cc.id)).map((cc) => <button key={cc.id} onClick={() => toggleFocus(cc.id)} className="lf-chip rounded-full bg-secondary px-3 py-1.5 text-[12px] font-semibold text-foreground/65">{cc.label}</button>)}
+                      </div>
+                    </>
+                  )}
+                  {wizard && chosen.length > 0 && (
+                    <>
+                      <p className="mt-3 font-display text-[14px] font-bold text-foreground">Fitness focus</p>
+                      <div className="mt-1 flex flex-wrap gap-1.5">
+                        {chosen.map((id) => { const f = FITNESS_GOALS.find((x) => x.id === id); return <span key={id} className="rounded-full bg-primary px-3 py-1.5 text-[12px] font-semibold text-primary-foreground">{f?.emoji} {f?.label ?? id}</span>; })}
+                      </div>
+                    </>
+                  )}
+                  {wizard && everyday.length > 0 && <p className="mt-2.5 text-[10.5px] leading-snug text-muted-foreground">Also caring for: {everyday.map((id) => EVERYDAY_ITEMS.find((e) => e.id === id)?.label ?? id).join(" · ")}.</p>}
+                  {metabolicWeightNote && <p className="mt-2.5 text-[10.5px] leading-snug text-primary/80">💪 As your health improves, you'll naturally <b>lose some weight</b> along the way too.</p>}
                 </div>
                 {habitSuggestions.length > 0 && <p className="px-1 text-[10.5px] leading-snug text-muted-foreground">We'll also nudge your habits: {habitSuggestions.slice(0, 3).map((h) => h.t).join(" · ")}.</p>}
               </>
@@ -704,13 +969,13 @@ function LifestylePage() {
               </div>
             )}
 
-            {/* common goals — 1 if there's a focus, 2 if not; covered / conflicting disabled */}
-            <div>
-              <p className="mb-1.5 px-1 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">{activeFocus.length ? "You can also pick 1 goal" : "Pick up to 2 goals"}</p>
+            {/* add another focus area — only in the short start=conditions flow (fitness has its own page in the wizard) */}
+            {!wizard && <div>
+              <p className="mb-1.5 px-1 text-[11.5px] font-semibold text-muted-foreground">{allCands.length ? "You can also pick 1 fitness goal" : "What would you like to work on?"}</p>
               <div className="flex flex-wrap gap-1.5">
                 {FITNESS_GOALS.map((gg) => {
-                  if (activeFocus.includes(gg.id)) return null;
-                  const covered = activeClusters.has(conditionMeta(gg.id)?.cluster ?? " ");
+                  if (allCands.some((c) => c.id === gg.id)) return null; // already shown as a focus / secondary
+                  const covered = gg.id !== "weight-loss" && gg.id !== "obesity" && activeClusters.has(conditionMeta(gg.id)?.cluster ?? " ");
                   const conflict = resolveConflicts([gg.id], focusCtx).length > 0;
                   if (covered) return <span key={gg.id} className="rounded-full bg-secondary/30 px-3 py-1.5 text-[11px] font-semibold text-muted-foreground/50">{gg.emoji} {gg.label} · included</span>;
                   if (conflict) return <span key={gg.id} className="rounded-full bg-secondary/30 px-3 py-1.5 text-[11px] font-semibold text-muted-foreground/40">{gg.emoji} {gg.label} · not suitable</span>;
@@ -718,15 +983,17 @@ function LifestylePage() {
                   return <button key={gg.id} onClick={() => pickGoal(gg.id)} className={`lf-chip rounded-full px-3 py-1.5 text-[12px] font-semibold ${on ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground/75"}`}>{gg.emoji} {gg.label}</button>;
                 })}
               </div>
-            </div>
+            </div>}
           </div>
         )}
       </div>
 
       <div className="fixed inset-x-0 z-30 mx-auto flex max-w-xl gap-2 px-4" style={{ bottom: "calc(4.5rem + env(safe-area-inset-bottom))" }}>
-        {key !== "goals"
+        {key === "gate"
+          ? null
+          : key !== "goals"
           ? <button onClick={next} disabled={!canNext} className={`lf-btn w-full rounded-2xl px-4 py-3 text-sm font-bold shadow-lg ${canNext ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}>Continue</button>
-          : (activeFocus.length || chosen.length || conds.length)
+          : (activeFocus.length || chosen.length || healthIds.length)
             ? <button onClick={buildPlan} className="lf-btn w-full rounded-2xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground shadow-lg">Build my plan →</button>
             : <button onClick={save} className="lf-btn w-full rounded-2xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground shadow-lg">Save profile</button>}
       </div>
@@ -735,4 +1002,12 @@ function LifestylePage() {
   );
 }
 
-export const Route = createFileRoute("/lifestyle")({ component: LifestylePage });
+export const Route = createFileRoute("/lifestyle")({
+  validateSearch: (s: Record<string, unknown>): { start?: string; mode?: string; preselect?: string; only?: string } => ({
+    start: typeof s.start === "string" ? s.start : undefined,
+    mode: typeof s.mode === "string" ? s.mode : undefined,
+    preselect: typeof s.preselect === "string" ? s.preselect : undefined,
+    only: typeof s.only === "string" ? s.only : undefined,
+  }),
+  component: LifestylePage,
+});
