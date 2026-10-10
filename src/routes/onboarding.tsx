@@ -1,12 +1,14 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, Fragment } from "react";
 import {
   ArrowLeft, ArrowRight, Sparkles, Flower2, MapPin, Info, ClipboardList,
-  Leaf, HeartPulse, Soup, Wind, Moon, Flame, Activity,
+  Leaf, HeartPulse, Soup, Wind, Moon, Flame, Activity, ChevronRight, Check,
 } from "lucide-react";
 import { PRAKRITI_QUESTIONS, scorePrakriti, type Dosha, type PrakritiAnswer } from "@/lib/diet";
 import { calcBMR, calcTDEE, ACTIVITY_LABEL, type ActivityLevel } from "@/lib/weight-loss";
 import { saveAsNewProfile, getActiveProfileId, upsertProfile } from "@/lib/profiles";
+import { cuisineRegion } from "@/lib/cuisines";
+import { CuisinePicker } from "@/components/CuisinePicker";
 
 export const Route = createFileRoute("/onboarding")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -23,7 +25,7 @@ export const Route = createFileRoute("/onboarding")({
   component: OnboardingPage,
 });
 
-type Step = "welcome" | "profile" | "activity" | "calories" | "prakriti-intro" | "prakriti-quiz" | "prakriti-result" | "prakriti-handoff" | "plan-intro";
+type Step = "welcome" | "profile" | "cuisine" | "activity" | "calories" | "prakriti-intro" | "prakriti-quiz" | "prakriti-result" | "prakriti-handoff" | "plan-intro";
 
 function OnboardingPage() {
   const navigate = useNavigate();
@@ -38,6 +40,7 @@ function OnboardingPage() {
   const [heightCm, setHeightCm] = useState("");
   const [weightKg, setWeightKg] = useState("");
   const [location, setLocation] = useState("");
+  const [cuisinePath, setCuisinePath] = useState<string[]>([]); // [region, sub, local]
 
   // Activity
   const [activity, setActivity] = useState<ActivityLevel | "">("");
@@ -64,6 +67,7 @@ function OnboardingPage() {
       if (p?.heightCm) setHeightCm(String(p.heightCm));
       if (p?.weightKg) setWeightKg(String(p.weightKg));
       if (p?.location) setLocation(p.location);
+      if (Array.isArray(p?.cuisinePath)) setCuisinePath(p.cuisinePath);
       if (p?.activity) setActivity(p.activity);
       if (p?.prakriti) setPrakritiResult(p.prakriti);
     } catch {}
@@ -89,6 +93,11 @@ function OnboardingPage() {
     if (heightCm) baseNext.heightCm = Number(heightCm);
     if (weightKg) baseNext.weightKg = Number(weightKg);
     if (location.trim()) baseNext.location = location.trim();
+    if (cuisinePath.length) {
+      baseNext.cuisinePath = cuisinePath;
+      baseNext.cuisine = cuisinePath[cuisinePath.length - 1]; // most specific, for display
+      baseNext.cuisineRegion = cuisineRegion(cuisinePath);    // engine key (Indian regions)
+    }
     if (activity) baseNext.activity = activity as ActivityLevel;
     if (calc?.bmr) baseNext.bmr = calc.bmr;
     if (calc?.tdee) baseNext.tdee = calc.tdee;
@@ -117,7 +126,8 @@ function OnboardingPage() {
             onClick={() => {
               if (step === "welcome") navigate({ to: "/login" });
               else if (step === "profile") setStep("welcome");
-              else if (step === "activity") setStep("profile");
+              else if (step === "cuisine") setStep("profile");
+              else if (step === "activity") setStep("cuisine");
               else if (step === "calories") setStep("activity");
               else if (step === "prakriti-intro") setStep("calories");
               else if (step === "prakriti-quiz") {
@@ -142,9 +152,13 @@ function OnboardingPage() {
         {step === "profile" && (
           <ProfileStep
             {...{ name, setName, age, setAge, gender, setGender, heightCm, setHeightCm, weightKg, setWeightKg, location, setLocation }}
-            onNext={() => profileValid && setStep("activity")}
+            onNext={() => profileValid && setStep("cuisine")}
             valid={!!profileValid}
           />
+        )}
+
+        {step === "cuisine" && (
+          <CuisineStep path={cuisinePath} setPath={setCuisinePath} onNext={() => setStep("activity")} />
         )}
 
         {step === "activity" && (
@@ -212,16 +226,37 @@ function OnboardingPage() {
 
 function StepDots({ step }: { step: Step }) {
   const map: Record<Step, number> = {
-    "welcome": 0, "profile": 1, "activity": 2, "calories": 2,
-    "prakriti-intro": 3, "prakriti-quiz": 3, "prakriti-result": 3,
-    "prakriti-handoff": 4, "plan-intro": 4,
+    "welcome": 0, "profile": 1, "cuisine": 2, "activity": 3, "calories": 3,
+    "prakriti-intro": 4, "prakriti-quiz": 4, "prakriti-result": 4,
+    "prakriti-handoff": 5, "plan-intro": 5,
   };
   const i = map[step];
   return (
     <div className="flex gap-1.5">
-      {[0, 1, 2, 3, 4].map((idx) => (
+      {[0, 1, 2, 3, 4, 5].map((idx) => (
         <span key={idx} className={`h-1.5 rounded-full transition-all ${idx <= i ? "w-6 bg-primary" : "w-1.5 bg-foreground/20"}`} />
       ))}
+    </div>
+  );
+}
+
+// ---------------- Cuisine (layered drill-down) ----------------
+function CuisineStep({ path, setPath, onNext }: { path: string[]; setPath: (p: string[]) => void; onNext: () => void }) {
+  return (
+    <div className="animate-float-up">
+      <h1 className="font-display text-2xl font-semibold text-foreground">Your cuisine preference</h1>
+      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+        So your meal plan uses food you actually enjoy. Pick a region, then narrow it down.
+      </p>
+      <div className="mt-5"><CuisinePicker path={path} setPath={setPath} /></div>
+      <button
+        onClick={onNext}
+        disabled={path.length === 0}
+        className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-primary py-3.5 text-sm font-bold text-primary-foreground disabled:opacity-50"
+      >
+        Continue <ArrowRight size={16} />
+      </button>
+      <button onClick={onNext} className="mt-2 w-full text-center text-[12px] font-semibold text-muted-foreground">Skip for now</button>
     </div>
   );
 }
@@ -272,6 +307,7 @@ function ProfileStep(p: any) {
           </div>
         </Field>
         <p className="-mt-2 text-[11px] text-muted-foreground">So we can adjust food &amp; meals to your weather (ritucharya).</p>
+
       </div>
 
       <button

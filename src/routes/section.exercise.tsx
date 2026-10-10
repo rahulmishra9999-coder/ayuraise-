@@ -100,7 +100,7 @@ function WorkoutsPage() {
         </button>
 
         <div className="sticky top-0 z-30 -mx-5 mt-3 flex gap-1.5 overflow-x-auto bg-background/85 px-5 py-2.5 backdrop-blur-xl [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {([["programs", "🗓️ My Programs"], ["library", "🏋️ Practice Library"], ["classics", "🥋 Classics"], ["learn", "🎓 Learn"]] as const).map(([id, label]) => (
+          {([["programs", "🗓️ Ready-made plans"], ["library", "🏋️ Practice Library"], ["classics", "🥋 Create your own bundle"], ["learn", "🎓 Learn"]] as const).map(([id, label]) => (
             <button key={id} onClick={() => setTab(id)}
               className={`rounded-full px-3.5 py-1.5 text-[12.5px] font-semibold transition ${tab === id ? "bg-primary text-primary-foreground shadow-[var(--shadow-glow)]" : "bg-card text-foreground/70 ring-1 ring-border/60"}`}>
               {label}
@@ -753,8 +753,8 @@ function MyProgramTab({ onOpenSession, editSignal = 0 }: { onOpenSession: (s: Se
       </section>
 
       <section className="pt-6">
-        <h2 className="px-1 font-display text-[15px] font-bold text-foreground">More plans</h2>
-        <p className="mt-0.5 px-1 text-[11px] leading-snug text-muted-foreground">Ready-made plans — use one as is, or customize and save it as your current plan.</p>
+        <h2 className="px-1 font-display text-[15px] font-bold text-foreground">Customizable ready-made plans</h2>
+        <p className="mt-0.5 px-1 text-[11px] leading-snug text-muted-foreground">Use one as is, or customize and save it as your current plan.</p>
         <div className="mt-2.5 grid grid-cols-2 gap-2.5">
           {MORE_PLANS.map((pl) => (
             <button key={pl.id} onClick={() => setPlanAction(pl)} className="relative flex items-center gap-3 rounded-2xl bg-card p-3 text-left ring-1 ring-border/60 active:scale-[0.98]">
@@ -1152,7 +1152,7 @@ function ClassicsTab({ onPreviewPlay, onPlayBundle }: {
   return (
     <div className="pb-2">
       <section className="pt-4">
-        <h2 className="px-1 font-display text-[16px] font-bold text-foreground">🥋 Classics</h2>
+        <h2 className="px-1 font-display text-[16px] font-bold text-foreground">🥋 Create your own exercise bundle</h2>
         <p className="mt-0.5 px-1 text-[11.5px] leading-snug text-muted-foreground">
           The timeless staples. Tap any to preview it, then ➕ to build your own bundle and practise it.
         </p>

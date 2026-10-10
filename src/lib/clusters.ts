@@ -201,6 +201,7 @@ export const CONDITIONS_META: Record<string, ConditionMeta> = {
   immunity: { label: "Immunity", cluster: null, collapsible: false, role: "concern", yogaProtocols: ["breath-airway"], mods: { herbs: ["Chyawanprash", "Tulsi", "Amla"] } },
   eyes: { label: "Eye health", cluster: null, collapsible: false, role: "foundation", yogaProtocols: ["calm"], mods: { herbs: ["Triphala (netra care)", "Amla"], safety: ["Sudden vision changes → see a doctor"] } },
   prostate: { label: "Prostate", cluster: null, collapsible: false, role: "foundation", mods: { herbs: ["Gokshura", "Varun (crataeva)"], safety: ["Trouble urinating or blood in urine → see a doctor"] } },
+  kidney: { label: "Kidney", cluster: null, collapsible: false, role: "foundation", mods: { diet: ["Plenty of water; low salt; go easy on protein if advised"], herbs: ["Punarnava", "Gokshura"], safety: ["Known kidney disease → check with your doctor before any detox, fasting or new herbs"] } },
 };
 
 export function conditionMeta(id: string): ConditionMeta | undefined { return CONDITIONS_META[id]; }

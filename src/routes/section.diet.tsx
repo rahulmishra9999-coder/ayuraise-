@@ -1,8 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, Sparkles, GraduationCap, BookOpen, ChevronRight, Salad } from "lucide-react";
+import { useEffect, useState } from "react";
+import { ArrowLeft, Sparkles, GraduationCap, BookOpen, ChevronRight, Salad, Heart } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
 import { AyuBot } from "@/components/AyuBot";
 import { JOURNEYS } from "@/lib/nutrition-journeys";
+import { DIET_PLANS, type DietPlan, loadDietFavs, toggleDietFav, resetDietFavs } from "@/lib/diet-plans";
 import { DiseasePipelineBanner, DiseasePipelineNext } from "@/components/DiseasePipeline";
 
 export const Route = createFileRoute("/section/diet")({
@@ -16,6 +18,11 @@ export const Route = createFileRoute("/section/diet")({
 });
 
 function DietHome() {
+  const [openDiet, setOpenDiet] = useState<DietPlan | null>(null);
+  const [favs, setFavs] = useState<string[]>([]);
+  useEffect(() => { setFavs(loadDietFavs()); }, []);
+  const onFav = (id: string) => setFavs(toggleDietFav(id));
+  const favPlans = DIET_PLANS.filter((d) => favs.includes(d.id));
   return (
     <div className="min-h-svh pb-28" style={{ background: "var(--gradient-hero)" }}>
       <div className="mx-auto max-w-xl px-5 pt-[max(1rem,env(safe-area-inset-top))]">
@@ -96,6 +103,38 @@ function DietHome() {
           </div>
         </section>
 
+        {/* Diets by goal — ready-made templates: view (informational), favourite, make-it-mine */}
+        <section className="mt-8">
+          <div className="flex items-end justify-between">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-primary">By goal</p>
+              <h2 className="font-display text-xl font-semibold">Diets for your goal</h2>
+            </div>
+            {favs.length > 0 && (
+              <button onClick={() => setFavs(resetDietFavs())} className="text-[11px] font-semibold text-muted-foreground">Reset</button>
+            )}
+          </div>
+          <p className="mt-0.5 text-[11px] text-muted-foreground">{DIET_PLANS.length} ready-made diets — tap to view, ♥ to save, then make it your plan.</p>
+
+          {favPlans.length > 0 && (
+            <>
+              <p className="mt-4 text-[11px] font-semibold uppercase tracking-wider text-rose-500">Your favourites</p>
+              <div className="mt-2 grid grid-cols-2 gap-3">
+                {favPlans.map((d) => (
+                  <DietCard key={d.id} d={d} fav onFav={() => onFav(d.id)} onOpen={() => setOpenDiet(d)} />
+                ))}
+              </div>
+              <p className="mt-5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">All diets</p>
+            </>
+          )}
+
+          <div className="mt-3 grid grid-cols-2 gap-3">
+            {DIET_PLANS.map((d) => (
+              <DietCard key={d.id} d={d} fav={favs.includes(d.id)} onFav={() => onFav(d.id)} onOpen={() => setOpenDiet(d)} />
+            ))}
+          </div>
+        </section>
+
         {/* 3. Nutrition Academy */}
         <section className="mt-8">
           <div className="mb-3">
@@ -142,8 +181,74 @@ function DietHome() {
         <DiseasePipelineNext currentSlug="diet" />
       </div>
 
+      {/* Diet detail sheet — informational, with favourite + make-it-mine */}
+      {openDiet && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-[1px]" onClick={() => setOpenDiet(null)}>
+          <div
+            className="w-full max-w-xl rounded-t-[28px] bg-card p-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-border" />
+            <div className="flex items-start gap-3">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-accent/40 text-2xl">{openDiet.emoji}</span>
+              <div className="min-w-0 flex-1">
+                <h3 className="font-display text-lg font-semibold leading-tight">{openDiet.title}</h3>
+                <p className="text-[11px] text-muted-foreground">Ready-made Ayurvedic diet · for reference</p>
+              </div>
+              <button
+                onClick={() => onFav(openDiet.id)}
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-secondary"
+                aria-label="Favourite"
+              >
+                <Heart size={16} className={favs.includes(openDiet.id) ? "fill-rose-400 text-rose-400" : "text-muted-foreground"} />
+              </button>
+            </div>
+            <div className="mt-4 space-y-2 text-[13px] leading-snug text-foreground/90">
+              <p><b className="text-emerald-600">Eat:</b> {openDiet.eat}</p>
+              <p><b className="text-rose-500">Avoid:</b> {openDiet.avoid}</p>
+              <p><b className="text-foreground">Timing:</b> {openDiet.timing}</p>
+              <p><b className="text-primary">Morning:</b> {openDiet.morning}</p>
+            </div>
+            <Link
+              to="/create"
+              search={{ tool: "diet" }}
+              className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-foreground px-5 py-3 text-sm font-semibold text-background transition-transform active:scale-[0.98]"
+            >
+              <Sparkles size={15} /> Customize & add to my plan →
+            </Link>
+            <button onClick={() => setOpenDiet(null)} className="mt-2 w-full py-2 text-[12px] font-semibold text-muted-foreground">Close</button>
+          </div>
+        </div>
+      )}
+
       <AyuBot />
       <BottomNav />
+    </div>
+  );
+}
+
+function DietCard({ d, fav, onFav, onOpen }: { d: DietPlan; fav: boolean; onFav: () => void; onOpen: () => void }) {
+  return (
+    <div className="group relative flex flex-col overflow-hidden rounded-3xl bg-card ring-1 ring-border/60 shadow-[var(--shadow-soft)]">
+      <button
+        onClick={onFav}
+        className="absolute right-2 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-card/85 backdrop-blur-sm ring-1 ring-border/50"
+        aria-label="Favourite"
+      >
+        <Heart size={14} className={fav ? "fill-rose-400 text-rose-400" : "text-muted-foreground"} />
+      </button>
+      <button onClick={onOpen} className="flex flex-1 flex-col text-left transition-transform active:scale-[0.98]">
+        <div className="flex h-20 items-center justify-center bg-accent/30 text-3xl">
+          <span className="drop-shadow-sm">{d.emoji}</span>
+        </div>
+        <div className="flex flex-1 flex-col p-3">
+          <h3 className="font-display text-[14px] font-semibold leading-tight">{d.title}</h3>
+          <p className="mt-1 line-clamp-2 text-[11px] text-muted-foreground">{d.eat}</p>
+          <div className="mt-2 flex items-center gap-1 text-[11px] font-semibold text-primary">
+            View diet <ChevronRight size={12} />
+          </div>
+        </div>
+      </button>
     </div>
   );
 }

@@ -5,18 +5,25 @@ import { BottomNav } from "@/components/BottomNav";
 import { AyuBot } from "@/components/AyuBot";
 import { loadYogaPlans } from "@/lib/yoga-plan";
 import { conditionMeta, resolvePlan } from "@/lib/clusters";
-import { loadPersonalPlan, setToolOverride, PLAN_TOOLS, type ToolOverride } from "@/lib/personalPlan";
+import { loadPersonalPlan, setToolOverride, setPlanTools, PLAN_TOOLS, type ToolOverride } from "@/lib/personalPlan";
+import { buildMealPlan } from "@/lib/meal-plan";
+import { MealPlanView } from "@/components/MealPlanView";
+import type { ActivityLevel, Sex } from "@/lib/weight-loss";
+import type { Dosha } from "@/lib/diet";
 
 export const Route = createFileRoute("/myplan/$id")({ component: MyPlanPage });
 
-/** One part of the plan. `onEdit` adds an Edit button that opens just that part's own question flow. */
-function Tool({ emoji, title, subtitle, onEdit, children }: { emoji: string; title: string; subtitle?: string; onEdit?: () => void; children: React.ReactNode }) {
+/** One part of the plan. `onEdit` opens that part's own flow; `onRemove` takes it out of the plan. */
+function Tool({ emoji, title, subtitle, onEdit, onRemove, children }: { emoji: string; title: string; subtitle?: string; onEdit?: () => void; onRemove?: () => void; children: React.ReactNode }) {
   return (
     <section className="overflow-hidden rounded-2xl bg-card ring-1 ring-border/60">
       <div className="flex items-center gap-2 px-3.5 py-2.5 text-primary-foreground" style={{ background: "var(--gradient-violet)" }}>
         <p className="font-display text-[13.5px] font-bold">{emoji} {title}</p>
         {subtitle && <p className="text-[10px] font-semibold opacity-85">{subtitle}</p>}
-        {onEdit && <button onClick={onEdit} className="ml-auto shrink-0 rounded-full bg-white/20 px-2.5 py-0.5 text-[10px] font-bold">Edit</button>}
+        <span className="ml-auto flex shrink-0 items-center gap-1">
+          {onEdit && <button onClick={onEdit} className="rounded-full bg-white/20 px-2.5 py-0.5 text-[10px] font-bold">Edit</button>}
+          {onRemove && <button onClick={onRemove} aria-label={`Remove ${title}`} className="rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-bold">✕</button>}
+        </span>
       </div>
       <div className="space-y-2 p-3.5 text-[12px] text-foreground/90">{children}</div>
     </section>
@@ -50,6 +57,7 @@ function MyPlanPage() {
   const { id } = Route.useParams();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<Record<string, unknown> | null>(null);
+  const [basics, setBasics] = useState<Record<string, unknown> | null>(null); // ayuraise.profile — age/sex/height/weight/activity/prakriti
   const [goalIds, setGoalIds] = useState<string[] | null | undefined>(undefined); // undefined = loading, null = not found
   const [name, setName] = useState("My personalized plan");
   const [medOpen, setMedOpen] = useState(false);
@@ -59,6 +67,7 @@ function MyPlanPage() {
 
   useEffect(() => {
     try { const raw = localStorage.getItem("ayuraise.lifestyle"); setProfile(raw ? JSON.parse(raw) : null); } catch { /* ignore */ }
+    try { const b = localStorage.getItem("ayuraise.profile"); setBasics(b ? JSON.parse(b) : null); } catch { /* ignore */ }
     if (id === "me") {
       const pp = loadPersonalPlan();
       setGoalIds(pp ? pp.goalIds : null);
@@ -129,6 +138,17 @@ function MyPlanPage() {
   if (Number(profile?.sleep ?? 7) < 6.5) habits.push("Aim for 7+ hours of sleep");
 
   const diet = rp.focus[0];
+  const mealPlan = useMemo(() => buildMealPlan({
+    age: Number(basics?.age) || undefined,
+    sex: (basics?.gender as Sex) || undefined,
+    heightCm: Number(basics?.heightCm ?? profile?.cm) || undefined,
+    weightKg: Number(basics?.weightKg ?? profile?.kg) || undefined,
+    activity: (basics?.activity as ActivityLevel) || undefined,
+    dosha: (basics?.prakriti as { dosha?: Dosha } | null)?.dosha || undefined,
+    cuisine: (basics?.cuisineRegion as string) || (basics?.cuisine as string) || (profile?.cuisineRegion as string) || (profile?.cuisine as string) || undefined,
+    goalIds: g,
+    conditions: conds,
+  }), [basics, goalIds, profile]); // eslint-disable-line react-hooks/exhaustive-deps
   const yogaHas = rp.yoga.am.length + rp.yoga.pm.length + rp.yoga.anytime.length > 0;
 
   // Goals summary — Primary focus / Also covered (health) + Fitness goal, from the saved selections
@@ -140,6 +160,12 @@ function MyPlanPage() {
   const fitnessSel = (profile?.chosenGoals as string[]) ?? [];
   // Edit a part → open that tool's own question flow in the Create wizard, plan goals carried (auto-selected)
   const editTool = (tool: string) => navigate({ to: "/create", search: { tool, goals: g.join(",") } });
+  const removeTool = (tool: string) => {
+    const label = PLAN_TOOLS.find((t) => t.id === tool)?.label ?? tool;
+    if (typeof window !== "undefined" && !window.confirm(`Remove ${label} from your plan?`)) return;
+    const next = enabled.filter((x) => x !== tool); setEnabled(next); setPlanTools(next);
+  };
+  const addTool = (tool: string) => { const next = [...enabled, tool]; setEnabled(next); setPlanTools(next); if (tool === "yoga" || tool === "exercise" || tool === "diet") editTool(tool); };
 
   if (goalIds === undefined) return <div className="flex min-h-svh items-center justify-center text-[13px] text-muted-foreground">Loading…</div>;
   if (goalIds === null) {
@@ -165,14 +191,34 @@ function MyPlanPage() {
       </div>
 
       <div className="mx-auto max-w-xl space-y-3.5 px-4 pt-4">
-        {/* Goals summary */}
-        <section className="rounded-2xl bg-card p-3.5 ring-1 ring-border/60">
-          <p className="font-display text-[14px] font-bold text-foreground">Goals</p>
-          {primaryFocus.length > 0 && (<><p className="mt-2 px-0.5 text-[10px] font-bold uppercase tracking-wide text-primary">Primary focus</p><div className="mt-1"><Chips items={primaryFocus.map(labelOf)} /></div></>)}
-          {alsoCovered.length > 0 && (<><p className="mt-2.5 px-0.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Also covered</p><div className="mt-1"><Chips items={alsoCovered.map(labelOf)} /></div></>)}
-          {fitnessSel.length > 0 && (<><p className="mt-2.5 px-0.5 text-[10px] font-bold uppercase tracking-wide text-primary">Fitness goal</p><div className="mt-1"><Chips items={fitnessSel.map(labelOf)} /></div></>)}
-          {primaryFocus.length === 0 && alsoCovered.length === 0 && fitnessSel.length === 0 && <div className="mt-1.5"><Chips items={g.map(labelOf)} /></div>}
-        </section>
+        {/* Goals summary — your selections, with auto-covered extras below (if any) */}
+        {id === "me" && (() => {
+          const goalItems = Array.from(new Set([...healthSel, ...fitnessSel]));
+          const covered = rp.layers.map((L) => L.label); // auto stress/sleep support, not explicitly chosen
+          return (
+            <section className="overflow-hidden rounded-2xl bg-card ring-1 ring-border/60">
+              <div className="flex items-center justify-between gap-2 px-3.5 py-2.5" style={{ background: "var(--gradient-leaf)" }}>
+                <p className="font-display text-[13.5px] font-bold text-primary-foreground">🎯 Your goals</p>
+                <Link to="/lifestyle" search={{ mode: "unified" }} className="shrink-0 rounded-full bg-white/20 px-2.5 py-0.5 text-[10px] font-bold text-primary-foreground active:opacity-70">Change</Link>
+              </div>
+              <div className="p-3.5">
+                <div className="flex flex-wrap gap-1.5">
+                  {(goalItems.length ? goalItems : g).map((x, i) => (
+                    <span key={i} className="rounded-full bg-primary/10 px-3 py-1 text-[12px] font-bold text-primary ring-1 ring-primary/20">{labelOf(x)}</span>
+                  ))}
+                </div>
+                {covered.length > 0 && (
+                  <>
+                    <p className="mt-3 px-0.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Also covered</p>
+                    <div className="mt-1 flex flex-wrap gap-1.5">
+                      {covered.map((c, i) => <span key={i} className="rounded-full bg-secondary px-2.5 py-1 text-[11px] font-semibold text-foreground/75">{c}</span>)}
+                    </div>
+                  </>
+                )}
+              </div>
+            </section>
+          );
+        })()}
 
         {/* Conflict / safety banners */}
         {rp.conflicts.map((cf, i) => (
@@ -183,7 +229,7 @@ function MyPlanPage() {
 
         {/* 1 · Yoga */}
         {yogaHas && enabled.includes("yoga") && (
-          <Tool emoji="🧘" title="Yoga & breathwork" onEdit={id === "me" ? () => editTool("yoga") : undefined}>
+          <Tool emoji="🧘" title="Yoga & breathwork" onEdit={id === "me" ? () => editTool("yoga") : undefined} onRemove={id === "me" ? () => removeTool("yoga") : undefined}>
             {rp.yoga.am.length > 0 && <p><b className="text-foreground">Morning:</b> {rp.yoga.am.join(" · ")}</p>}
             {rp.yoga.pm.length > 0 && <p><b className="text-foreground">Evening:</b> {rp.yoga.pm.join(" · ")}</p>}
             {rp.yoga.anytime.length > 0 && <p><b className="text-foreground">Anytime:</b> {rp.yoga.anytime.join(" · ")}</p>}
@@ -194,16 +240,21 @@ function MyPlanPage() {
 
         {/* 2 · Diet */}
         {diet && enabled.includes("diet") && (
-          <Tool emoji="🥗" title="Diet" onEdit={id === "me" ? () => editTool("diet") : undefined}>
-            <p className="leading-relaxed text-muted-foreground">{diet.diet}</p>
-            {dos.length > 0 && <ul className="list-disc space-y-1 pl-4">{dos.slice(0, 6).map((d, i) => <li key={i}>{d}</li>)}</ul>}
-            <Link to="/section/diet" className="inline-block rounded-full bg-secondary px-3 py-1 text-[11px] font-bold text-foreground">See meal ideas →</Link>
+          <Tool emoji="🥗" title="Diet" subtitle="your meal plan" onEdit={id === "me" ? () => editTool("diet") : undefined} onRemove={id === "me" ? () => removeTool("diet") : undefined}>
+            <MealPlanView plan={mealPlan} />
+            {dos.length > 0 && (
+              <div className="border-t border-border/50 pt-2">
+                <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">For your focus</p>
+                <ul className="list-disc space-y-1 pl-4">{dos.slice(0, 6).map((d, i) => <li key={i}>{d}</li>)}</ul>
+              </div>
+            )}
+            <Link to="/section/diet" className="inline-block rounded-full bg-secondary px-3 py-1 text-[11px] font-bold text-foreground">Browse more diets →</Link>
           </Tool>
         )}
 
         {/* 3 · Exercise */}
         {enabled.includes("exercise") && (
-          <Tool emoji="🏋️" title="Exercise" onEdit={id === "me" ? () => editTool("exercise") : undefined}>
+          <Tool emoji="🏋️" title="Exercise" onEdit={id === "me" ? () => editTool("exercise") : undefined} onRemove={id === "me" ? () => removeTool("exercise") : undefined}>
             <ul className="list-disc space-y-1 pl-4">{exercise.map((e, i) => <li key={i}>{e}</li>)}</ul>
             <Link to="/section/exercise" className="inline-block rounded-full bg-secondary px-3 py-1 text-[11px] font-bold text-foreground">Browse workouts →</Link>
             {id === "me" && <Adjust tool="exercise" ov={ovr.exercise ?? {}} onChange={changeOv} />}
@@ -212,7 +263,7 @@ function MyPlanPage() {
 
         {/* 4 · Detox (engine picks 2–3, across days) */}
         {rp.detox.protocols.length > 0 && enabled.includes("detox") && (
-          <Tool emoji="✨" title="Detox" subtitle={rp.detox.protocols.length > 1 ? "across your week" : undefined} onEdit={() => navigate({ to: "/section/detox" })}>
+          <Tool emoji="✨" title="Detox" subtitle={rp.detox.protocols.length > 1 ? "across your week" : undefined} onEdit={() => navigate({ to: "/section/detox" })} onRemove={id === "me" ? () => removeTool("detox") : undefined}>
             {rp.detox.protocols.map((d) => (
               <div key={d.id}>
                 <p className="font-semibold text-foreground">{d.label}</p>
@@ -225,7 +276,7 @@ function MyPlanPage() {
 
         {/* 5 · Intermittent fasting */}
         {enabled.includes("fasting") && (
-          <Tool emoji="⏱️" title="Intermittent fasting">
+          <Tool emoji="⏱️" title="Intermittent fasting" onRemove={id === "me" ? () => removeTool("fasting") : undefined}>
             {ifBlocked
               ? <p className="text-muted-foreground">Fasting isn't advised for you right now{pregnant ? " (pregnancy)" : type1 ? " (type 1 — needs your doctor)" : ""}. We'll keep meals regular instead.</p>
               : <p>{metabolicFocus ? "A 14:10 window — e.g. finish dinner by 8 pm, first meal after 10 am." : "A gentle 12-hour overnight gap — finish dinner early, break it after ~12 hours."}</p>}
@@ -243,7 +294,7 @@ function MyPlanPage() {
 
         {/* 7 · Meditation (few + expand) */}
         {enabled.includes("meditation") && (
-          <Tool emoji="🕉️" title="Meditation" onEdit={() => navigate({ to: "/section/meditation" })}>
+          <Tool emoji="🕉️" title="Meditation" onEdit={() => navigate({ to: "/section/meditation" })} onRemove={id === "me" ? () => removeTool("meditation") : undefined}>
             <ul className="list-disc space-y-1 pl-4">{(medOpen ? meditation : meditation.slice(0, 2)).map((m, i) => <li key={i}>{m}</li>)}</ul>
             {meditation.length > 2 && (
               <button onClick={() => setMedOpen((o) => !o)} className="inline-flex items-center gap-1 text-[11px] font-bold text-primary">
@@ -256,7 +307,7 @@ function MyPlanPage() {
 
         {/* 8 · Herbs */}
         {herbs.length > 0 && enabled.includes("herbs") && (
-          <Tool emoji="🌱" title="Herbs & remedies">
+          <Tool emoji="🌱" title="Herbs & remedies" onRemove={id === "me" ? () => removeTool("herbs") : undefined}>
             <Chips items={herbs} />
           </Tool>
         )}
@@ -276,12 +327,23 @@ function MyPlanPage() {
           </Tool>
         )}
 
+        {/* Add parts — always available on your plan */}
+        {id === "me" && (
+          <section className="rounded-2xl bg-card/70 p-3 ring-1 ring-border/60">
+            <p className="mb-1.5 px-0.5 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Add to your plan</p>
+            {PLAN_TOOLS.some((t) => !enabled.includes(t.id))
+              ? <div className="flex flex-wrap gap-1.5">
+                  {PLAN_TOOLS.filter((t) => !enabled.includes(t.id)).map((t) => (
+                    <button key={t.id} onClick={() => addTool(t.id)} className="flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1.5 text-[11.5px] font-semibold text-foreground/80 active:opacity-70">{t.emoji} {t.label} <span className="font-bold text-primary">＋</span></button>
+                  ))}
+                </div>
+              : <p className="px-0.5 text-[11px] leading-snug text-muted-foreground">All parts are in your plan — tap ✕ on any above to remove it.</p>}
+          </section>
+        )}
+
         <p className="px-1 text-[10.5px] leading-snug text-muted-foreground">This plan supports your wellness alongside medical care — it doesn't replace your doctor. Seek urgent help for any severe or sudden symptoms.</p>
 
-        <div className="flex gap-2">
-          <Link to="/edit-plan" className="flex-1 rounded-2xl bg-secondary py-2.5 text-center text-[12.5px] font-bold text-foreground ring-1 ring-border/60">Adjust / edit</Link>
-          <Link to="/home" className="flex-1 rounded-2xl bg-primary py-2.5 text-center text-[12.5px] font-bold text-primary-foreground">Done</Link>
-        </div>
+        <Link to="/home" className="block rounded-2xl bg-primary py-2.5 text-center text-[12.5px] font-bold text-primary-foreground">Done</Link>
       </div>
       <AyuBot />
       <BottomNav />

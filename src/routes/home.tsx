@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { SECTIONS } from "@/lib/sections";
-import { HOME_GOAL_TILES, ALL_GOALS, PRACTICE_SLUGS, PRACTICE_LABELS } from "@/lib/goals";
+import { BROWSE_GROUPS, ALL_GOALS, PRACTICE_SLUGS, PRACTICE_LABELS } from "@/lib/goals";
 import { loadYogaPlans, type YogaPlan } from "@/lib/yoga-plan";
 import { clearPersonalPlan } from "@/lib/personalPlan";
 import { BottomNav } from "@/components/BottomNav";
@@ -78,18 +78,13 @@ function HomePage() {
           <ProfileSwitcher />
         </header>
 
-        {/* Create / adjust CTA — create goes to the wizard; adjust goes to the edit menu */}
-        {hasPersonalPlan
-          ? <Link to="/edit-plan" className="mt-4 flex items-center gap-2.5 rounded-2xl px-3.5 py-2.5 text-primary-foreground shadow-[var(--shadow-glow)] active:scale-[0.99]" style={{ background: "var(--gradient-violet)" }}>
-              <Sparkles size={16} className="shrink-0" />
-              <span className="min-w-0 flex-1 text-[13px] font-bold leading-tight">Adjust / edit my personalized plan</span>
-              <ChevronRight size={15} className="shrink-0 opacity-80" />
-            </Link>
-          : <Link to="/lifestyle" search={{ mode: "unified" }} className="mt-4 flex items-center gap-2.5 rounded-2xl px-3.5 py-2.5 text-primary-foreground shadow-[var(--shadow-glow)] active:scale-[0.99]" style={{ background: "var(--gradient-violet)" }}>
-              <Sparkles size={16} className="shrink-0" />
-              <span className="min-w-0 flex-1 text-[13px] font-bold leading-tight">Create my personalized plan</span>
-              <ChevronRight size={15} className="shrink-0 opacity-80" />
-            </Link>}
+        {/* Create / edit plan — always opens the wizard (auto-selects your saved goals when editing).
+            The plan itself opens from the My Plans card below. */}
+        <Link to="/lifestyle" search={{ mode: "unified" }} className="mt-4 flex items-center gap-2.5 rounded-2xl px-3.5 py-2.5 text-primary-foreground shadow-[var(--shadow-glow)] active:scale-[0.99]" style={{ background: "var(--gradient-violet)" }}>
+          <Sparkles size={16} className="shrink-0" />
+          <span className="min-w-0 flex-1 text-[13px] font-bold leading-tight">{hasPersonalPlan ? "Edit / adjust my plan" : "Create my personalized plan"}</span>
+          <ChevronRight size={15} className="shrink-0 opacity-80" />
+        </Link>
 
         {/* Create my profile — full lifestyle flow (basics + picker); moves into onboarding later */}
         <Link to="/lifestyle" className="mt-2 flex items-center gap-2.5 rounded-2xl bg-card px-3.5 py-2.5 ring-1 ring-border/60 active:scale-[0.99]">
@@ -116,7 +111,7 @@ function HomePage() {
                 </div>
               </Link>
               <div className="flex shrink-0 items-center gap-1">
-                <Link to="/edit-plan" className="rounded-full bg-secondary px-2.5 py-1 text-[10.5px] font-bold text-foreground active:opacity-70">Edit</Link>
+                <Link to="/lifestyle" search={{ mode: "unified" }} className="rounded-full bg-secondary px-2.5 py-1 text-[10.5px] font-bold text-foreground active:opacity-70">Edit</Link>
                 <button onClick={() => { if (typeof window !== "undefined" && window.confirm("Delete your personalized plan?")) { clearPersonalPlan(); setHasPersonalPlan(false); } }} aria-label="Delete plan" className="rounded-full bg-secondary px-2.5 py-1 text-[11px] active:opacity-70">🗑</button>
               </div>
             </div>
@@ -141,54 +136,21 @@ function HomePage() {
           </div>
         </section>
 
-        {/* Browse by goal — grid of goals + umbrellas that expand */}
+        {/* Browse by goals — one flat grid, coloured by category */}
         <section className="mt-5">
-          <h2 className="px-1 font-display text-[13.5px] font-bold text-foreground">Browse by goal</h2>
+          <h2 className="px-1 font-display text-[13.5px] font-bold text-foreground">Browse by goals</h2>
           <div className="mt-2 grid grid-cols-5 gap-1.5">
-            {HOME_GOAL_TILES.map((t) => {
-              if (t.kind === "goal") {
-                const g = ALL_GOALS[t.id];
-                if (!g) return null;
-                return (
-                  <Link key={t.id} to="/goal/$id" params={{ id: t.id }} className="flex flex-col items-center gap-1 rounded-xl bg-card p-1.5 text-center ring-1 ring-border/60 active:scale-[0.97]">
-                    <span className="flex h-8 w-8 items-center justify-center rounded-lg text-[15px] shadow-sm" style={{ background: g.gradient }}>{g.emoji}</span>
-                    <span className="text-[9px] font-semibold leading-tight text-foreground/85">{g.label}</span>
-                  </Link>
-                );
-              }
-              const open = openUmbrella === t.id;
+            {Array.from(new Set(BROWSE_GROUPS.flatMap((grp) => grp.goalIds))).filter((id) => id !== "immunity").map((id) => {
+              const g = ALL_GOALS[id];
+              if (!g) return null;
               return (
-                <button key={t.id} onClick={() => setOpenUmbrella(open ? null : t.id)} className={`relative flex flex-col items-center gap-1 rounded-xl p-1.5 text-center ring-1 active:scale-[0.97] ${open ? "bg-accent/60 ring-primary/40" : "bg-card ring-border/60"}`}>
-                  <span className="absolute right-1 top-1 rounded-full bg-foreground/10 px-1 text-[7.5px] font-bold text-foreground/60">{t.goalIds.length}</span>
-                  <span className="flex h-8 w-8 items-center justify-center rounded-lg text-[15px] text-primary-foreground shadow-sm" style={{ background: t.gradient }}>{t.emoji}</span>
-                  <span className="text-[9px] font-semibold leading-tight text-foreground/85">{t.label}</span>
-                </button>
+                <Link key={id} to="/goal/$id" params={{ id }} className="flex flex-col items-center gap-1 rounded-xl bg-card p-1.5 text-center ring-1 ring-border/60 active:scale-[0.97]">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg text-[15px] shadow-sm" style={{ background: g.gradient }}>{g.emoji}</span>
+                  <span className="text-[9px] font-semibold leading-tight text-foreground/85">{g.label}</span>
+                </Link>
               );
             })}
           </div>
-
-          {/* Expanded umbrella — its goals */}
-          {(() => {
-            const u = HOME_GOAL_TILES.find((t) => t.kind === "umbrella" && t.id === openUmbrella);
-            if (!u || u.kind !== "umbrella") return null;
-            return (
-              <div className="mt-2 rounded-2xl bg-card/70 p-2.5 ring-1 ring-border/60">
-                <p className="mb-1.5 px-1 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">{u.emoji} {u.label}</p>
-                <div className="grid grid-cols-5 gap-1.5">
-                  {u.goalIds.map((id) => {
-                    const g = ALL_GOALS[id];
-                    if (!g) return null;
-                    return (
-                      <Link key={id} to="/goal/$id" params={{ id }} className="flex flex-col items-center gap-1 rounded-xl bg-background/60 p-1.5 text-center ring-1 ring-border/50 active:scale-[0.97]">
-                        <span className="flex h-8 w-8 items-center justify-center rounded-lg text-[15px] shadow-sm" style={{ background: g.gradient }}>{g.emoji}</span>
-                        <span className="text-[9px] font-semibold leading-tight text-foreground/85">{g.label}</span>
-                      </Link>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })()}
         </section>
       </div>
       <AyuBot />

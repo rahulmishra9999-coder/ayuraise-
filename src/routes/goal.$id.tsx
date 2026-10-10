@@ -95,7 +95,7 @@ function GoalHub() {
             <p className="mt-2 font-display text-[15px] font-bold text-foreground">You already have a plan</p>
             <p className="mt-1 text-[12px] leading-snug text-muted-foreground">Want to customize it by adding <b className="text-foreground">{goal.label}</b> as well?</p>
             <div className="mt-4 flex gap-2">
-              <button onClick={() => setPopup(false)} className="flex-1 rounded-xl bg-secondary py-2.5 text-[12.5px] font-bold text-foreground">Not now</button>
+              <button onClick={() => setPopup(false)} className="flex-1 rounded-xl bg-secondary py-2.5 text-[12.5px] font-bold text-foreground">No</button>
               <button onClick={openFull} className="flex-1 rounded-xl bg-primary py-2.5 text-[12.5px] font-bold text-primary-foreground">Add it</button>
             </div>
           </div>

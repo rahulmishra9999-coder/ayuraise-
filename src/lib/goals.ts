@@ -33,7 +33,7 @@ export const GOAL_GROUPS: GoalGroup[] = [
     goals: [
       { id: "weight-loss", label: "Weight Loss", emoji: "🔥" },
       { id: "better-sleep", label: "Better Sleep", emoji: "🌙" },
-      { id: "stress", label: "Stress Relief", emoji: "🧘" },
+      { id: "stress", label: "De-stress", emoji: "🧘" },
       { id: "metabolic", label: "Metabolic Boost", emoji: "🍽️" },
       { id: "sr-fitness", label: "Sr. Fitness", emoji: "🧓" },
       { id: "general-wellness", label: "General Wellness", emoji: "🌿" },
@@ -71,7 +71,7 @@ export const GOAL_GROUPS: GoalGroup[] = [
       { id: "lungs", label: "Lungs", emoji: "🫁" },
       { id: "brain", label: "Brain", emoji: "🧠" },
       { id: "pancreas", label: "Pancreas", emoji: "🩸" },
-      { id: "prostate", label: "Prostate", emoji: "🚹" },
+      { id: "prostate", label: "Enlarged prostate", emoji: "🚹" },
       { id: "skin", label: "Skin / Glow", emoji: "✨" },
       { id: "hair", label: "Hair", emoji: "💇" },
       { id: "bones-joints", label: "Bones & Joints", emoji: "🦴" },
@@ -125,6 +125,15 @@ export const ALL_GOALS: Record<string, GoalMeta> = (() => {
   for (const g of GOAL_GROUPS) for (const it of g.goals) m[it.id] = { label: it.label, emoji: it.emoji, gradient: g.gradient, groupId: g.id };
   return m;
 })();
+
+/** Home "Browse by goals" — open grouped lists under headers (no tap-to-expand). */
+export const BROWSE_GROUPS: { header: string; goalIds: string[] }[] = [
+  { header: "Fitness goals", goalIds: ["weight-loss", "general-wellness", "strength", "muscle-building", "flexibility", "mobility"] },
+  { header: "Manage a condition", goalIds: ["diabetes", "hypertension", "thyroid", "cholesterol", "fatty-liver", "asthma", "migraine", "gout", "autoimmune", "hernia", "prostate", "knee-pain", "hip-pain", "back-pain", "neck-pain", "sciatica", "arthritis", "osteoporosis", "acidity-gerd", "ibs", "constipation", "indigestion"] },
+  { header: "Improve & strengthen", goalIds: ["heart", "liver", "gut", "lungs", "kidney", "brain", "pancreas", "bones-joints", "eyes"] },
+  { header: "Women's health", goalIds: ["pregnancy", "post-natal", "premenopause", "postmenopause", "pcos-pcod"] },
+  { header: "General", goalIds: ["hair-fall", "skin", "immunity", "stress", "better-sleep"] },
+];
 
 /** Home "Browse by goal" is a grid of tiles: some are single goals (open), others are
  *  umbrellas that expand to reveal related goals. Every goal id lives in exactly one tile. */

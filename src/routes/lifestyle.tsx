@@ -4,6 +4,8 @@ import { ArrowLeft } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
 import { conditionSeverity, conditionMeta, resolveConflicts } from "@/lib/clusters";
 import { savePersonalPlan } from "@/lib/personalPlan";
+import { CuisinePicker } from "@/components/CuisinePicker";
+import { cuisineRegion } from "@/lib/cuisines";
 
 /** Ease-out count-up for the calorie number — a small premium touch, no deps. */
 function CountUp({ to, className }: { to: number; className?: string }) {
@@ -219,6 +221,11 @@ const CONDITIONS: { g: string; items: { id: string; label: string; emoji: string
       { key: "type", q: "Which type?", opts: ["Inguinal", "Hiatal", "Umbilical"] },
       { key: "surgery", q: "Had surgery?", opts: ["No, hasn't needed", "Advised, not done yet", "Done, still recovering", "Done, fully recovered", "Done, but it came back"] },
     ] },
+    { id: "prostate", label: "Enlarged prostate", emoji: "🚹", subs: [
+      { key: "symptoms", q: "Any urinary symptoms?", multi: true, opts: ["Weak / slow flow", "Frequent urge", "Night-time urges", "Trouble starting"] },
+      { key: "bph", q: "Diagnosed enlarged prostate (BPH)?", opts: ["Yes", "No", "Not sure"] },
+      { key: "since", q: "How long have you had this?", opts: ["<1 yr", "1–5 yrs", "5+ yrs"] },
+    ] },
   ] },
   { g: "Joint & Spine", items: [
     { id: "knee-pain", label: "Knee Pain", emoji: "🦵", subs: JOINT_SUBS }, { id: "hip-pain", label: "Hip Pain", emoji: "🦿", subs: JOINT_SUBS },
@@ -289,8 +296,9 @@ const FITNESS_GOALS = [
 const PREVENTION_ORGANS: { id: string; label: string; emoji: string; hint?: string }[] = [
   { id: "heart", label: "Heart", emoji: "❤️" }, { id: "liver", label: "Liver", emoji: "🟠" },
   { id: "gut", label: "Gut", emoji: "🌀" }, { id: "lungs", label: "Lungs", emoji: "🫁" },
-  { id: "brain", label: "Brain & nervous system", emoji: "🧠" }, { id: "pancreas", label: "Pancreas", emoji: "🩸", hint: "Blood sugar & insulin resistance — helps prevent diabetes" },
-  { id: "bones-joints", label: "Bones & Joints", emoji: "🦴" }, { id: "prostate", label: "Prostate", emoji: "🚹" },
+  { id: "kidney", label: "Kidney", emoji: "🫘" }, { id: "brain", label: "Brain & nervous system", emoji: "🧠" },
+  { id: "pancreas", label: "Pancreas", emoji: "🩸", hint: "Blood sugar & insulin resistance — helps prevent diabetes" },
+  { id: "bones-joints", label: "Bones & Joints", emoji: "🦴" }, { id: "eyes", label: "Eyes", emoji: "👁️" },
 ];
 // A selected condition already strengthens its organ — so we show that organ as auto-covered.
 const CONDITION_ORGAN: Record<string, string> = {
@@ -301,10 +309,9 @@ const CONDITION_ORGAN: Record<string, string> = {
 };
 const EVERYDAY_ITEMS = [
   { id: "hair-fall", label: "Hair Fall", emoji: "💇" }, { id: "skin", label: "Skin / Glow", emoji: "✨" },
-  { id: "eyes", label: "Eyesight", emoji: "👁️" },
 ];
 const REST_CALM = [
-  { id: "better-sleep", label: "Better Sleep", emoji: "🌙" }, { id: "stress", label: "Stress Relief", emoji: "🧘" },
+  { id: "better-sleep", label: "Better Sleep", emoji: "🌙" }, { id: "stress", label: "De-stress", emoji: "🧘" },
 ];
 const WOMEN_ITEMS = [
   { id: "pregnancy", label: "Pregnancy", emoji: "🤰" }, { id: "post-natal", label: "Post-natal", emoji: "👶" },
@@ -313,7 +320,7 @@ const WOMEN_ITEMS = [
 ];
 
 const HEAD: Record<string, string> = {
-  about: "A few basics", movement: "How active are you?",
+  about: "A few basics", movement: "How active are you?", cuisine: "Cuisine you prefer",
   eating: "Your food & meals", habits: "Your eating habits", "eat-text": "Describe your meals",
   sleep: "Let's start with your sleep", digestion: "Your digestion", mind: "Mental wellbeing", gate: "How would you like to begin?", areas: "Pick your focus areas", conditions: "Any health conditions?", disease: "Manage a condition?", prevention: "Improve & strengthen", women: "Women's health & life stages", everyday: "Hair & skin care", fitness: "Fitness goal", seniors: "Seeing & moving", cycle: "Your cycle", goals: "Your focus for building plan",
 };
@@ -437,7 +444,7 @@ function LifestylePage() {
     : planFlow
     ? ["conditions", ...(female ? ["cycle"] : []), "goals"]          // disease-first short flow
     : [ // profile: basics → gate → the 3 core screens → focus
-        "about", "movement", "sleep", "eating", "habits", "eat-text", "digestion", "mind", "gate",
+        "about", "movement", "sleep", "eating", "habits", "eat-text", "cuisine", "digestion", "mind", "gate",
         "disease", "prevention", ...(showWomen ? ["women"] : []), "fitness",
         ...(older ? ["seniors"] : []),
         "goals",
@@ -477,7 +484,9 @@ function LifestylePage() {
     ...focusPool.map((id) => ({ id, label: COND_LABEL[id] ?? conditionMeta(id)?.label ?? id, pri: conditionSeverity(id, cdet[id] ?? {}) })),
     ...indirect.filter((x) => !focusPool.includes(x.id)),
   ].sort((x, y) => y.pri - x.pri);
-  const autoActive = candidates.slice(0, 2).map((cc) => cc.id);
+  // auto-detected signals (stress / sleep from the Mind & Sleep answers) never auto-fill Primary —
+  // they ride along as "Also covered"; Primary stays what the user actually selected.
+  const autoActive = candidates.filter((cc) => !indirect.some((x) => x.id === cc.id)).slice(0, 2).map((cc) => cc.id);
   const ovAF = (a.activeFocus as string[]) ?? [];
   const activeFocus = ovAF.length ? ovAF.filter((id) => candidates.some((cc) => cc.id === id)) : autoActive;
   const togActive = (id: string) => setA((p) => { const base = (p.activeFocus as string[])?.length ? (p.activeFocus as string[]) : autoActive; const cur = base.includes(id) ? base.filter((x) => x !== id) : base.length >= 2 ? [...base.slice(1), id] : [...base, id]; return { ...p, activeFocus: cur }; });
@@ -722,6 +731,17 @@ function LifestylePage() {
           </div>
         )}
 
+        {/* CUISINE — its own screen, layered picker */}
+        {key === "cuisine" && (
+          <div>
+            <p className="mb-3 px-1 text-[12px] text-muted-foreground">Pick a region, then narrow it down — your meal plan will use food you enjoy.</p>
+            <CuisinePicker
+              path={(a.cuisinePath as string[]) ?? []}
+              setPath={(p) => { set("cuisinePath", p); set("cuisine", p[p.length - 1] ?? ""); set("cuisineRegion", cuisineRegion(p)); }}
+            />
+          </div>
+        )}
+
         {/* DIGESTION */}
         {key === "digestion" && (
           <Field label="How are your bowel movements?">
@@ -763,19 +783,20 @@ function LifestylePage() {
         {/* GATE — personalized plan vs explore ready-made (same question flow continues for personalized) */}
         {key === "gate" && (
           <div className="space-y-3">
-            {/* tools listed once as plain text (not tappable) — both paths revolve around these */}
-            <p className="px-1 text-[11.5px] leading-relaxed text-muted-foreground"><b className="text-foreground/80">What's inside:</b> 🧘 Yoga · 🏋️ Exercise · 🥗 Diet · 🕉️ Meditation · ✨ Detox · ⏱️ Fasting · 🌱 Herbs</p>
+            <p className="px-1 text-[11.5px] leading-relaxed text-muted-foreground"><b className="text-foreground/80">Sections inside:</b> 🧘 Yoga · 🏋️ Exercise · 🥗 Diet · 🕉️ Meditation · ✨ Detox · ⏱️ Fasting · 🌱 Herbs</p>
             <button onClick={() => { set("planMode", "personalized"); next(); }} className="lf-btn block w-full rounded-2xl bg-card p-4 text-left shadow-sm ring-1 ring-primary/40 active:scale-[0.99]">
-              <p className="flex items-center gap-2 text-[14px] font-extrabold text-foreground">✨ Build my personalized plan</p>
-              <p className="mt-1.5 text-[12px] font-semibold text-foreground">Tailored to what you want</p>
-              <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">Lose weight, build muscle, de-stress, or manage conditions like diabetes, BP &amp; gut health etc.</p>
-              <p className="mt-2 text-[11px] font-bold text-primary">Let's pick your goals →</p>
+              <p className="flex items-center gap-2 text-[14px] font-extrabold text-foreground">✨ Pick your goals &amp; create personalized plan</p>
+              <ul className="mt-2 space-y-1 text-[11px] leading-snug text-muted-foreground">
+                <li><b className="text-foreground/80">Fitness goals</b> like weight loss, muscle building</li>
+                <li><b className="text-foreground/80">Manage health conditions</b> like diabetes, gut health, back &amp; spine etc.</li>
+                <li><b className="text-foreground/80">General goals</b> like hair fall, stress relief, better sleep</li>
+              </ul>
+              <p className="mt-2 text-[11px] font-bold text-primary">Continue →</p>
             </button>
             <button onClick={() => { set("planMode", "explore"); persist(); navigate({ to: "/home" }); }} className="lf-btn block w-full rounded-2xl bg-card p-4 text-left shadow-sm ring-1 ring-primary/40 active:scale-[0.99]">
-              <p className="flex items-center gap-2 text-[14px] font-extrabold text-foreground">🧭 Explore ready-made plans</p>
-              <p className="mt-1.5 text-[12px] font-semibold text-foreground">Browse by section</p>
-              <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">Explore ready-made plans in each section. You can create your personalized plan later.</p>
-              <p className="mt-2 text-[11px] font-bold text-primary">Show me the sections →</p>
+              <p className="flex items-center gap-2 text-[14px] font-extrabold text-foreground">🧭 Explore sections first &amp; create plan later</p>
+              <p className="mt-1.5 text-[11px] leading-snug text-muted-foreground">Get access to ready-made plans created around each goal.</p>
+              <p className="mt-2 text-[11px] font-bold text-primary">Take me to the sections →</p>
             </button>
           </div>
         )}
@@ -800,7 +821,7 @@ function LifestylePage() {
             ? CONDITIONS.find((g) => g.g === a.openGroup) : undefined;
           return (
             <div className="space-y-3">
-              <p className="px-1 text-[12px] text-muted-foreground">Select if it applies to you — or skip.</p>
+              <p className="px-1 text-[12px] text-muted-foreground">{onlyOne ? "Tell us about any of the below that apply — we collect this only as a precaution, to keep your plan safe." : "Select if it applies to you — or skip."}</p>
               {condGroupBody(hc, true)}
               <div className="grid grid-cols-2 gap-1.5">
                 {["Joint & Spine", "Gut & Digestion"].map((gname) => {
@@ -827,10 +848,9 @@ function LifestylePage() {
           <div className="space-y-4">
             {/* Organs */}
             <div className="space-y-2">
-              <p className="font-display text-[13px] font-bold text-foreground">Organs</p>
               {autoOrgans.length > 0
-                ? <p className="rounded-2xl bg-primary/10 px-3 py-2.5 text-[11px] leading-snug text-foreground/85 ring-1 ring-primary/20">Based on the conditions you picked, your <b>{autoOrgans.map((id) => PREVENTION_ORGANS.find((o) => o.id === id)?.label ?? id).join(", ")}</b> will strengthen automatically. Add more if you like — but keep to <b>1–2 focus areas</b>; picking too many dilutes your plan.</p>
-                : <p className="px-1 text-[11.5px] leading-snug text-muted-foreground">Strengthen what matters — keep it to <b className="text-foreground">1–2 focus areas</b>; picking too many will dilute your plan. Skip if none.</p>}
+                ? <p className="rounded-2xl bg-primary/10 px-3 py-2.5 text-[11px] leading-snug text-foreground/85 ring-1 ring-primary/20">Based on the conditions you picked, your <b>{autoOrgans.map((id) => PREVENTION_ORGANS.find((o) => o.id === id)?.label ?? id).join(", ")}</b> will strengthen automatically. Add more if you like, but picking too many will dilute your plan.</p>
+                : <p className="px-1 text-[11.5px] leading-snug text-muted-foreground">Pick what matters — but picking too many will dilute your plan. Skip if none.</p>}
               <div className="grid grid-cols-2 gap-1.5">
                 {PREVENTION_ORGANS.map((o) => {
                   const auto = autoOrgans.includes(o.id);
@@ -854,9 +874,8 @@ function LifestylePage() {
                 <p key={o.id} className="px-1 text-[10.5px] leading-snug text-muted-foreground">{o.emoji} <b className="text-foreground/80">{o.label}</b> — {o.hint}</p>
               ))}
             </div>
-            {/* Hair, skin & eyes */}
+            {/* Hair & skin (own colour, no header) */}
             <div className="space-y-2">
-              <p className="font-display text-[13px] font-bold text-foreground">Hair, skin &amp; eyes</p>
               <div className="grid grid-cols-2 gap-1.5">
                 {EVERYDAY_ITEMS.map((o) => { const on = everyday.includes(o.id); return (
                   <button key={o.id} onClick={() => togIn("everyday", o.id)} className={`lf-chip flex items-center gap-1.5 rounded-xl py-1.5 pl-1.5 pr-2 text-[11.5px] font-semibold ring-1 ${on ? "bg-primary/10 ring-primary" : "bg-card text-foreground/85 ring-border/60"}`}>
@@ -866,10 +885,8 @@ function LifestylePage() {
                 ); })}
               </div>
             </div>
-            {/* Rest & calm */}
+            {/* Rest & calm (no header, no intro) */}
             <div className="space-y-2">
-              <p className="font-display text-[13px] font-bold text-foreground">Rest &amp; calm</p>
-              <p className="px-1 text-[10.5px] leading-snug text-muted-foreground">We support these along the way anyway — select one only if you want it as a focus.</p>
               <div className="grid grid-cols-2 gap-1.5">
                 {REST_CALM.map((o) => { const on = everyday.includes(o.id); return (
                   <button key={o.id} onClick={() => togIn("everyday", o.id)} className={`lf-chip flex items-center gap-1.5 rounded-xl py-1.5 pl-1.5 pr-2 text-[11.5px] font-semibold ring-1 ${on ? "bg-primary/10 ring-primary" : "bg-card text-foreground/85 ring-border/60"}`}>
@@ -984,6 +1001,7 @@ function LifestylePage() {
                 })}
               </div>
             </div>}
+            <p className="px-1 pt-1 text-[10px] leading-snug text-muted-foreground">Supportive lifestyle guidance — not a substitute for medical care. For any health condition, keep following your doctor's advice.</p>
           </div>
         )}
       </div>

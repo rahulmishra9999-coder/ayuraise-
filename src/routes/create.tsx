@@ -179,6 +179,7 @@ function CreatePlan() {
   // shared / yoga
   const [yogaLevel, setYogaLevel] = useState<string>(LEVELS[0]);
   const [duration, setDuration] = useState<number>(20);
+  const [yogaDays, setYogaDays] = useState<number>(5);
   const [protect, setProtect] = useState<string[]>([]);
   // exercise
   const [exLevel, setExLevel] = useState<string>(LEVELS[0]);
@@ -214,7 +215,7 @@ function CreatePlan() {
     if (!w) return;
     const S = <T,>(v: unknown, set: (x: T) => void) => { if (v !== undefined && v !== null) set(v as T); };
     S<string[]>(w.goalIds, setGoals); S<IvKey[]>(w.ivs, setIvs);
-    S<string>(w.yogaLevel, setYogaLevel); S<number>(w.duration, setDuration); S<string[]>(w.protect, setProtect); S<number>(w.mini, setMini);
+    S<string>(w.yogaLevel, setYogaLevel); S<number>(w.duration, setDuration); S<number>(w.yogaDays, setYogaDays); S<string[]>(w.protect, setProtect); S<number>(w.mini, setMini);
     S<string>(w.exLevel, setExLevel); S<number>(w.exDays, setExDays); S<number>(w.exDur, setExDur);
     S<string>(w.focus, setFocus); S<string>(w.equip, setEquip);
     S<"detailed" | "recos">(w.mealMode, setMealMode); S<boolean>(w.dietIF, setDietIF); S<string>(w.ifWindow, setIfWindow); S<number>(w.fastHrs, setFastHrs);
@@ -232,7 +233,7 @@ function CreatePlan() {
 
   const stepKeys = useMemo(() => {
     const s: string[] = ["goals", "interventions"];
-    if (anyMedical || wantsWeight) s.push("about");
+    if (wantsWeight) s.push("about"); // conditions are asked earlier (in the profile); here only the weight target
     if (hasYoga) s.push("yoga-time");
     if (hasYoga || hasExercise) s.push("protect");
     if (hasExercise) s.push("ex-level", "ex-days", "ex-duration", "ex-focus", "ex-equip");
@@ -269,7 +270,6 @@ function CreatePlan() {
   const canNext =
     key === "goals" ? goals.length >= 1 :
     key === "interventions" ? ivs.length >= 1 :
-    key === "about" ? cleared :
     true;
 
   const goTo = (name: string) => { const i = stepKeys.indexOf(name); if (i >= 0) setStep(i); };
@@ -280,9 +280,9 @@ function CreatePlan() {
     const parts = ivs.map((k) => IV_META[k].label);
     const dietBits: string[] = [];
     if (hasDiet) { if (dietIF) dietBits.push(`IF ${ifWindow}`); dietBits.push(mealMode === "detailed" ? `${meals} main${mini ? `+${mini} mini` : ""}` : "Food tips"); if (prefs.length) dietBits.push(prefs.join("/")); }
-    const days = hasExercise ? WEEKDAYS.slice(0, exDays).map((w) => w.id) : ["mon", "tue", "wed", "thu", "fri"];
+    const days = WEEKDAYS.slice(0, hasExercise ? exDays : yogaDays).map((w) => w.id);
     const pid = editId ?? newPlanId();
-    const wizard = { goalIds: goals, ivs, yogaLevel, duration, protect, exLevel, exDays, exDur, focus, equip, mealMode, dietIF, ifWindow, fastHrs, prefs, allergies, meals, mini, dq, curWt, tgtWt, tgtDate };
+    const wizard = { goalIds: goals, ivs, yogaLevel, duration, yogaDays, protect, exLevel, exDays, exDur, focus, equip, mealMode, dietIF, ifWindow, fastHrs, prefs, allergies, meals, mini, dq, curWt, tgtWt, tgtDate };
     const plan: YogaPlan = {
       id: pid,
       wizard,
@@ -290,7 +290,7 @@ function CreatePlan() {
       primary: goalLabels[0],
       secondary: goalLabels[1] ?? null,
       level: hasExercise ? exLevel : hasYoga ? yogaLevel : "Beginner",
-      weeks: 4,
+      weeks: Math.max(1, Math.ceil(28 / days.length)), // ~28 sessions spread over the chosen days/week
       daysPerWeek: days.length,
       days,
       duration: hasYoga ? duration : exDur,
@@ -396,45 +396,30 @@ function CreatePlan() {
 
         {/* ABOUT */}
         {key === "about" && (
-          <Q title="A little about you" hint="So your plan fits your condition.">
+          <Q title="Your weight target" hint="We'll set a safe, steady pace.">
             <div className="space-y-3">
-              {wantsWeight && (
-                <div className="rounded-2xl bg-card p-3 ring-1 ring-border/60">
-                  <p className="mb-2 text-[12px] font-bold text-foreground">🔥 Weight target</p>
-                  <div className="grid grid-cols-3 gap-2">
-                    <label className="block"><span className="text-[10.5px] font-semibold text-muted-foreground">Current (kg)</span><input value={curWt} onChange={(e) => setCurWt(e.target.value)} inputMode="decimal" placeholder="72" className="mt-1 w-full rounded-xl bg-secondary/40 px-2 py-2 text-[13px] ring-1 ring-border/60" /></label>
-                    <label className="block"><span className="text-[10.5px] font-semibold text-muted-foreground">Target (kg)</span><input value={tgtWt} onChange={(e) => setTgtWt(e.target.value)} inputMode="decimal" placeholder="66" className="mt-1 w-full rounded-xl bg-secondary/40 px-2 py-2 text-[13px] ring-1 ring-border/60" /></label>
-                    <label className="block"><span className="text-[10.5px] font-semibold text-muted-foreground">By</span><input type="date" value={tgtDate} onChange={(e) => setTgtDate(e.target.value)} className="mt-1 w-full rounded-xl bg-secondary/40 px-2 py-2 text-[12px] ring-1 ring-border/60" /></label>
-                  </div>
-                  {dailyDeficit && <p className="mt-2 text-[11.5px] font-semibold text-primary">≈ {dailyDeficit} kcal/day to reach your target.</p>}
+              <div className="rounded-2xl bg-card p-3 ring-1 ring-border/60">
+                <div className="grid grid-cols-3 gap-2">
+                  <label className="block"><span className="text-[10.5px] font-semibold text-muted-foreground">Current (kg)</span><input value={curWt} onChange={(e) => setCurWt(e.target.value)} inputMode="decimal" placeholder="72" className="mt-1 w-full rounded-xl bg-secondary/40 px-2 py-2 text-[13px] ring-1 ring-border/60" /></label>
+                  <label className="block"><span className="text-[10.5px] font-semibold text-muted-foreground">Target (kg)</span><input value={tgtWt} onChange={(e) => setTgtWt(e.target.value)} inputMode="decimal" placeholder="66" className="mt-1 w-full rounded-xl bg-secondary/40 px-2 py-2 text-[13px] ring-1 ring-border/60" /></label>
+                  <label className="block"><span className="text-[10.5px] font-semibold text-muted-foreground">By</span><input type="date" value={tgtDate} onChange={(e) => setTgtDate(e.target.value)} className="mt-1 w-full rounded-xl bg-secondary/40 px-2 py-2 text-[12px] ring-1 ring-border/60" /></label>
                 </div>
-              )}
-              {medicalGoals.map((g) => {
-                const qs = DISEASE_Q[g]; if (!qs) return null;
-                return (
-                  <div key={g} className="rounded-2xl bg-card p-3 ring-1 ring-border/60">
-                    <p className="mb-2 text-[12px] font-bold text-foreground">{ALL_GOALS[g]?.emoji} {ALL_GOALS[g]?.label}</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      {qs.map((q) => <label key={q.key} className="block"><span className="text-[10.5px] font-semibold text-muted-foreground">{q.label}</span><input value={dq[q.key] ?? ""} onChange={(e) => setDq((c) => ({ ...c, [q.key]: e.target.value }))} placeholder={q.ph} className="mt-1 w-full rounded-xl bg-secondary/40 px-2 py-2 text-[13px] ring-1 ring-border/60" /></label>)}
-                    </div>
-                  </div>
-                );
-              })}
-              <button onClick={() => setCleared((c) => !c)} className={`flex w-full items-start gap-2.5 rounded-2xl p-3 text-left ring-1 transition ${cleared ? "bg-amber-100 ring-amber-300 dark:bg-amber-900/30 dark:ring-amber-700" : "bg-amber-50 ring-amber-200 dark:bg-amber-900/20 dark:ring-amber-800/60"}`}>
-                <span className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-[5px] text-[10px] font-bold ${cleared ? "bg-amber-500 text-white" : "bg-white ring-1 ring-amber-300 dark:bg-transparent"}`}>{cleared ? "✓" : ""}</span>
-                <span className="text-[10.5px] leading-snug text-amber-800 dark:text-amber-300">I understand this is <b>supportive lifestyle guidance, not medical treatment</b>, and I'll check with my doctor about my condition.</span>
-              </button>
+                {dailyDeficit && <p className="mt-2 text-[11.5px] font-semibold text-primary">≈ {dailyDeficit} kcal/day to reach your target.</p>}
+              </div>
             </div>
           </Q>
         )}
 
         {/* YOGA — level + time */}
         {key === "yoga-time" && (
-          <Q title="Set up your yoga" hint="No fixed weeks or weekly schedule — practise at your pace; the next sessions adapt as you go.">
+          <Q title="Set up your yoga">
             <p className="mb-1.5 px-1 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Your level</p>
             <div className="mb-3 flex flex-wrap gap-1.5">{LEVELS.map((l) => <button key={l} onClick={() => setYogaLevel(l)} className={chip(yogaLevel === l)}>{l}</button>)}</div>
             <p className="mb-1.5 px-1 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">How long each session?</p>
-            <div className="flex flex-wrap gap-1.5">{DURATIONS.map((d) => <button key={d} onClick={() => setDuration(d)} className={chip(duration === d)}>{d} min</button>)}</div>
+            <div className="mb-3 flex flex-wrap gap-1.5">{DURATIONS.map((d) => <button key={d} onClick={() => setDuration(d)} className={chip(duration === d)}>{d} min</button>)}</div>
+            <p className="mb-1.5 px-1 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Days per week</p>
+            <div className="flex flex-wrap gap-1.5">{DAYS_N.map((d) => <button key={d} onClick={() => setYogaDays(d)} className={chip(yogaDays === d)}>{d} days</button>)}</div>
+            <p className="mt-3 rounded-2xl bg-primary/10 px-3 py-2.5 text-[11px] leading-snug text-foreground/85 ring-1 ring-primary/20"><b>28 sessions are recommended</b> for real results — at {yogaDays} days/week that's about <b>{Math.ceil(28 / yogaDays)} weeks</b>. We'll build the full plan now and keep extending it as you progress, based on your feedback.</p>
           </Q>
         )}
 
@@ -451,7 +436,7 @@ function CreatePlan() {
 
         {/* EXERCISE — one per screen */}
         {key === "ex-level" && <Q title="Your exercise level"><div className="flex flex-wrap gap-1.5">{LEVELS.map((l) => <button key={l} onClick={() => setExLevel(l)} className={chip(exLevel === l)}>{l}</button>)}</div></Q>}
-        {key === "ex-days" && <Q title="Exercise days per week"><div className="flex flex-wrap gap-1.5">{DAYS_N.map((d) => <button key={d} onClick={() => setExDays(d)} className={chip(exDays === d)}>{d} days</button>)}</div></Q>}
+        {key === "ex-days" && <Q title="Exercise days per week"><div className="flex flex-wrap gap-1.5">{DAYS_N.map((d) => <button key={d} onClick={() => setExDays(d)} className={chip(exDays === d)}>{d} days</button>)}</div><p className="mt-3 rounded-2xl bg-primary/10 px-3 py-2.5 text-[11px] leading-snug text-foreground/85 ring-1 ring-primary/20"><b>28 sessions are recommended</b> for real results — at {exDays} days/week that's about <b>{Math.ceil(28 / exDays)} weeks</b>. We'll build the full plan now and keep extending it as you progress, based on your feedback.</p></Q>}
         {key === "ex-duration" && <Q title="How long each workout?"><div className="flex flex-wrap gap-1.5">{DURATIONS.map((d) => <button key={d} onClick={() => setExDur(d)} className={chip(exDur === d)}>{d} min</button>)}</div></Q>}
         {key === "ex-focus" && <Q title="Exercise focus"><div className="flex flex-wrap gap-1.5">{EX_FOCUS.map((f) => <button key={f} onClick={() => setFocus(f)} className={chip(focus === f)}>{f}</button>)}</div></Q>}
         {key === "ex-equip" && <Q title="What equipment do you have?"><div className="flex flex-wrap gap-1.5">{EQUIP.map((e) => <button key={e} onClick={() => setEquip(e)} className={chip(equip === e)}>{e}</button>)}</div></Q>}
