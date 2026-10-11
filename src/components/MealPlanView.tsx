@@ -231,35 +231,33 @@ export function MealPlanView({ plan }: { plan: GeneratedMealPlan }) {
         </p>
       )}
 
-      {/* 2 · Recommended foods (collapsed) */}
-      <Collapse title="Recommended foods for you">
-        <div className="space-y-1.5 text-[11px] text-foreground/85">
-          <p><b className="text-emerald-600">Protein ({plan.macros.protein}g):</b> <TermList items={plan.foodRecos.protein} /></p>
-          <p><b className="text-amber-600">Low-GI carbs ({plan.macros.carbs}g):</b> <TermList items={plan.foodRecos.carbs} /></p>
-          <p><b className="text-rose-500">Healthy fats ({plan.macros.fat}g):</b> <TermList items={plan.foodRecos.fats} /></p>
+      {/* Know your food — grouped info sections */}
+      <Collapse title="🍎 Know your food">
+        <div className="space-y-2">
+          <Collapse title="Recommended foods for you">
+            <div className="space-y-1.5 text-[11px] text-foreground/85">
+              <p><b className="text-emerald-600">Protein ({plan.macros.protein}g):</b> <TermList items={plan.foodRecos.protein} /></p>
+              <p><b className="text-amber-600">Low-GI carbs ({plan.macros.carbs}g):</b> <TermList items={plan.foodRecos.carbs} /></p>
+              <p><b className="text-rose-500">Healthy fats ({plan.macros.fat}g):</b> <TermList items={plan.foodRecos.fats} /></p>
+            </div>
+            <p className="mt-1.5 text-[9.5px] text-muted-foreground">Tap an underlined term for why it helps.</p>
+          </Collapse>
+          {plan.perGoal.length > 0 && (
+            <Collapse title={`Favour & limit — ${plan.perGoal.map((p) => p.label).join(", ")}`}>
+              <div className="space-y-1.5">
+                {plan.perGoal.map((p, i) => <EatAvoidRow key={i} item={p} />)}
+              </div>
+            </Collapse>
+          )}
+          {plan.prakriti && (
+            <Collapse title="As per your body type (prakriti)">
+              <EatAvoidRow item={plan.prakriti} />
+            </Collapse>
+          )}
+          <Collapse title={`This season — ${plan.ritucharya.label} (ritucharya)`}>
+            <EatAvoidRow item={plan.ritucharya} />
+          </Collapse>
         </div>
-        <p className="mt-1.5 text-[9.5px] text-muted-foreground">Tap an underlined term for why it helps.</p>
-      </Collapse>
-
-      {/* 3 · Per-goal favour / limit (collapsed) */}
-      {plan.perGoal.length > 0 && (
-        <Collapse title={`Favour & limit — ${plan.perGoal.map((p) => p.label).join(", ")}`}>
-          <div className="space-y-1.5">
-            {plan.perGoal.map((p, i) => <EatAvoidRow key={i} item={p} />)}
-          </div>
-        </Collapse>
-      )}
-
-      {/* 4 · Prakriti (collapsed) */}
-      {plan.prakriti && (
-        <Collapse title="As per your body type (prakriti)">
-          <EatAvoidRow item={plan.prakriti} />
-        </Collapse>
-      )}
-
-      {/* 5 · Ritucharya (collapsed) */}
-      <Collapse title={`This season — ${plan.ritucharya.label} (ritucharya)`}>
-        <EatAvoidRow item={plan.ritucharya} />
       </Collapse>
 
       {/* 6 · 1-week plan */}

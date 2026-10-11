@@ -74,17 +74,13 @@ function DayStrip({ done, doneToday, total, onPlay }: { done: number[]; doneToda
               key={d}
               onClick={() => onPlay(d)}
               aria-label={`Day ${d}`}
-              className={`flex h-11 w-10 shrink-0 flex-col items-center justify-center gap-0.5 rounded-lg leading-none ${playable ? "bg-primary text-primary-foreground" : isNext ? "bg-amber-100 text-amber-700" : "bg-secondary/50 text-muted-foreground/70"}`}
+              className={`flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg px-2 ${playable ? "bg-primary text-primary-foreground" : isNext ? "bg-amber-100 text-amber-700" : "bg-secondary/50 text-muted-foreground/70 ring-1 ring-border/50"}`}
             >
-              <span className="text-[7px] font-bold uppercase opacity-70">Day</span>
-              <span className="text-[13px] font-bold">{d}</span>
-              {playable ? <Play size={9} className="opacity-80" /> : <span className="text-[8px]">{isNext && capReached ? "⏳" : "🔒"}</span>}
+              <span className="text-[12px] font-bold">Day {d}</span>
+              {playable ? <Play size={11} className="opacity-90" /> : <span className="text-[10px]">{isNext && capReached ? "⏳" : "🔒"}</span>}
             </button>
           );
         })}
-        {next + 2 < total && (
-          <div className="flex h-11 flex-1 items-center justify-center rounded-lg bg-secondary/25 px-2 text-center text-[9px] leading-tight text-muted-foreground">opens as you progress</div>
-        )}
       </div>
       <p className="mt-1 text-[9px] text-muted-foreground">{capReached ? "3 done today — next opens tomorrow." : "Up to 3 sessions a day · play them in order."}</p>
     </div>
@@ -106,6 +102,7 @@ function MyPlanPage() {
   const [exPlay, setExPlay] = useState<{ title: string; steps: Step[] } | null>(null);
   const [prog, setProg] = useState<{ yoga: { done: number[]; dates: Record<number, string> }; exercise: { done: number[]; dates: Record<number, string> } }>({ yoga: { done: [], dates: {} }, exercise: { done: [], dates: {} } });
   const [capPopup, setCapPopup] = useState(false);
+  const [tab, setTab] = useState<"mine" | "recos">("mine");
   const changeOv = (tool: string, o: ToolOverride) => { setOvr((p) => ({ ...p, [tool]: { ...(p[tool] ?? {}), ...o } })); setToolOverride(tool, o); };
 
   useEffect(() => {
@@ -285,6 +282,22 @@ function MyPlanPage() {
           );
         })()}
 
+        {/* Add not-added tools — quick add, right below goals */}
+        {id === "me" && PLAN_TOOLS.some((t) => !enabled.includes(t.id)) && (
+          <div className="flex flex-wrap items-center gap-1.5 rounded-xl bg-card/70 px-3 py-2 ring-1 ring-border/60">
+            <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Add</span>
+            {PLAN_TOOLS.filter((t) => !enabled.includes(t.id)).map((t) => (
+              <button key={t.id} onClick={() => addTool(t.id)} className="flex items-center gap-1 rounded-full bg-secondary px-2.5 py-1 text-[11px] font-semibold text-foreground/80 active:opacity-70">{t.emoji} {t.label} <span className="font-bold text-primary">＋</span></button>
+            ))}
+          </div>
+        )}
+
+        {/* My plan / Recommendations tabs */}
+        <div className="flex gap-1.5">
+          <button onClick={() => setTab("mine")} className={`flex-1 rounded-full py-1.5 text-[12px] font-bold ${tab === "mine" ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground/70"}`}>My plan</button>
+          <button onClick={() => setTab("recos")} className={`flex-1 rounded-full py-1.5 text-[12px] font-bold ${tab === "recos" ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground/70"}`}>Recommendations</button>
+        </div>
+
         {/* Conflict / safety banners */}
         {rp.conflicts.map((cf, i) => (
           <div key={i} className={`rounded-2xl p-3 text-[11.5px] leading-snug ring-1 ${cf.action === "block" ? "bg-red-50 text-red-800 ring-red-200 dark:bg-red-900/20 dark:text-red-300 dark:ring-red-800/60" : "bg-amber-50 text-amber-800 ring-amber-200 dark:bg-amber-900/20 dark:text-amber-300 dark:ring-amber-800/60"}`}>
@@ -292,6 +305,7 @@ function MyPlanPage() {
           </div>
         ))}
 
+        {tab === "mine" && (<>
         {/* 1 · Yoga */}
         {yogaHas && enabled.includes("yoga") && (
           <Tool emoji="🧘" title="Yoga & pranayam" onEdit={id === "me" ? () => editTool("yoga") : undefined} onRemove={id === "me" ? () => removeTool("yoga") : undefined}>
@@ -320,6 +334,9 @@ function MyPlanPage() {
           </Tool>
         )}
 
+        </>)}
+
+        {tab === "recos" && (<>
         {/* 4 · Detox (engine picks 2–3, across days) */}
         {rp.detox.protocols.length > 0 && enabled.includes("detox") && (
           <Tool emoji="✨" title="Detox" subtitle={rp.detox.protocols.length > 1 ? "across your week" : undefined} onEdit={() => navigate({ to: "/section/detox" })} onRemove={id === "me" ? () => removeTool("detox") : undefined}>
@@ -364,6 +381,9 @@ function MyPlanPage() {
           </Tool>
         )}
 
+        </>)}
+
+        {tab === "mine" && (<>
         {/* 8 · Herbs */}
         {herbs.length > 0 && enabled.includes("herbs") && (
           <Tool emoji="🌱" title="Herbs & remedies" onRemove={id === "me" ? () => removeTool("herbs") : undefined}>
@@ -386,19 +406,7 @@ function MyPlanPage() {
           </Tool>
         )}
 
-        {/* Add parts — always available on your plan */}
-        {id === "me" && (
-          <section className="rounded-2xl bg-card/70 p-3 ring-1 ring-border/60">
-            <p className="mb-1.5 px-0.5 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Add to your plan</p>
-            {PLAN_TOOLS.some((t) => !enabled.includes(t.id))
-              ? <div className="flex flex-wrap gap-1.5">
-                  {PLAN_TOOLS.filter((t) => !enabled.includes(t.id)).map((t) => (
-                    <button key={t.id} onClick={() => addTool(t.id)} className="flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1.5 text-[11.5px] font-semibold text-foreground/80 active:opacity-70">{t.emoji} {t.label} <span className="font-bold text-primary">＋</span></button>
-                  ))}
-                </div>
-              : <p className="px-0.5 text-[11px] leading-snug text-muted-foreground">All parts are in your plan — tap ✕ on any above to remove it.</p>}
-          </section>
-        )}
+        </>)}
 
         <p className="px-1 text-[10.5px] leading-snug text-muted-foreground">This plan supports your wellness alongside medical care — it doesn't replace your doctor. Seek urgent help for any severe or sudden symptoms.</p>
 
