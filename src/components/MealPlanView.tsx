@@ -1,4 +1,4 @@
-import { useState, Fragment, createContext, useContext } from "react";
+import { useState, Fragment, createContext, useContext, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { RefreshCw, Leaf, Scale, ChevronDown, BookOpen, ChevronLeft, ChevronRight, Download } from "lucide-react";
 import type { GeneratedMealPlan, EatAvoid, FoodMacro } from "@/lib/meal-plan";
@@ -24,6 +24,20 @@ function Term({ text }: { text: string }) {
 
 function TermList({ items }: { items: string[] }) {
   return <>{items.map((t, i) => <Fragment key={i}><Term text={t} />{i < items.length - 1 ? ", " : ""}</Fragment>)}</>;
+}
+
+/** Collapsible info section — closed by default (tap the header to open). */
+function Collapse({ title, children }: { title: string; children: ReactNode }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="rounded-xl bg-secondary/40 ring-1 ring-border/60">
+      <button onClick={() => setOpen((o) => !o)} className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left">
+        <span className="text-[10.5px] font-bold uppercase tracking-wide text-muted-foreground">{title}</span>
+        <ChevronDown size={14} className={`shrink-0 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && <div className="border-t border-border/50 px-3 py-2.5">{children}</div>}
+    </div>
+  );
 }
 
 /** Flat eat/avoid block for per-goal, prakriti and ritucharya. */
@@ -168,15 +182,11 @@ export function MealPlanView({ plan }: { plan: GeneratedMealPlan }) {
     <div className="space-y-3">
       {/* 1 · Calorie need + macros */}
       <div className="rounded-xl bg-secondary/60 p-3">
-        <div className="flex items-end justify-between">
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Your calorie need</p>
-            <p className="font-display text-xl font-bold text-foreground">{plan.kcalTarget.toLocaleString()} kcal<span className="text-[11px] font-semibold text-muted-foreground">/day</span></p>
-          </div>
-          <p className="max-w-[55%] text-right text-[10.5px] leading-snug text-muted-foreground">
-            {plan.goalLabel}{plan.complete ? ` · maintenance ${plan.maintenance.toLocaleString()}` : ""}
-          </p>
-        </div>
+        <p className="text-[12px] leading-snug text-muted-foreground">
+          <span className="text-[10px] font-bold uppercase tracking-wide">Your calorie need</span>{" "}
+          <b className="font-display text-[15px] text-foreground">{plan.kcalTarget.toLocaleString()} kcal/day</b>
+          <span> · {plan.goalLabel}</span>
+        </p>
         <div className="mt-2 flex h-2.5 overflow-hidden rounded-full">
           <div style={{ width: pct(pCal) }} className="bg-emerald-500" />
           <div style={{ width: pct(cCal) }} className="bg-amber-400" />
@@ -194,97 +204,62 @@ export function MealPlanView({ plan }: { plan: GeneratedMealPlan }) {
         )}
       </div>
 
-      {/* 2 · Recommended foods */}
-      <div className="rounded-xl bg-accent/20 p-3">
-        <p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-primary">Recommended foods for you</p>
+      {/* energy note — surfaced up top */}
+      {plan.fitnessNote && (
+        <p className="rounded-xl bg-emerald-50 px-3 py-2 text-[11px] leading-snug text-emerald-800 ring-1 ring-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-200 dark:ring-emerald-900/40">
+          {plan.fitnessNote}
+        </p>
+      )}
+
+      {/* 2 · Recommended foods (collapsed) */}
+      <Collapse title="Recommended foods for you">
         <div className="space-y-1.5 text-[11px] text-foreground/85">
           <p><b className="text-emerald-600">Protein ({plan.macros.protein}g):</b> <TermList items={plan.foodRecos.protein} /></p>
           <p><b className="text-amber-600">Low-GI carbs ({plan.macros.carbs}g):</b> <TermList items={plan.foodRecos.carbs} /></p>
           <p><b className="text-rose-500">Healthy fats ({plan.macros.fat}g):</b> <TermList items={plan.foodRecos.fats} /></p>
         </div>
-        <p className="mt-1.5 text-[9.5px] text-muted-foreground">Tap an underlined term to see examples.</p>
-      </div>
+        <p className="mt-1.5 text-[9.5px] text-muted-foreground">Tap an underlined term for why it helps.</p>
+      </Collapse>
 
-      {/* 3 · Per-goal favour / limit */}
+      {/* 3 · Per-goal favour / limit (collapsed) */}
       {plan.perGoal.length > 0 && (
-        <div>
-          <p className={SECTION_HEAD}>As you chose {plan.perGoal.map((p) => p.label).join(", ")} — here's what we favour &amp; limit</p>
+        <Collapse title={`Favour & limit — ${plan.perGoal.map((p) => p.label).join(", ")}`}>
           <div className="space-y-1.5">
             {plan.perGoal.map((p, i) => <EatAvoidRow key={i} item={p} />)}
           </div>
-          {plan.fitnessNote && (
-            <p className="mt-1.5 rounded-xl bg-emerald-50 px-3 py-2 text-[11px] leading-snug text-emerald-800 ring-1 ring-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-200 dark:ring-emerald-900/40">
-              {plan.fitnessNote}
-            </p>
-          )}
-        </div>
+        </Collapse>
       )}
 
-      {/* 4 · Prakriti */}
+      {/* 4 · Prakriti (collapsed) */}
       {plan.prakriti && (
-        <div>
-          <p className={SECTION_HEAD}>As per your prakriti (body type)</p>
+        <Collapse title="As per your body type (prakriti)">
           <EatAvoidRow item={plan.prakriti} />
-        </div>
+        </Collapse>
       )}
 
-      {/* 5 · Ritucharya */}
-      <div>
-        <p className={`${SECTION_HEAD} flex items-center gap-1`}><Leaf size={11} className="text-emerald-600" /> This season — {plan.ritucharya.label} (ritucharya)</p>
+      {/* 5 · Ritucharya (collapsed) */}
+      <Collapse title={`This season — ${plan.ritucharya.label} (ritucharya)`}>
         <EatAvoidRow item={plan.ritucharya} />
-      </div>
+      </Collapse>
 
       {/* 6 · 1-week plan */}
       <div>
         <div className="mb-2 flex items-center justify-between gap-2">
-          <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Your week</p>
+          <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">This week</p>
           <div className="flex items-center gap-1.5">
-            <select
-              value={acrossMeal ?? "day"}
-              onChange={(e) => setAcrossMeal(e.target.value === "day" ? null : e.target.value)}
-              className="rounded-full bg-secondary px-2.5 py-1 text-[10px] font-bold text-foreground/75"
-            >
-              <option value="day">Day by day</option>
-              {slots.map((sl) => <option key={sl} value={sl}>{sl} · all week</option>)}
-            </select>
-            <button
-              onClick={() => setDetailAll((q) => !q)}
-              className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold ${detailAll ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground/75"}`}
-            >
-              <Scale size={11} /> Detail
-            </button>
+            <button onClick={() => setDetailAll((q) => !q)} className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold ${detailAll ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground/75"}`}><Scale size={11} /> Detail</button>
             <button onClick={downloadPDF} aria-label="Download PDF" title="Download PDF" className="flex h-7 w-7 items-center justify-center rounded-full bg-secondary text-foreground/70"><Download size={12} /></button>
           </div>
         </div>
-
-        {acrossMeal ? (
-          <>
-            <p className="mb-1.5 text-[10px] text-muted-foreground">{acrossMeal} · all 7 days · tap ↻ to swap</p>
-            <div className="space-y-2">
-              {plan.week.map((d, dayI) => {
-                const si = d.meals.findIndex((m) => m.slot === acrossMeal);
-                return si >= 0 ? renderMeal(d.meals[si], dayI, si, true) : null;
-              })}
-            </div>
-          </>
-        ) : (
-          <>
-            {/* day selector with prev/next */}
-            <div className="flex items-center gap-1.5">
-              <button onClick={() => go(-1)} aria-label="Previous day" className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-secondary text-foreground/70 active:scale-95"><ChevronLeft size={13} /></button>
-              <div className="flex min-w-0 flex-1 gap-1 overflow-x-auto">
-                {plan.week.map((d, i) => (
-                  <button key={d.day} onClick={() => setDayIdx(i)} className={`shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-bold ${i === dayIdx ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground/60"}`}>{d.day}</button>
-                ))}
-              </div>
-              <button onClick={() => go(1)} aria-label="Next day" className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-secondary text-foreground/70 active:scale-95"><ChevronRight size={13} /></button>
-            </div>
-            <p className="mt-1 text-[10px] text-muted-foreground">Day {dayIdx + 1} of 7 · tap a meal for quantities &amp; recipe · auto-generates next week</p>
-            <div className="mt-2 space-y-2">
-              {plan.week[dayIdx].meals.map((m, si) => renderMeal(m, dayIdx, si, false))}
-            </div>
-          </>
-        )}
+        <div className="flex gap-1">
+          {plan.week.map((d, i) => (
+            <button key={d.day} onClick={() => setDayIdx(i)} className={`flex-1 rounded-md py-1 text-center text-[10px] font-bold ${i === dayIdx ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground/60"}`}>{d.day}</button>
+          ))}
+        </div>
+        <p className="mt-1.5 text-[10px] leading-snug text-muted-foreground">We'll create your next week's plan as you progress, based on your feedback.</p>
+        <div className="mt-2 space-y-2">
+          {plan.week[dayIdx].meals.map((m, si) => renderMeal(m, dayIdx, si, false))}
+        </div>
       </div>
     </div>
 

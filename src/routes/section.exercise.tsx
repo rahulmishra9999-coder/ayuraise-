@@ -1465,7 +1465,7 @@ function SessionDetail({ s, fav, onFav, onClose, onStart }: {
 
 /* ================= Player ================= */
 
-function Player({ src, onClose }: { src: PlaySource; onClose: () => void }) {
+export function Player({ src, onClose }: { src: PlaySource; onClose: () => void }) {
   const kg = bodyWeight();
   const steps = src.steps;
   const [idx, setIdx] = useState(Math.min(src.startIndex, steps.length - 1));

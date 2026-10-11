@@ -257,7 +257,7 @@ function YogaSection() {
 /* ================= Current yoga plan card (mirrors the workout plan) ================= */
 
 /** Map a plan's primary focus to a generatable yoga goal (for dummy sessions via the pose engine). */
-function toYogaGoal(primary: string): Goal {
+export function toYogaGoal(primary: string): Goal {
   const p = primary.toLowerCase();
   if (/flex|mobil|posture|ache|knee|back|neck|hip|spine|arthritis|joint/.test(p)) return "flexibility";
   if (/strength|ageing|senior|sr\.|balance|osteo|muscle/.test(p)) return "strength";
@@ -992,7 +992,7 @@ function CreatePlanSheet({ onClose, onPlay }: { onClose: () => void; onPlay: (ti
 
 /* ================= Session player ================= */
 
-function SessionPlayer({ title, plan, feedback, onDone, onClose }: { title: string; plan: YogaPlan; feedback: boolean; onDone?: (choice: string | null) => void; onClose: () => void }) {
+export function SessionPlayer({ title, plan, feedback, onDone, onClose }: { title: string; plan: YogaPlan; feedback: boolean; onDone?: (choice: string | null) => void; onClose: () => void }) {
   const poses = useMemo(() => { const p = posesFor(plan); return p.length ? p : POSES.slice(0, 5); }, [plan]);
   const [idx, setIdx] = useState(0);
   const [secs, setSecs] = useState(poses[0]?.durationSec ?? 40);

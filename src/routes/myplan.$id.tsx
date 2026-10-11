@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, ChevronDown } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ArrowLeft, ChevronDown, ChevronLeft, ChevronRight, Play } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
 import { AyuBot } from "@/components/AyuBot";
 import { loadYogaPlans } from "@/lib/yoga-plan";
@@ -10,6 +10,10 @@ import { buildMealPlan } from "@/lib/meal-plan";
 import { MealPlanView } from "@/components/MealPlanView";
 import type { ActivityLevel, Sex } from "@/lib/weight-loss";
 import type { Dosha } from "@/lib/diet";
+import { SessionPlayer, toYogaGoal } from "@/routes/section.yoga";
+import { Player as ExercisePlayer } from "@/routes/section.exercise";
+import { generatePlan } from "@/lib/yoga";
+import { bundleSteps, CLASSICS, type Step } from "@/lib/exercise";
 
 export const Route = createFileRoute("/myplan/$id")({ component: MyPlanPage });
 
@@ -53,6 +57,39 @@ function Adjust({ tool, ov, onChange }: { tool: string; ov: ToolOverride; onChan
   );
 }
 
+/** Compact 3-day strip — up to 3 sessions a day, the rest unlock as you progress. */
+function DayStrip({ startedAt, total, onPlay }: { startedAt: number; total: number; onPlay: (day: number) => void }) {
+  const current = Math.max(1, Math.min(total, Math.floor((Date.now() - startedAt) / 86_400_000) + 1));
+  const show = Array.from({ length: Math.min(3, total) }, (_, k) => k + 1);
+  return (
+    <div>
+      <div className="flex gap-1.5">
+        {show.map((d) => {
+          const locked = d > current;
+          const isToday = d === current;
+          return (
+            <button
+              key={d}
+              disabled={locked}
+              onClick={() => onPlay(d)}
+              aria-label={`Day ${d}`}
+              className={`flex h-11 w-10 shrink-0 flex-col items-center justify-center gap-0.5 rounded-lg leading-none ${isToday ? "bg-primary text-primary-foreground" : locked ? "bg-secondary/50 text-muted-foreground/60" : "bg-accent/50 text-foreground/85 ring-1 ring-border/50"}`}
+            >
+              <span className="text-[7px] font-bold uppercase opacity-70">Day</span>
+              <span className="text-[13px] font-bold">{d}</span>
+              {locked ? <span className="text-[8px]">🔒</span> : <Play size={9} className="opacity-80" />}
+            </button>
+          );
+        })}
+        {total > 3 && (
+          <div className="flex h-11 flex-1 items-center justify-center rounded-lg bg-secondary/25 px-2 text-center text-[9px] leading-tight text-muted-foreground">🔒 more open as you progress</div>
+        )}
+      </div>
+      <p className="mt-1 text-[9px] text-muted-foreground">Up to 3 sessions a day — the rest unlock as you go.</p>
+    </div>
+  );
+}
+
 function MyPlanPage() {
   const { id } = Route.useParams();
   const navigate = useNavigate();
@@ -63,6 +100,9 @@ function MyPlanPage() {
   const [medOpen, setMedOpen] = useState(false);
   const [ovr, setOvr] = useState<Record<string, ToolOverride>>({});
   const [enabled, setEnabled] = useState<string[]>(PLAN_TOOLS.map((t) => t.id));
+  const [planStartedAt, setPlanStartedAt] = useState<number>(Date.now());
+  const [yogaSession, setYogaSession] = useState<{ title: string; plan: ReturnType<typeof generatePlan> } | null>(null);
+  const [exPlay, setExPlay] = useState<{ title: string; steps: Step[] } | null>(null);
   const changeOv = (tool: string, o: ToolOverride) => { setOvr((p) => ({ ...p, [tool]: { ...(p[tool] ?? {}), ...o } })); setToolOverride(tool, o); };
 
   useEffect(() => {
@@ -73,6 +113,7 @@ function MyPlanPage() {
       setGoalIds(pp ? pp.goalIds : null);
       if (pp?.overrides) setOvr(pp.overrides);
       setEnabled(pp?.tools ?? PLAN_TOOLS.map((t) => t.id));
+      if (pp?.createdAt) setPlanStartedAt(pp.createdAt);
     } else {
       const yp = loadYogaPlans().find((p) => p.id === id);
       const w = (yp?.wizard ?? {}) as Record<string, unknown>;
@@ -158,6 +199,9 @@ function MyPlanPage() {
   const primaryFocus = activeFocusP.filter((x) => healthSel.includes(x));
   const alsoCovered = healthSel.filter((x) => !primaryFocus.includes(x));
   const fitnessSel = (profile?.chosenGoals as string[]) ?? [];
+  // Play a day's session inline using the real Yoga / Exercise players
+  const openYogaDay = (d: number) => setYogaSession({ title: `Yoga · Day ${d}`, plan: generatePlan("none", toYogaGoal(g[0] ?? "wellness"), Number(ovr.yoga?.minutes) || 20) });
+  const openExerciseDay = (d: number) => setExPlay({ title: `Exercise · Day ${d}`, steps: bundleSteps(CLASSICS.slice(0, 6).map((e) => ({ exId: e.id, sets: 1, sec: e.sec }))) });
   // Edit a part → open that tool's own question flow in the Create wizard, plan goals carried (auto-selected)
   const editTool = (tool: string) => navigate({ to: "/create", search: { tool, goals: g.join(",") } });
   const removeTool = (tool: string) => {
@@ -185,7 +229,7 @@ function MyPlanPage() {
           <Link to="/home" className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/15 text-primary-foreground"><ArrowLeft size={15} /></Link>
           <div className="min-w-0">
             <h1 className="truncate font-display text-[19px] font-extrabold leading-tight text-primary-foreground">{name}</h1>
-            <p className="truncate text-[11.5px] text-primary-foreground/80">Everything in one place</p>
+            <p className="truncate text-[11.5px] text-primary-foreground/80">28 days · gets extended based on your feedback</p>
           </div>
         </div>
       </div>
@@ -194,24 +238,25 @@ function MyPlanPage() {
         {/* Goals summary — your selections, with auto-covered extras below (if any) */}
         {id === "me" && (() => {
           const goalItems = Array.from(new Set([...healthSel, ...fitnessSel]));
-          const covered = rp.layers.map((L) => L.label); // auto stress/sleep support, not explicitly chosen
+          const items = goalItems.length ? goalItems : g;
+          const covered = rp.layers.map((L) => L.label);
           return (
             <section className="overflow-hidden rounded-2xl bg-card ring-1 ring-border/60">
-              <div className="flex items-center justify-between gap-2 px-3.5 py-2.5" style={{ background: "var(--gradient-leaf)" }}>
-                <p className="font-display text-[13.5px] font-bold text-primary-foreground">🎯 Your goals</p>
+              <div className="flex items-center justify-between gap-2 px-3.5 py-2" style={{ background: "var(--gradient-leaf)" }}>
+                <p className="font-display text-[12.5px] font-bold text-primary-foreground">🎯 Your goals</p>
                 <Link to="/lifestyle" search={{ mode: "unified" }} className="shrink-0 rounded-full bg-white/20 px-2.5 py-0.5 text-[10px] font-bold text-primary-foreground active:opacity-70">Change</Link>
               </div>
-              <div className="p-3.5">
-                <div className="flex flex-wrap gap-1.5">
-                  {(goalItems.length ? goalItems : g).map((x, i) => (
-                    <span key={i} className="rounded-full bg-primary/10 px-3 py-1 text-[12px] font-bold text-primary ring-1 ring-primary/20">{labelOf(x)}</span>
+              <div className="px-3.5 py-2.5">
+                <div className="flex flex-wrap gap-1">
+                  {items.map((x, i) => (
+                    <span key={i} className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary ring-1 ring-primary/20">{labelOf(x)}</span>
                   ))}
                 </div>
                 {covered.length > 0 && (
                   <>
-                    <p className="mt-3 px-0.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Also covered</p>
-                    <div className="mt-1 flex flex-wrap gap-1.5">
-                      {covered.map((c, i) => <span key={i} className="rounded-full bg-secondary px-2.5 py-1 text-[11px] font-semibold text-foreground/75">{c}</span>)}
+                    <p className="mt-2 px-0.5 text-[9px] font-bold uppercase tracking-wide text-muted-foreground">Also covered</p>
+                    <div className="mt-0.5 flex flex-wrap gap-1">
+                      {covered.map((c, i) => <span key={i} className="rounded-full bg-secondary px-2 py-0.5 text-[10.5px] font-semibold text-foreground/75">{c}</span>)}
                     </div>
                   </>
                 )}
@@ -229,16 +274,19 @@ function MyPlanPage() {
 
         {/* 1 · Yoga */}
         {yogaHas && enabled.includes("yoga") && (
-          <Tool emoji="🧘" title="Yoga & breathwork" onEdit={id === "me" ? () => editTool("yoga") : undefined} onRemove={id === "me" ? () => removeTool("yoga") : undefined}>
-            {rp.yoga.am.length > 0 && <p><b className="text-foreground">Morning:</b> {rp.yoga.am.join(" · ")}</p>}
-            {rp.yoga.pm.length > 0 && <p><b className="text-foreground">Evening:</b> {rp.yoga.pm.join(" · ")}</p>}
-            {rp.yoga.anytime.length > 0 && <p><b className="text-foreground">Anytime:</b> {rp.yoga.anytime.join(" · ")}</p>}
-            <p className="text-[10.5px] text-muted-foreground">Poses that aren't safe for your conditions are left out.</p>
-            {id === "me" && <Adjust tool="yoga" ov={ovr.yoga ?? {}} onChange={changeOv} />}
+          <Tool emoji="🧘" title="Yoga & pranayam" onEdit={id === "me" ? () => editTool("yoga") : undefined} onRemove={id === "me" ? () => removeTool("yoga") : undefined}>
+            <DayStrip startedAt={planStartedAt} total={28} onPlay={openYogaDay} />
           </Tool>
         )}
 
-        {/* 2 · Diet */}
+        {/* 2 · Exercise */}
+        {enabled.includes("exercise") && (
+          <Tool emoji="🏋️" title="Exercise" onEdit={id === "me" ? () => editTool("exercise") : undefined} onRemove={id === "me" ? () => removeTool("exercise") : undefined}>
+            <DayStrip startedAt={planStartedAt} total={28} onPlay={openExerciseDay} />
+          </Tool>
+        )}
+
+        {/* 3 · Diet */}
         {diet && enabled.includes("diet") && (
           <Tool emoji="🥗" title="Diet" subtitle="your meal plan" onEdit={id === "me" ? () => editTool("diet") : undefined} onRemove={id === "me" ? () => removeTool("diet") : undefined}>
             <MealPlanView plan={mealPlan} />
@@ -249,15 +297,6 @@ function MyPlanPage() {
               </div>
             )}
             <Link to="/section/diet" className="inline-block rounded-full bg-secondary px-3 py-1 text-[11px] font-bold text-foreground">Browse more diets →</Link>
-          </Tool>
-        )}
-
-        {/* 3 · Exercise */}
-        {enabled.includes("exercise") && (
-          <Tool emoji="🏋️" title="Exercise" onEdit={id === "me" ? () => editTool("exercise") : undefined} onRemove={id === "me" ? () => removeTool("exercise") : undefined}>
-            <ul className="list-disc space-y-1 pl-4">{exercise.map((e, i) => <li key={i}>{e}</li>)}</ul>
-            <Link to="/section/exercise" className="inline-block rounded-full bg-secondary px-3 py-1 text-[11px] font-bold text-foreground">Browse workouts →</Link>
-            {id === "me" && <Adjust tool="exercise" ov={ovr.exercise ?? {}} onChange={changeOv} />}
           </Tool>
         )}
 
@@ -345,6 +384,8 @@ function MyPlanPage() {
 
         <Link to="/home" className="block rounded-2xl bg-primary py-2.5 text-center text-[12.5px] font-bold text-primary-foreground">Done</Link>
       </div>
+      {yogaSession && <SessionPlayer title={yogaSession.title} plan={yogaSession.plan} feedback={false} onClose={() => setYogaSession(null)} />}
+      {exPlay && <ExercisePlayer src={{ title: exPlay.title, steps: exPlay.steps, startIndex: 0 }} onClose={() => setExPlay(null)} />}
       <AyuBot />
       <BottomNav />
     </div>
