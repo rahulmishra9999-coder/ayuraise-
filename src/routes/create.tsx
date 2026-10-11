@@ -4,6 +4,10 @@ import { ArrowLeft } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
 import { ALL_GOALS, getGoal } from "@/lib/goals";
 import { loadYogaPlans, newPlanId, upsertYogaPlan, WEEKDAYS, type YogaPlan } from "@/lib/yoga-plan";
+import { buildMealPlan } from "@/lib/meal-plan";
+import { MealPlanView } from "@/components/MealPlanView";
+import type { ActivityLevel, Sex } from "@/lib/weight-loss";
+import type { Dosha } from "@/lib/diet";
 import { SUPPORT } from "@/lib/support";
 
 export const Route = createFileRoute("/create")({
@@ -238,6 +242,7 @@ function CreatePlan() {
     if (hasYoga || hasExercise) s.push("protect");
     if (hasExercise) s.push("ex-duration", "ex-level", "ex-days", "ex-focus", "ex-equip");
     if (hasDiet) {
+      if (editTool === "diet") s.push("diet-edit"); // pick-what-to-change menu when editing
       s.push("diet-meals", "diet-prefs", "diet-allergies"); // IF lives inside the meal-plan page
     }
     s.push("review");
@@ -250,7 +255,7 @@ function CreatePlan() {
   const jumpedTool = useRef(false);
   useEffect(() => {
     if (jumpedTool.current || !editTool) return;
-    const first = editTool === "yoga" ? "yoga-time" : editTool === "exercise" ? "ex-duration" : "diet-meals";
+    const first = editTool === "yoga" ? "yoga-time" : editTool === "exercise" ? "ex-duration" : "diet-edit";
     const i = stepKeys.indexOf(first);
     if (i >= 0) { jumpedTool.current = true; setStep(i); }
   }, [editTool, stepKeys]);
@@ -273,6 +278,24 @@ function CreatePlan() {
     true;
 
   const goTo = (name: string) => { const i = stepKeys.indexOf(name); if (i >= 0) setStep(i); };
+
+  // Meal-plan preview for the review step (reads saved profile basics + conditions)
+  const reviewMealPlan = useMemo(() => {
+    let b: Record<string, any> = {}, lf: Record<string, any> = {};
+    try { b = JSON.parse(localStorage.getItem("ayuraise.profile") ?? "{}") ?? {}; } catch { /* ignore */ }
+    try { lf = JSON.parse(localStorage.getItem("ayuraise.lifestyle") ?? "{}") ?? {}; } catch { /* ignore */ }
+    return buildMealPlan({
+      age: Number(b.age) || undefined,
+      sex: (b.gender as Sex) || undefined,
+      heightCm: Number(b.heightCm ?? lf.cm) || undefined,
+      weightKg: Number(b.weightKg ?? lf.kg) || undefined,
+      activity: (b.activity as ActivityLevel) || undefined,
+      dosha: ((b.prakriti as { dosha?: Dosha } | undefined)?.dosha) || undefined,
+      cuisine: (b.cuisineRegion as string) || (b.cuisine as string) || (lf.cuisineRegion as string) || undefined,
+      goalIds: goals,
+      conditions: (lf.conditions as string[]) ?? [],
+    });
+  }, [goals]);
   const back = () => (step === 0 ? navigate({ to: "/home" }) : setStep((s) => s - 1));
   const next = () => { if (canNext) setStep((s) => Math.min(stepKeys.length - 1, s + 1)); };
 
@@ -307,7 +330,7 @@ function CreatePlan() {
     "yoga-time": "Set up your yoga", protect: "Areas to protect",
     "ex-level": "Your exercise", "ex-days": "Exercise days", "ex-duration": "Workout length",
     "ex-focus": "Exercise focus", "ex-equip": "Equipment",
-    "diet-meals": "Let's create your meal plan", "diet-prefs": "Dietary preferences", "diet-allergies": "Allergies", review: "Review your plan",
+    "diet-edit": "Edit your diet", "diet-meals": "Let's create your meal plan", "diet-prefs": "Dietary preferences", "diet-allergies": "Allergies", review: "Review your plan",
   };
 
   return (
@@ -441,6 +464,16 @@ function CreatePlan() {
         {key === "ex-focus" && <Q title="Exercise focus"><div className="flex flex-wrap gap-1.5">{EX_FOCUS.map((f) => <button key={f} onClick={() => setFocus(f)} className={chip(focus === f)}>{f}</button>)}</div></Q>}
         {key === "ex-equip" && <Q title="What equipment do you have?"><div className="flex flex-wrap gap-1.5">{EQUIP.map((e) => <button key={e} onClick={() => setEquip(e)} className={chip(equip === e)}>{e}</button>)}</div></Q>}
 
+        {key === "diet-edit" && (
+          <div className="space-y-2">
+            <p className="px-1 text-[12px] text-muted-foreground">Here's your current diet — tap <b>Edit</b> on anything you want to change, or save as is.</p>
+            <ReviewRow label="Meal format" value={mealMode === "detailed" ? `Detailed · ${meals} main${mini ? ` + ${mini} mini` : ""}` : "Just food tips"} onEdit={() => goTo("diet-meals")} />
+            <ReviewRow label="Preferences" value={prefs.join(", ") || "none"} onEdit={() => goTo("diet-prefs")} />
+            <ReviewRow label="Allergies / avoid" value={allergies.join(", ") || "none"} onEdit={() => goTo("diet-allergies")} />
+            <button onClick={save} className="mt-2 w-full rounded-2xl bg-primary py-3 text-[13px] font-bold text-primary-foreground active:scale-[0.99]">Save my diet</button>
+          </div>
+        )}
+
         {key === "diet-meals" && (
           <div>
             <p className="px-1 text-[12px] leading-snug text-muted-foreground">We recommend 2–3 main meals, plus 1 mini-meal (snack) only if you need it.</p>
@@ -573,6 +606,14 @@ function CreatePlan() {
             {hasExercise && <ReviewRow label="Exercise" value={`${exDur} min · ${exLevel} · ${exDays} days · ${focus} · ${equip}`} onEdit={() => goTo("ex-duration")} />}
             {hasDiet && <ReviewRow label="Diet" value={`${dietIF ? `IF ${ifWindow} · ` : ""}${mealMode === "detailed" ? `${meals} main${mini ? `+${mini} mini` : ""}` : "Food tips"} · ${prefs.join(", ") || "no prefs"}${allergies.length ? ` · avoid: ${allergies.join(", ")}` : ""}`} onEdit={() => goTo("diet-meals")} />}
             {wantsWeight && dailyDeficit && <ReviewRow label="Target" value={`${tgtWt} kg by ${tgtDate} (≈${dailyDeficit} kcal/day)`} onEdit={() => goTo("about")} />}
+
+            {hasDiet && (
+              <div className="rounded-2xl bg-card p-2.5 ring-1 ring-border/60">
+                <p className="mb-0.5 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Your meal plan — a preview</p>
+                <p className="mb-2 text-[10.5px] leading-snug text-muted-foreground">Have a look. <b>Swap</b> any meal (we'll ask why) or tap <b>Ingredients</b> to remove anything you don't want — the plan adjusts.</p>
+                <MealPlanView plan={reviewMealPlan} />
+              </div>
+            )}
 
             {goals.some((g) => { const s = SUPPORT[g]; return s && (s.detox || s.fasting || s.meditation || s.herbs); }) && (
               <p className="px-1 text-[11.5px] leading-snug text-muted-foreground">Next you'll see <b>Detox, Fasting, Meditation & Herbs</b> that support your goal — explained on your plan page, to start whenever you're ready.</p>
