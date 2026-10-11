@@ -57,35 +57,36 @@ function Adjust({ tool, ov, onChange }: { tool: string; ov: ToolOverride; onChan
   );
 }
 
-/** Compact 3-day strip — up to 3 sessions a day, the rest unlock as you progress. */
-function DayStrip({ startedAt, total, onPlay }: { startedAt: number; total: number; onPlay: (day: number) => void }) {
-  const current = Math.max(1, Math.min(total, Math.floor((Date.now() - startedAt) / 86_400_000) + 1));
-  const show = Array.from({ length: Math.min(3, total) }, (_, k) => k + 1);
+/** Compact 3-session strip — sequential unlock, up to 3 a day; rest open as you progress. */
+function DayStrip({ done, doneToday, total, onPlay }: { done: number[]; doneToday: number; total: number; onPlay: (day: number) => void }) {
+  let next = total;
+  for (let i = 1; i <= total; i++) if (!done.includes(i)) { next = i; break; }
+  const capReached = doneToday >= 3;
+  const win = [next, next + 1, next + 2].filter((d) => d <= total);
   return (
     <div>
       <div className="flex gap-1.5">
-        {show.map((d) => {
-          const locked = d > current;
-          const isToday = d === current;
+        {win.map((d) => {
+          const isNext = d === next;
+          const playable = isNext && !capReached;
           return (
             <button
               key={d}
-              disabled={locked}
               onClick={() => onPlay(d)}
               aria-label={`Day ${d}`}
-              className={`flex h-11 w-10 shrink-0 flex-col items-center justify-center gap-0.5 rounded-lg leading-none ${isToday ? "bg-primary text-primary-foreground" : locked ? "bg-secondary/50 text-muted-foreground/60" : "bg-accent/50 text-foreground/85 ring-1 ring-border/50"}`}
+              className={`flex h-11 w-10 shrink-0 flex-col items-center justify-center gap-0.5 rounded-lg leading-none ${playable ? "bg-primary text-primary-foreground" : isNext ? "bg-amber-100 text-amber-700" : "bg-secondary/50 text-muted-foreground/70"}`}
             >
               <span className="text-[7px] font-bold uppercase opacity-70">Day</span>
               <span className="text-[13px] font-bold">{d}</span>
-              {locked ? <span className="text-[8px]">🔒</span> : <Play size={9} className="opacity-80" />}
+              {playable ? <Play size={9} className="opacity-80" /> : <span className="text-[8px]">{isNext && capReached ? "⏳" : "🔒"}</span>}
             </button>
           );
         })}
-        {total > 3 && (
-          <div className="flex h-11 flex-1 items-center justify-center rounded-lg bg-secondary/25 px-2 text-center text-[9px] leading-tight text-muted-foreground">🔒 more open as you progress</div>
+        {next + 2 < total && (
+          <div className="flex h-11 flex-1 items-center justify-center rounded-lg bg-secondary/25 px-2 text-center text-[9px] leading-tight text-muted-foreground">opens as you progress</div>
         )}
       </div>
-      <p className="mt-1 text-[9px] text-muted-foreground">Up to 3 sessions a day — the rest unlock as you go.</p>
+      <p className="mt-1 text-[9px] text-muted-foreground">{capReached ? "3 done today — next opens tomorrow." : "Up to 3 sessions a day · play them in order."}</p>
     </div>
   );
 }
@@ -103,6 +104,8 @@ function MyPlanPage() {
   const [planStartedAt, setPlanStartedAt] = useState<number>(Date.now());
   const [yogaSession, setYogaSession] = useState<{ title: string; plan: ReturnType<typeof generatePlan> } | null>(null);
   const [exPlay, setExPlay] = useState<{ title: string; steps: Step[] } | null>(null);
+  const [prog, setProg] = useState<{ yoga: { done: number[]; dates: Record<number, string> }; exercise: { done: number[]; dates: Record<number, string> } }>({ yoga: { done: [], dates: {} }, exercise: { done: [], dates: {} } });
+  const [capPopup, setCapPopup] = useState(false);
   const changeOv = (tool: string, o: ToolOverride) => { setOvr((p) => ({ ...p, [tool]: { ...(p[tool] ?? {}), ...o } })); setToolOverride(tool, o); };
 
   useEffect(() => {
@@ -114,6 +117,7 @@ function MyPlanPage() {
       if (pp?.overrides) setOvr(pp.overrides);
       setEnabled(pp?.tools ?? PLAN_TOOLS.map((t) => t.id));
       if (pp?.createdAt) setPlanStartedAt(pp.createdAt);
+      try { const pr = localStorage.getItem("ayuraise.myplan.prog"); if (pr) setProg(JSON.parse(pr)); } catch { /* ignore */ }
     } else {
       const yp = loadYogaPlans().find((p) => p.id === id);
       const w = (yp?.wizard ?? {}) as Record<string, unknown>;
@@ -199,9 +203,25 @@ function MyPlanPage() {
   const primaryFocus = activeFocusP.filter((x) => healthSel.includes(x));
   const alsoCovered = healthSel.filter((x) => !primaryFocus.includes(x));
   const fitnessSel = (profile?.chosenGoals as string[]) ?? [];
-  // Play a day's session inline using the real Yoga / Exercise players
-  const openYogaDay = (d: number) => setYogaSession({ title: `Yoga · Day ${d}`, plan: generatePlan("none", toYogaGoal(g[0] ?? "wellness"), Number(ovr.yoga?.minutes) || 20) });
-  const openExerciseDay = (d: number) => setExPlay({ title: `Exercise · Day ${d}`, steps: bundleSteps(CLASSICS.slice(0, 6).map((e) => ({ exId: e.id, sets: 1, sec: e.sec }))) });
+  // Play a day's session inline using the real Yoga / Exercise players (3-a-day, sequential)
+  const today = new Date().toISOString().slice(0, 10);
+  const doneTodayCount = (tool: "yoga" | "exercise") => prog[tool].done.filter((d) => prog[tool].dates[d] === today).length;
+  const markDone = (tool: "yoga" | "exercise", day: number) => setProg((p) => {
+    if (p[tool].done.includes(day)) return p;
+    const np = { ...p, [tool]: { done: [...p[tool].done, day], dates: { ...p[tool].dates, [day]: today } } };
+    try { localStorage.setItem("ayuraise.myplan.prog", JSON.stringify(np)); } catch { /* ignore */ }
+    return np;
+  });
+  const openYogaDay = (d: number) => {
+    if (doneTodayCount("yoga") >= 3 && !prog.yoga.done.includes(d)) { setCapPopup(true); return; }
+    markDone("yoga", d);
+    setYogaSession({ title: `Yoga · Day ${d}`, plan: generatePlan("none", toYogaGoal(g[0] ?? "wellness"), Number(ovr.yoga?.minutes) || 20) });
+  };
+  const openExerciseDay = (d: number) => {
+    if (doneTodayCount("exercise") >= 3 && !prog.exercise.done.includes(d)) { setCapPopup(true); return; }
+    markDone("exercise", d);
+    setExPlay({ title: `Exercise · Day ${d}`, steps: bundleSteps(CLASSICS.slice(0, 6).map((e) => ({ exId: e.id, sets: 1, sec: e.sec }))) });
+  };
   // Edit a part → open that tool's own question flow in the Create wizard, plan goals carried (auto-selected)
   const editTool = (tool: string) => navigate({ to: "/create", search: { tool, goals: g.join(",") } });
   const removeTool = (tool: string) => {
@@ -275,14 +295,14 @@ function MyPlanPage() {
         {/* 1 · Yoga */}
         {yogaHas && enabled.includes("yoga") && (
           <Tool emoji="🧘" title="Yoga & pranayam" onEdit={id === "me" ? () => editTool("yoga") : undefined} onRemove={id === "me" ? () => removeTool("yoga") : undefined}>
-            <DayStrip startedAt={planStartedAt} total={28} onPlay={openYogaDay} />
+            <DayStrip done={prog.yoga.done} doneToday={doneTodayCount("yoga")} total={28} onPlay={openYogaDay} />
           </Tool>
         )}
 
         {/* 2 · Exercise */}
         {enabled.includes("exercise") && (
           <Tool emoji="🏋️" title="Exercise" onEdit={id === "me" ? () => editTool("exercise") : undefined} onRemove={id === "me" ? () => removeTool("exercise") : undefined}>
-            <DayStrip startedAt={planStartedAt} total={28} onPlay={openExerciseDay} />
+            <DayStrip done={prog.exercise.done} doneToday={doneTodayCount("exercise")} total={28} onPlay={openExerciseDay} />
           </Tool>
         )}
 
@@ -386,6 +406,16 @@ function MyPlanPage() {
       </div>
       {yogaSession && <SessionPlayer title={yogaSession.title} plan={yogaSession.plan} feedback={false} onClose={() => setYogaSession(null)} />}
       {exPlay && <ExercisePlayer src={{ title: exPlay.title, steps: exPlay.steps, startIndex: 0 }} onClose={() => setExPlay(null)} />}
+      {capPopup && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-6" onClick={() => setCapPopup(false)}>
+          <div className="w-full max-w-xs rounded-2xl bg-card p-5 text-center" onClick={(e) => e.stopPropagation()}>
+            <p className="text-[28px]">🌙</p>
+            <p className="mt-1 text-[14px] font-bold text-foreground">That's 3 for today!</p>
+            <p className="mt-1 text-[12px] leading-snug text-muted-foreground">Great work — your next sessions open tomorrow. Rest and recover so you keep progressing.</p>
+            <button onClick={() => setCapPopup(false)} className="mt-4 w-full rounded-2xl bg-primary py-2.5 text-[13px] font-bold text-primary-foreground">Got it</button>
+          </div>
+        </div>
+      )}
       <AyuBot />
       <BottomNav />
     </div>

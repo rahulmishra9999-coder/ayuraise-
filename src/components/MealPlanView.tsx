@@ -1,6 +1,10 @@
 import { useState, Fragment, createContext, useContext, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
-import { RefreshCw, Leaf, Scale, ChevronDown, BookOpen, ChevronLeft, ChevronRight, Download } from "lucide-react";
+import { RefreshCw, Scale, ChevronDown, BookOpen, Download, Carrot } from "lucide-react";
+
+// Major ingredients the plan leans on — editable in the ingredient sheet.
+const MAIN_INGREDIENTS = ["Paneer", "Tofu", "Dal", "Rajma", "Chana", "Rice", "Roti", "Millet", "Oats", "Curd", "Peanut", "Soya", "Ghee", "Besan", "Makhana"];
+const SABZI_OPTIONS = "lauki, bhindi, tinda, cabbage, mixed veg, palak, gobi, tori";
 import type { GeneratedMealPlan, EatAvoid, FoodMacro } from "@/lib/meal-plan";
 import { TERM_EXAMPLES, FOOD_MACROS } from "@/lib/meal-plan";
 import { getDishDetail, ingredientMacro, dishSeason } from "@/lib/dish-details";
@@ -64,7 +68,12 @@ export function MealPlanView({ plan }: { plan: GeneratedMealPlan }) {
   const [openMeals, setOpenMeals] = useState<Record<string, boolean>>({});
   const [openRecipes, setOpenRecipes] = useState<Record<string, boolean>>({});
   const [tip, setTip] = useState<{ text: string; ex?: string; macro?: FoodMacro; left: number; top: number } | null>(null);
-  const go = (d: number) => setDayIdx((i) => (i + d + 7) % 7);
+  const [swapFor, setSwapFor] = useState<{ key: string; n: number } | null>(null);
+  const [swapReason, setSwapReason] = useState("");
+  const [swapPref, setSwapPref] = useState("");
+  const [, setSwapReasons] = useState<Record<string, { reason: string; pref: string }>>({});
+  const [avoid, setAvoid] = useState<string[]>([]);
+  const [ingOpen, setIngOpen] = useState(false);
 
   const TIP_W = Math.min(250, (typeof window !== "undefined" ? window.innerWidth : 360) - 16);
   const openTip = (text: string, rect: DOMRect, data?: { ex?: string; macro?: FoodMacro }) => {
@@ -84,8 +93,16 @@ export function MealPlanView({ plan }: { plan: GeneratedMealPlan }) {
 
   const renderMeal = (m: GeneratedMealPlan["week"][number]["meals"][number], dayI: number, si: number, showDay: boolean) => {
     const key = `${dayI}:${si}`;
+    const useOpts = (() => {
+      if (!avoid.length) return m.options;
+      const filtered = m.options.filter((o) => {
+        const hay = (o + " " + getDishDetail(o, m.kcal).ingredients.join(" ")).toLowerCase();
+        return !avoid.some((a) => hay.includes(a.toLowerCase()));
+      });
+      return filtered.length ? filtered : m.options;
+    })();
     const idx = swaps[key] ?? 0;
-    const dish = m.options[idx % m.options.length];
+    const dish = useOpts[idx % useOpts.length];
     const det = getDishDetail(dish, m.kcal);
     const open = detailAll || openMeals[key];
     const recipeOpen = openRecipes[key];
@@ -102,7 +119,7 @@ export function MealPlanView({ plan }: { plan: GeneratedMealPlan }) {
             <p className="mt-0.5 text-[10px] text-muted-foreground">~{det.kcal} kcal · P {det.p} · C {det.c} · F {det.f} g</p>
           </button>
           <button
-            onClick={() => setSwaps((p) => ({ ...p, [key]: (idx + 1) % m.options.length }))}
+            onClick={() => setSwapFor({ key, n: useOpts.length })}
             className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-secondary text-foreground/70 active:scale-95"
             aria-label={`Swap ${m.slot}`}
           >
@@ -130,6 +147,9 @@ export function MealPlanView({ plan }: { plan: GeneratedMealPlan }) {
               </ul>
               <p className="text-[9px] text-muted-foreground">Tap an underlined item for its macros.</p>
             </div>
+            {(dish.toLowerCase().includes("sabzi") || dish.toLowerCase().includes("veg")) && (
+              <p className="text-[10px] leading-snug text-muted-foreground"><span className="font-semibold text-foreground/80">Sabzi options:</span> {SABZI_OPTIONS}</p>
+            )}
             <button onClick={() => setOpenRecipes((p) => ({ ...p, [key]: !recipeOpen }))} className="flex items-center gap-1 text-[10.5px] font-bold text-primary">
               <BookOpen size={12} /> {recipeOpen ? "Hide recipe" : "See recipe"}
             </button>
@@ -247,7 +267,8 @@ export function MealPlanView({ plan }: { plan: GeneratedMealPlan }) {
         <div className="mb-2 flex items-center justify-between gap-2">
           <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">This week</p>
           <div className="flex items-center gap-1.5">
-            <button onClick={() => setDetailAll((q) => !q)} className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold ${detailAll ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground/75"}`}><Scale size={11} /> Detail</button>
+            <button onClick={() => setIngOpen(true)} title="Ingredients" className={`flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-bold ${avoid.length ? "bg-rose-50 text-rose-600" : "bg-secondary text-foreground/75"}`}><Carrot size={11} /> Ingredients{avoid.length ? ` (${avoid.length}✕)` : ""}</button>
+            <button onClick={() => setDetailAll((q) => !q)} className={`flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-bold ${detailAll ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground/75"}`}><Scale size={11} /> Detail</button>
             <button onClick={downloadPDF} aria-label="Download PDF" title="Download PDF" className="flex h-7 w-7 items-center justify-center rounded-full bg-secondary text-foreground/70"><Download size={12} /></button>
           </div>
         </div>
@@ -282,6 +303,54 @@ export function MealPlanView({ plan }: { plan: GeneratedMealPlan }) {
           )}
         </div>
       </>
+    )}
+
+    {swapFor && (
+      <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40" onClick={() => setSwapFor(null)}>
+        <div className="w-full max-w-xl rounded-t-2xl bg-card p-4 pb-[max(1.25rem,env(safe-area-inset-bottom))]" onClick={(e) => e.stopPropagation()}>
+          <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-border" />
+          <p className="text-[13px] font-bold text-foreground">Swap this meal</p>
+          <p className="mt-0.5 text-[11px] text-muted-foreground">Tell us why — your next week's plan learns from it.</p>
+          <div className="mt-2.5 flex flex-wrap gap-1.5">
+            {["Don't like it", "Not available", "Too heavy", "Want variety", "Avoid an ingredient"].map((r) => (
+              <button key={r} onClick={() => setSwapReason(r)} className={`rounded-full px-3 py-1 text-[11px] font-semibold ${swapReason === r ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground/75"}`}>{r}</button>
+            ))}
+          </div>
+          <input value={swapPref} onChange={(e) => setSwapPref(e.target.value)} placeholder="Any preference? e.g. something with paneer, lighter, no onion" className="mt-2.5 w-full rounded-xl bg-background px-3 py-2 text-[12px] ring-1 ring-border/60 focus:outline-none focus:ring-2 focus:ring-primary/40" />
+          <button
+            onClick={() => {
+              const k = swapFor.key;
+              setSwaps((p) => ({ ...p, [k]: ((p[k] ?? 0) + 1) % Math.max(1, swapFor.n) }));
+              setSwapReasons((p) => ({ ...p, [k]: { reason: swapReason, pref: swapPref } }));
+              setSwapFor(null); setSwapReason(""); setSwapPref("");
+            }}
+            className="mt-3 w-full rounded-2xl bg-primary py-2.5 text-[13px] font-bold text-primary-foreground active:scale-[0.99]"
+          >Get a new meal →</button>
+        </div>
+      </div>
+    )}
+
+    {ingOpen && (
+      <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40" onClick={() => setIngOpen(false)}>
+        <div className="w-full max-w-xl rounded-t-2xl bg-card p-4 pb-[max(1.25rem,env(safe-area-inset-bottom))]" onClick={(e) => e.stopPropagation()}>
+          <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-border" />
+          <p className="text-[13px] font-bold text-foreground">Your main ingredients</p>
+          <p className="mt-0.5 text-[11px] text-muted-foreground">Tap to remove anything you don't want — meals using it are swapped out and the plan adjusts.</p>
+          <div className="mt-2.5 flex flex-wrap gap-1.5">
+            {MAIN_INGREDIENTS.map((ing) => {
+              const off = avoid.includes(ing);
+              return (
+                <button key={ing} onClick={() => setAvoid((a) => off ? a.filter((x) => x !== ing) : [...a, ing])}
+                  className={`rounded-full px-3 py-1 text-[11px] font-semibold ring-1 ${off ? "bg-rose-50 text-rose-600 line-through ring-rose-200" : "bg-secondary text-foreground/80 ring-border/50"}`}>
+                  {ing}
+                </button>
+              );
+            })}
+          </div>
+          <p className="mt-2 text-[10px] text-muted-foreground">{avoid.length ? `Avoiding: ${avoid.join(", ")}` : "Nothing removed — tap an item to avoid it."}</p>
+          <button onClick={() => setIngOpen(false)} className="mt-3 w-full rounded-2xl bg-primary py-2.5 text-[13px] font-bold text-primary-foreground active:scale-[0.99]">Done</button>
+        </div>
+      </div>
     )}
     </TermTipCtx.Provider>
   );

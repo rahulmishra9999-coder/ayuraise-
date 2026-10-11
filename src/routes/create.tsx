@@ -236,7 +236,7 @@ function CreatePlan() {
     if (wantsWeight) s.push("about"); // conditions are asked earlier (in the profile); here only the weight target
     if (hasYoga) s.push("yoga-time");
     if (hasYoga || hasExercise) s.push("protect");
-    if (hasExercise) s.push("ex-level", "ex-days", "ex-duration", "ex-focus", "ex-equip");
+    if (hasExercise) s.push("ex-duration", "ex-level", "ex-days", "ex-focus", "ex-equip");
     if (hasDiet) {
       s.push("diet-meals", "diet-prefs", "diet-allergies"); // IF lives inside the meal-plan page
     }
@@ -250,7 +250,7 @@ function CreatePlan() {
   const jumpedTool = useRef(false);
   useEffect(() => {
     if (jumpedTool.current || !editTool) return;
-    const first = editTool === "yoga" ? "yoga-time" : editTool === "exercise" ? "ex-level" : "diet-meals";
+    const first = editTool === "yoga" ? "yoga-time" : editTool === "exercise" ? "ex-duration" : "diet-meals";
     const i = stepKeys.indexOf(first);
     if (i >= 0) { jumpedTool.current = true; setStep(i); }
   }, [editTool, stepKeys]);
@@ -451,6 +451,25 @@ function CreatePlan() {
               <button onClick={() => setMealMode("recos")} className={`lf-btn flex-1 rounded-2xl py-2.5 text-[12px] font-bold ring-1 ${mealMode === "recos" ? "bg-primary/10 text-primary ring-primary" : "bg-card ring-border/60"}`}>Just food tips</button>
             </div>
 
+            {/* sample of the picked mode */}
+            <div className="mt-2.5 rounded-2xl bg-secondary/40 p-2.5 ring-1 ring-border/60">
+              <p className="mb-1 text-[9px] font-bold uppercase tracking-wide text-muted-foreground">Sample · {mealMode === "detailed" ? "detailed plan" : "food tips"}</p>
+              {mealMode === "detailed" ? (
+                <div className="space-y-0.5 text-[11px] text-foreground/85">
+                  <p><b>Breakfast · 8–10am</b> — Vegetable poha + peanuts</p>
+                  <p className="text-[10px] text-muted-foreground">Poha 60g · peanuts 15g · 1 bowl veg · 1 tsp oil · ~460 kcal</p>
+                  <p><b>Lunch · 1–3pm</b> — Dal + 2 roti + sabzi + salad</p>
+                  <p className="text-[10px] text-muted-foreground">1 bowl dal · 2 phulka · 1 cup sabzi · salad</p>
+                </div>
+              ) : (
+                <div className="space-y-0.5 text-[11px] text-foreground/85">
+                  <p><b className="text-emerald-600">Favour:</b> dal, millets, lots of veg, curd; biggest meal at lunch</p>
+                  <p><b className="text-rose-500">Limit:</b> sugar, maida, fried, late-night snacking</p>
+                  <p className="text-[10px] text-muted-foreground">Flexible — no fixed menu, follow it your own way.</p>
+                </div>
+              )}
+            </div>
+
             {mealMode === "detailed" ? (
               <div className="mt-3 flex gap-6">
                 <div>
@@ -551,7 +570,7 @@ function CreatePlan() {
             <ReviewRow label="Goal" value={goalLabels.join(" + ")} onEdit={() => goTo("goals")} />
             <ReviewRow label="Personalizing" value={ivs.map((k) => `${IV_META[k].emoji} ${IV_META[k].label}`).join("  ·  ")} onEdit={() => goTo("interventions")} />
             {hasYoga && <ReviewRow label="Yoga" value={`${yogaLevel} · ${duration} min/session${protect.length ? ` · protect: ${protect.join(", ")}` : ""}`} onEdit={() => goTo("yoga-time")} />}
-            {hasExercise && <ReviewRow label="Exercise" value={`${exLevel} · ${exDays} days · ${exDur} min · ${focus} · ${equip}`} onEdit={() => goTo("ex-level")} />}
+            {hasExercise && <ReviewRow label="Exercise" value={`${exDur} min · ${exLevel} · ${exDays} days · ${focus} · ${equip}`} onEdit={() => goTo("ex-duration")} />}
             {hasDiet && <ReviewRow label="Diet" value={`${dietIF ? `IF ${ifWindow} · ` : ""}${mealMode === "detailed" ? `${meals} main${mini ? `+${mini} mini` : ""}` : "Food tips"} · ${prefs.join(", ") || "no prefs"}${allergies.length ? ` · avoid: ${allergies.join(", ")}` : ""}`} onEdit={() => goTo("diet-meals")} />}
             {wantsWeight && dailyDeficit && <ReviewRow label="Target" value={`${tgtWt} kg by ${tgtDate} (≈${dailyDeficit} kcal/day)`} onEdit={() => goTo("about")} />}
 
