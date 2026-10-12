@@ -9,7 +9,7 @@ import { YOGA_TEMPLATES, CATEGORY_LABELS, CATEGORY_ORDER, templateToPlan, type Y
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import {
-  ArrowLeft, Play, Pause, ChevronRight, ChevronLeft, X, Trash2, Volume2, VolumeX, History, Bot, Plus, Check, Sliders, Star, MoreHorizontal,
+  ArrowLeft, Play, Pause, ChevronRight, ChevronLeft, X, Trash2, Volume2, VolumeX, History, Bot, Plus, Check, Sliders, Star, MoreHorizontal, Info,
 } from "lucide-react";
 import {
   POSES, DURATIONS, GOALS, DISEASES, generatePlan, posesFor, speak, stopSpeaking,
@@ -999,16 +999,22 @@ export function SessionPlayer({ title, plan, feedback, onDone, onClose }: { titl
   const [playing, setPlaying] = useState(true);
   const [voice, setVoice] = useState(feedback);
   const [done, setDone] = useState(false);
+  const [readyLen, setReadyLen] = useState(3);               // GET READY countdown length (tap to change)
+  const [ready, setReady] = useState<number | null>(3);
+  const [infoOpen, setInfoOpen] = useState(false);
   const startRef = useRef(Date.now());
   const pose = poses[idx];
 
+  useEffect(() => { setReady(readyLen); }, [idx]); // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     if (!playing || done) return;
+    if (ready !== null) { const t = setTimeout(() => setReady((r) => (r && r > 1 ? r - 1 : null)), 1000); return () => clearTimeout(t); }
     if (secs <= 0) { next(); return; }
     const t = setTimeout(() => setSecs((s) => s - 1), 1000);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [secs, playing, done]);
+  }, [secs, playing, done, ready]);
 
   useEffect(() => {
     if (done) return;
@@ -1088,7 +1094,10 @@ export function SessionPlayer({ title, plan, feedback, onDone, onClose }: { titl
       <div className="flex items-center justify-between px-5 pt-[max(1rem,env(safe-area-inset-top))]">
         <button onClick={() => { stopSpeaking(); onClose(); }} className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10"><X size={16} /></button>
         <p className="text-[12px] font-semibold opacity-80">{idx + 1} / {poses.length} · {title}</p>
-        <button onClick={() => setVoice(!voice)} className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10">{voice ? <Volume2 size={16} /> : <VolumeX size={16} />}</button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => { setPlaying(false); setInfoOpen(true); }} aria-label="Pose info" className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10"><Info size={16} /></button>
+          <button onClick={() => setVoice(!voice)} className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10">{voice ? <Volume2 size={16} /> : <VolumeX size={16} />}</button>
+        </div>
       </div>
 
       <div className="mt-3 flex gap-1 px-5">
@@ -1100,11 +1109,25 @@ export function SessionPlayer({ title, plan, feedback, onDone, onClose }: { titl
       </div>
 
       <div className="flex flex-1 flex-col items-center justify-center px-8 text-center">
-        <span className="animate-breathe text-[92px] leading-none">{pose.emoji}</span>
-        <h2 className="mt-5 font-display text-2xl font-bold">{pose.name}</h2>
-        <p className="text-[13px] italic opacity-70">{pose.sanskrit}</p>
-        <p className="mt-4 max-w-xs text-[14px] leading-relaxed opacity-90">{pose.steps[0]}</p>
-        <p className="mt-6 font-display text-5xl font-bold tabular-nums">{Math.floor(secs / 60)}:{String(secs % 60).padStart(2, "0")}</p>
+        {ready !== null ? (
+          <>
+            <span className="animate-breathe text-[84px] leading-none">{pose.emoji}</span>
+            <p className="mt-4 text-[12px] font-bold uppercase tracking-[0.2em] text-teal-300">Get ready</p>
+            <h2 className="mt-1 font-display text-2xl font-bold">{pose.name}</h2>
+            <button onClick={() => { const nx = readyLen === 3 ? 5 : readyLen === 5 ? 10 : 3; setReadyLen(nx); setReady(nx); }} className="mt-4 flex h-24 w-24 items-center justify-center rounded-full bg-teal-500/15 ring-2 ring-teal-400 active:scale-95">
+              <span className="font-display text-6xl font-bold tabular-nums">{ready}</span>
+            </button>
+            <p className="mt-2 text-[11px] opacity-60">Tap the number to change the countdown</p>
+          </>
+        ) : (
+          <>
+            <span className="animate-breathe text-[92px] leading-none">{pose.emoji}</span>
+            <h2 className="mt-5 font-display text-2xl font-bold">{pose.name}</h2>
+            <p className="text-[13px] italic opacity-70">{pose.sanskrit}</p>
+            <p className="mt-4 max-w-xs text-[14px] leading-relaxed opacity-90">{pose.steps[0]}</p>
+            <p className="mt-6 font-display text-5xl font-bold tabular-nums">{Math.floor(secs / 60)}:{String(secs % 60).padStart(2, "0")}</p>
+          </>
+        )}
       </div>
 
       <div className="flex items-center justify-center gap-6 px-5">
@@ -1113,6 +1136,28 @@ export function SessionPlayer({ title, plan, feedback, onDone, onClose }: { titl
         <button onClick={next} className="flex h-12 w-12 items-center justify-center rounded-full bg-white/10"><ChevronRight size={22} /></button>
       </div>
       <button onClick={finish} className="mx-auto mb-[max(1.5rem,env(safe-area-inset-bottom))] mt-4 text-[12px] font-semibold opacity-70">Finish session</button>
+
+      <Dialog open={infoOpen} onOpenChange={(v) => { setInfoOpen(v); if (!v) setPlaying(true); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="font-display">{pose.name}</DialogTitle>
+            <DialogDescription>{pose.sanskrit}</DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[60svh] space-y-3 overflow-y-auto pr-1">
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-wide text-foreground/50">How to do it</p>
+              <ol className="mt-1 list-decimal space-y-0.5 pl-4">
+                {pose.steps.map((st, i) => <li key={i} className="text-[12.5px] leading-relaxed text-foreground/85">{st}</li>)}
+              </ol>
+            </div>
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-wide text-foreground/50">Breathing</p>
+              <p className="mt-1 text-[12.5px] leading-relaxed text-foreground/85">Breathe slow and deep through the nose. Lengthen on the inhale, soften deeper into the pose on the exhale. Never strain.</p>
+            </div>
+          </div>
+          <button onClick={() => { setInfoOpen(false); setPlaying(true); }} className="w-full rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground">Got it</button>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

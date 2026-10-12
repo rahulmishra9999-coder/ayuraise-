@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, ChevronDown, ChevronLeft, ChevronRight, Play } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronLeft, ChevronRight, Play, Music, Info, Clock, X } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
 import { AyuBot } from "@/components/AyuBot";
 import { loadYogaPlans } from "@/lib/yoga-plan";
@@ -12,8 +12,8 @@ import type { ActivityLevel, Sex } from "@/lib/weight-loss";
 import type { Dosha } from "@/lib/diet";
 import { SessionPlayer, toYogaGoal } from "@/routes/section.yoga";
 import { Player as ExercisePlayer } from "@/routes/section.exercise";
-import { generatePlan } from "@/lib/yoga";
-import { bundleSteps, CLASSICS, type Step } from "@/lib/exercise";
+import { generatePlan, posesFor } from "@/lib/yoga";
+import { bundleSteps, CLASSICS, getExercise, type Step } from "@/lib/exercise";
 
 export const Route = createFileRoute("/myplan/$id")({ component: MyPlanPage });
 
@@ -57,32 +57,141 @@ function Adjust({ tool, ov, onChange }: { tool: string; ov: ToolOverride; onChan
   );
 }
 
-/** Compact 3-session strip — sequential unlock, up to 3 a day; rest open as you progress. */
-function DayStrip({ done, doneToday, total, onPlay }: { done: number[]; doneToday: number; total: number; onPlay: (day: number) => void }) {
-  let next = total;
-  for (let i = 1; i <= total; i++) if (!done.includes(i)) { next = i; break; }
-  const capReached = doneToday >= 3;
-  const win = [next, next + 1, next + 2].filter((d) => d <= total);
+/** Compact day strip — the current 3 days are open (playable); the next days show locked. */
+function DayStrip({ done, total, onPlay }: { done: number[]; total: number; onPlay: (day: number) => void }) {
+  let base = 1;
+  for (let i = 1; i <= total; i++) if (!done.includes(i)) { base = i; break; }
+  base = Math.min(base, Math.max(1, total - 2));
+  const open = [base, base + 1, base + 2].filter((d) => d <= total);
+  const locked = [base + 3, base + 4].filter((d) => d <= total);
   return (
     <div>
       <div className="flex gap-1.5">
-        {win.map((d) => {
-          const isNext = d === next;
-          const playable = isNext && !capReached;
+        {open.map((d) => {
+          const isDone = done.includes(d);
           return (
             <button
               key={d}
               onClick={() => onPlay(d)}
               aria-label={`Day ${d}`}
-              className={`flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg px-2 ${playable ? "bg-primary text-primary-foreground" : isNext ? "bg-amber-100 text-amber-700" : "bg-secondary/50 text-muted-foreground/70 ring-1 ring-border/50"}`}
+              className={`flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg px-2 ${isDone ? "bg-secondary/50 text-foreground/55 ring-1 ring-border/50" : "bg-primary text-primary-foreground"}`}
             >
               <span className="text-[12px] font-bold">Day {d}</span>
-              {playable ? <Play size={11} className="opacity-90" /> : <span className="text-[10px]">{isNext && capReached ? "⏳" : "🔒"}</span>}
+              {isDone ? <span className="text-[10px]">✓</span> : <Play size={11} className="opacity-90" />}
             </button>
           );
         })}
+        {locked.map((d) => (
+          <div key={d} aria-label={`Day ${d} locked`} className="flex h-9 flex-1 items-center justify-center gap-1 rounded-lg bg-secondary/40 px-2 text-muted-foreground/60 ring-1 ring-border/40">
+            <span className="text-[11px] font-bold">Day {d}</span>
+            <span className="text-[9px]">🔒</span>
+          </div>
+        ))}
       </div>
-      <p className="mt-1 text-[9px] text-muted-foreground">{capReached ? "3 done today — next opens tomorrow." : "Up to 3 sessions a day · play them in order."}</p>
+      <p className="mt-1 text-[9px] leading-snug text-muted-foreground">At a given time 3 sessions can be accessed — the next open as you progress.</p>
+    </div>
+  );
+}
+
+/* ================= Workout-details intro (shown before the player) ================= */
+
+type IntroItem = { name: string; emoji: string; sec: number; how?: string; steps?: string[] };
+type IntroData = {
+  tool: "yoga" | "exercise";
+  title: string;
+  level: string;
+  focus: string;
+  minutes: number;
+  build: (min: number) => IntroItem[];
+  onStart: (min: number) => void;
+};
+
+const INTRO_DURATIONS = [10, 15, 20, 30, 45];
+const PLAYLISTS = ["Calm focus", "Upbeat energy", "Lo-fi flow", "No music"];
+function introFmt(sec: number) { return `${Math.floor(sec / 60)}:${String(Math.round(sec) % 60).padStart(2, "0")}`; }
+
+function WorkoutIntro({ data, onClose }: { data: IntroData; onClose: () => void }) {
+  const [dur, setDur] = useState(data.minutes);
+  const [playlist, setPlaylist] = useState(0);
+  const [detail, setDetail] = useState<IntroItem | null>(null);
+  const items = useMemo(() => data.build(dur), [dur, data]);
+  const kcal = Math.round(dur * (data.tool === "exercise" ? 7 : 4));
+  const noun = data.tool === "yoga" ? "poses" : "exercises";
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col bg-background">
+      <div className="relative overflow-hidden px-5 pb-6 pt-[max(1rem,env(safe-area-inset-top))] text-primary-foreground" style={{ background: "var(--gradient-violet)" }}>
+        <button onClick={onClose} className="flex h-9 w-9 items-center justify-center rounded-full bg-white/15"><ArrowLeft size={16} /></button>
+        <h2 className="mt-4 text-center font-display text-[26px] font-extrabold">{data.title}</h2>
+      </div>
+      <div className="flex-1 overflow-y-auto px-5 pb-32 pt-4">
+        <p className="font-display text-[16px] font-bold text-foreground">Workout Details</p>
+        <div className="mt-2 grid grid-cols-2 gap-2.5">
+          <div className="rounded-2xl bg-card p-3 ring-1 ring-border/60">
+            <p className="text-[10px] font-bold uppercase tracking-wide text-primary">Basic</p>
+            <p className="mt-1.5 text-[12.5px] text-foreground/85">🔥 {kcal} kcal</p>
+            <p className="text-[12.5px] text-foreground/85">⏱ {dur} min</p>
+            <p className="text-[12.5px] text-foreground/85">🎚 {data.level}</p>
+          </div>
+          <div className="rounded-2xl bg-card p-3 ring-1 ring-border/60">
+            <p className="text-[10px] font-bold uppercase tracking-wide text-primary">Focus zones</p>
+            <p className="mt-1.5 text-[12.5px] font-semibold text-foreground">{data.focus}</p>
+          </div>
+        </div>
+        <button onClick={() => setPlaylist((p) => (p + 1) % PLAYLISTS.length)} className="mt-2.5 flex w-full items-center gap-2.5 rounded-2xl bg-card p-3 text-left ring-1 ring-border/60">
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary"><Music size={16} /></span>
+          <div className="min-w-0 flex-1"><p className="text-[10px] font-bold uppercase tracking-wide text-primary">Music</p><p className="text-[12.5px] font-semibold text-foreground">{PLAYLISTS[playlist]}</p></div>
+          <ChevronRight size={16} className="text-muted-foreground" />
+        </button>
+        <div className="mt-2.5 rounded-2xl bg-card p-3 ring-1 ring-border/60">
+          <p className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-primary"><Clock size={11} /> Session length</p>
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {INTRO_DURATIONS.map((m) => <button key={m} onClick={() => setDur(m)} className={`rounded-full px-3 py-1 text-[12px] font-bold ${dur === m ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground/75"}`}>{m} min</button>)}
+          </div>
+        </div>
+        <p className="mt-4 font-display text-[15px] font-bold text-foreground">{items.length} {noun}</p>
+        <div className="mt-2 space-y-1.5">
+          {items.map((it, i) => (
+            <button key={i} onClick={() => setDetail(it)} className="flex w-full items-center gap-3 rounded-2xl bg-card p-2.5 text-left ring-1 ring-border/60 active:scale-[0.99]">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-accent/50 text-xl">{it.emoji}</span>
+              <div className="min-w-0 flex-1"><p className="truncate text-[13px] font-semibold text-foreground">{it.name}</p><p className="text-[11px] text-muted-foreground">{introFmt(it.sec)}</p></div>
+              <Info size={15} className="shrink-0 text-muted-foreground" />
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-background via-background/95 to-transparent px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-4">
+        <button onClick={() => data.onStart(dur)} className="w-full rounded-2xl bg-primary py-3.5 text-[15px] font-bold text-primary-foreground shadow-[var(--shadow-glow)] active:scale-[0.99]">Start</button>
+      </div>
+
+      {detail && (
+        <div className="absolute inset-0 z-10 flex flex-col bg-background">
+          <div className="relative flex items-center justify-center bg-accent/40 pt-[max(1rem,env(safe-area-inset-top))]">
+            <button onClick={() => setDetail(null)} className="absolute right-4 top-[max(1rem,env(safe-area-inset-top))] flex h-9 w-9 items-center justify-center rounded-full bg-card/80 text-foreground"><X size={16} /></button>
+            <span className="py-10 text-[110px] leading-none">{detail.emoji}</span>
+          </div>
+          <div className="flex-1 overflow-y-auto px-5 pb-32 pt-4">
+            <h3 className="font-display text-[22px] font-extrabold text-foreground">{detail.name}</h3>
+            <p className="mt-0.5 text-[11.5px] text-muted-foreground">{introFmt(detail.sec)}</p>
+            <p className="mt-4 text-[11px] font-bold uppercase tracking-wide text-foreground/50">How to do it</p>
+            {detail.steps?.length
+              ? <ol className="mt-1 list-decimal space-y-0.5 pl-4">{detail.steps.map((s, i) => <li key={i} className="text-[12.5px] leading-relaxed text-foreground/85">{s}</li>)}</ol>
+              : <p className="mt-1 text-[12.5px] leading-relaxed text-foreground/85">{detail.how ?? "Move with control through the full range. Keep your core engaged and shoulders relaxed."}</p>}
+            <p className="mt-4 text-[11px] font-bold uppercase tracking-wide text-foreground/50">Breathing</p>
+            {data.tool === "yoga"
+              ? <p className="mt-1 text-[12.5px] leading-relaxed text-foreground/85">Breathe slow through the nose — lengthen on the inhale, soften deeper on the exhale. Never strain.</p>
+              : <ul className="mt-1 space-y-0.5 text-[12.5px] leading-relaxed text-foreground/85"><li>• Exhale on the effort (the hard part).</li><li>• Inhale as you release / return.</li><li>• Never hold your breath.</li></ul>}
+            <p className="mt-4 text-[11px] font-bold uppercase tracking-wide text-foreground/50">Common mistakes</p>
+            <ul className="mt-1 space-y-0.5 text-[12.5px] leading-relaxed text-foreground/85">
+              <li>• Rushing — keep it slow and controlled.</li>
+              <li>• Losing form to finish faster — quality over speed.</li>
+              {data.tool === "yoga" ? <li>• Holding your breath — keep it flowing.</li> : <li>• Locking the joints — keep knees & elbows soft.</li>}
+            </ul>
+          </div>
+          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-background via-background/95 to-transparent px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-4">
+            <button onClick={() => data.onStart(dur)} className="w-full rounded-2xl bg-primary py-3.5 text-[15px] font-bold text-primary-foreground shadow-[var(--shadow-glow)] active:scale-[0.99]">Start</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -100,9 +209,11 @@ function MyPlanPage() {
   const [planStartedAt, setPlanStartedAt] = useState<number>(Date.now());
   const [yogaSession, setYogaSession] = useState<{ title: string; plan: ReturnType<typeof generatePlan> } | null>(null);
   const [exPlay, setExPlay] = useState<{ title: string; steps: Step[] } | null>(null);
+  const [intro, setIntro] = useState<IntroData | null>(null); // workout-details screen shown before the player
   const [prog, setProg] = useState<{ yoga: { done: number[]; dates: Record<number, string> }; exercise: { done: number[]; dates: Record<number, string> } }>({ yoga: { done: [], dates: {} }, exercise: { done: [], dates: {} } });
-  const [capPopup, setCapPopup] = useState(false);
   const [tab, setTab] = useState<"mine" | "recos">("mine");
+  const [wizardMealMode, setWizardMealMode] = useState<"detailed" | "recos" | null>(null); // mealMode saved on a named plan's wizard
+  const [dietAvoid, setDietAvoid] = useState<string[]>([]); // ingredients to leave out of the meal plan
   const changeOv = (tool: string, o: ToolOverride) => { setOvr((p) => ({ ...p, [tool]: { ...(p[tool] ?? {}), ...o } })); setToolOverride(tool, o); };
 
   useEffect(() => {
@@ -120,6 +231,8 @@ function MyPlanPage() {
       const w = (yp?.wizard ?? {}) as Record<string, unknown>;
       setGoalIds(yp ? ((w.goalIds as string[]) ?? []) : null);
       if (yp) setName(yp.name ?? yp.primary ?? "My plan");
+      if (w.mealMode === "recos" || w.mealMode === "detailed") setWizardMealMode(w.mealMode);
+      if (Array.isArray(w.avoidIng)) setDietAvoid(w.avoidIng as string[]);
     }
   }, [id]);
 
@@ -209,16 +322,25 @@ function MyPlanPage() {
     try { localStorage.setItem("ayuraise.myplan.prog", JSON.stringify(np)); } catch { /* ignore */ }
     return np;
   });
-  const openYogaDay = (d: number) => {
-    if (doneTodayCount("yoga") >= 3 && !prog.yoga.done.includes(d)) { setCapPopup(true); return; }
-    markDone("yoga", d);
-    setYogaSession({ title: `Yoga · Day ${d}`, plan: generatePlan("none", toYogaGoal(g[0] ?? "wellness"), Number(ovr.yoga?.minutes) || 20) });
-  };
-  const openExerciseDay = (d: number) => {
-    if (doneTodayCount("exercise") >= 3 && !prog.exercise.done.includes(d)) { setCapPopup(true); return; }
-    markDone("exercise", d);
-    setExPlay({ title: `Exercise · Day ${d}`, steps: bundleSteps(CLASSICS.slice(0, 6).map((e) => ({ exId: e.id, sets: 1, sec: e.sec }))) });
-  };
+  const exCountFor = (min: number) => { const avg = CLASSICS.reduce((a, e) => a + e.sec, 0) / (CLASSICS.length || 1) || 40; return Math.max(4, Math.min(CLASSICS.length, Math.round((min * 60) / avg))); };
+  const buildYogaItems = (min: number): IntroItem[] =>
+    posesFor(generatePlan("none", toYogaGoal(g[0] ?? "wellness"), min)).map((p) => ({ name: p.name, emoji: p.emoji, sec: p.durationSec, steps: p.steps }));
+  const buildExItems = (min: number): IntroItem[] =>
+    bundleSteps(CLASSICS.slice(0, exCountFor(min)).map((e) => ({ exId: e.id, sets: 1, sec: e.sec })))
+      .filter((s) => s.kind !== "break")
+      .map((s) => ({ name: s.name, emoji: s.emoji, sec: s.sec, how: getExercise(s.exId)?.how }));
+
+  // Tapping a day opens the workout-details screen first (choose time, see the list), then the player.
+  const openYogaDay = (d: number) => setIntro({
+    tool: "yoga", title: `Yoga · Day ${d}`, level: (ovr.yoga?.level as string) ?? "Beginner", focus: "Full body · flexibility & calm",
+    minutes: Number(ovr.yoga?.minutes) || 20, build: buildYogaItems,
+    onStart: (min) => { markDone("yoga", d); setIntro(null); setYogaSession({ title: `Yoga · Day ${d}`, plan: generatePlan("none", toYogaGoal(g[0] ?? "wellness"), min) }); },
+  });
+  const openExerciseDay = (d: number) => setIntro({
+    tool: "exercise", title: `Exercise · Day ${d}`, level: (ovr.exercise?.level as string) ?? "Beginner", focus: "Full body",
+    minutes: Number(ovr.exercise?.minutes) || 30, build: buildExItems,
+    onStart: (min) => { markDone("exercise", d); setIntro(null); setExPlay({ title: `Exercise · Day ${d}`, steps: bundleSteps(CLASSICS.slice(0, exCountFor(min)).map((e) => ({ exId: e.id, sets: 1, sec: e.sec }))) }); },
+  });
   // Edit a part → open that tool's own question flow in the Create wizard, plan goals carried (auto-selected)
   const editTool = (tool: string) => navigate({ to: "/create", search: { tool, goals: g.join(",") } });
   const removeTool = (tool: string) => {
@@ -309,21 +431,21 @@ function MyPlanPage() {
         {/* 1 · Yoga */}
         {yogaHas && enabled.includes("yoga") && (
           <Tool emoji="🧘" title="Yoga & pranayam" onEdit={id === "me" ? () => editTool("yoga") : undefined} onRemove={id === "me" ? () => removeTool("yoga") : undefined}>
-            <DayStrip done={prog.yoga.done} doneToday={doneTodayCount("yoga")} total={28} onPlay={openYogaDay} />
+            <DayStrip done={prog.yoga.done} total={28} onPlay={openYogaDay} />
           </Tool>
         )}
 
         {/* 2 · Exercise */}
         {enabled.includes("exercise") && (
           <Tool emoji="🏋️" title="Exercise" onEdit={id === "me" ? () => editTool("exercise") : undefined} onRemove={id === "me" ? () => removeTool("exercise") : undefined}>
-            <DayStrip done={prog.exercise.done} doneToday={doneTodayCount("exercise")} total={28} onPlay={openExerciseDay} />
+            <DayStrip done={prog.exercise.done} total={28} onPlay={openExerciseDay} />
           </Tool>
         )}
 
         {/* 3 · Diet */}
         {diet && enabled.includes("diet") && (
           <Tool emoji="🥗" title="Diet" subtitle="your meal plan" onEdit={id === "me" ? () => editTool("diet") : undefined} onRemove={id === "me" ? () => removeTool("diet") : undefined}>
-            <MealPlanView plan={mealPlan} />
+            <MealPlanView plan={mealPlan} mode={(id === "me" ? ovr.diet?.mealMode : wizardMealMode) ?? "detailed"} avoid={dietAvoid} onAvoidChange={setDietAvoid} />
             {dos.length > 0 && (
               <div className="border-t border-border/50 pt-2">
                 <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">For your focus</p>
@@ -412,18 +534,9 @@ function MyPlanPage() {
 
         <Link to="/home" className="block rounded-2xl bg-primary py-2.5 text-center text-[12.5px] font-bold text-primary-foreground">Done</Link>
       </div>
+      {intro && <WorkoutIntro data={intro} onClose={() => setIntro(null)} />}
       {yogaSession && <SessionPlayer title={yogaSession.title} plan={yogaSession.plan} feedback={false} onClose={() => setYogaSession(null)} />}
       {exPlay && <ExercisePlayer src={{ title: exPlay.title, steps: exPlay.steps, startIndex: 0 }} onClose={() => setExPlay(null)} />}
-      {capPopup && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-6" onClick={() => setCapPopup(false)}>
-          <div className="w-full max-w-xs rounded-2xl bg-card p-5 text-center" onClick={(e) => e.stopPropagation()}>
-            <p className="text-[28px]">🌙</p>
-            <p className="mt-1 text-[14px] font-bold text-foreground">That's 3 for today!</p>
-            <p className="mt-1 text-[12px] leading-snug text-muted-foreground">Great work — your next sessions open tomorrow. Rest and recover so you keep progressing.</p>
-            <button onClick={() => setCapPopup(false)} className="mt-4 w-full rounded-2xl bg-primary py-2.5 text-[13px] font-bold text-primary-foreground">Got it</button>
-          </div>
-        </div>
-      )}
       <AyuBot />
       <BottomNav />
     </div>

@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft, Play, Pause, X, ChevronRight, ChevronLeft, Heart, Trash2, History,
-  Check, Plus, Minus, ListOrdered, Save, Music, Dumbbell, Sliders, Shuffle,
+  Check, Plus, Minus, ListOrdered, Save, Music, Dumbbell, Sliders, Shuffle, Info,
 } from "lucide-react";
 import { toast } from "sonner";
 import { BottomNav } from "@/components/BottomNav";
@@ -1479,13 +1479,19 @@ export function Player({ src, onClose }: { src: PlaySource; onClose: () => void 
   const [rest, setRest] = useState<number | null>(null);
   const kcalRef = useRef(0);
   const [kcal, setKcal] = useState(0);
+  const [readyLen, setReadyLen] = useState(3);           // GET READY countdown length (tap to change)
+  const [ready, setReady] = useState<number | null>(cur.kind === "break" ? null : 3);
+  const [infoOpen, setInfoOpen] = useState(false);
 
-  useEffect(() => { setSecs(steps[idx].sec); }, [idx, steps]);
+  // reset the per-step timer + GET READY countdown whenever the step changes
+  useEffect(() => { setSecs(steps[idx].sec); setReady(steps[idx].kind === "break" ? null : readyLen); }, [idx, steps]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (done && src.preview) onClose(); }, [done, src.preview, onClose]);
 
   useEffect(() => {
     if (!playing || done) return;
     const t = setTimeout(() => {
+      // GET READY countdown — the exercise demo runs but the timer below hasn't started yet
+      if (ready !== null) { setReady(ready > 1 ? ready - 1 : null); return; }
       setElapsed((e) => e + 1);
       if (rest !== null) { setRest(rest > 1 ? rest - 1 : null); return; }
       const st = steps[idx];
@@ -1497,7 +1503,7 @@ export function Player({ src, onClose }: { src: PlaySource; onClose: () => void 
     }, 1000);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [secs, playing, done, idx, rest]);
+  }, [secs, playing, done, idx, rest, ready]);
 
   function advance() { if (idx >= steps.length - 1) { finish(); return; } setIdx((i) => i + 1); }
   function back() { if (idx > 0) setIdx((i) => i - 1); }
@@ -1518,7 +1524,10 @@ export function Player({ src, onClose }: { src: PlaySource; onClose: () => void 
       <div className="flex items-center justify-between px-5 pt-[max(1rem,env(safe-area-inset-top))]">
         <button onClick={() => { setPlaying(false); setExitOpen(true); }} className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10"><X size={16} /></button>
         <p className="text-[12px] font-semibold opacity-80">{src.preview ? "Preview" : `${Math.min(exDone + 1, exCount)} / ${exCount}`} · {src.title}</p>
-        <button onClick={() => { setPlaying(false); setListOpen(true); }} disabled={src.preview} className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 disabled:opacity-30"><ListOrdered size={16} /></button>
+        <div className="flex items-center gap-2">
+          {!isBreak && <button onClick={() => { setPlaying(false); setInfoOpen(true); }} aria-label="Exercise info" className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10"><Info size={16} /></button>}
+          <button onClick={() => { setPlaying(false); setListOpen(true); }} disabled={src.preview} className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 disabled:opacity-30"><ListOrdered size={16} /></button>
+        </div>
       </div>
 
       <div className="mt-3 flex gap-1 px-5">
@@ -1530,7 +1539,17 @@ export function Player({ src, onClose }: { src: PlaySource; onClose: () => void 
       </div>
 
       <div className="flex flex-1 flex-col items-center justify-center px-8 text-center">
-        {isBreak ? (
+        {ready !== null ? (
+          <>
+            <span className="animate-breathe text-[80px] leading-none">{cur.emoji}</span>
+            <p className="mt-4 text-[12px] font-bold uppercase tracking-[0.2em] text-teal-300">Get ready</p>
+            <h2 className="mt-1 font-display text-2xl font-bold">{cur.name}</h2>
+            <button onClick={() => { const nx = readyLen === 3 ? 5 : readyLen === 5 ? 10 : 3; setReadyLen(nx); setReady(nx); }} className="mt-4 flex h-24 w-24 items-center justify-center rounded-full bg-teal-500/15 ring-2 ring-teal-400 active:scale-95">
+              <span className="font-display text-6xl font-bold tabular-nums">{ready}</span>
+            </button>
+            <p className="mt-2 text-[11px] opacity-60">Tap the number to change the countdown</p>
+          </>
+        ) : isBreak ? (
           <>
             <span className="text-[80px] leading-none">⏸️</span>
             <h2 className="mt-4 font-display text-2xl font-bold text-teal-300">Break</h2>
@@ -1545,7 +1564,7 @@ export function Player({ src, onClose }: { src: PlaySource; onClose: () => void 
             {getExercise(cur.exId)?.how && <p className="mt-2 max-w-xs text-[12.5px] leading-relaxed opacity-70">{getExercise(cur.exId)!.how}</p>}
           </>
         )}
-        <p className="mt-5 font-display text-5xl font-bold tabular-nums">{fmt(rest !== null ? rest : secs)}</p>
+        {ready === null && <p className="mt-5 font-display text-5xl font-bold tabular-nums">{fmt(rest !== null ? rest : secs)}</p>}
 
         <div className="mt-5 flex items-center gap-6">
           <div>
@@ -1601,6 +1620,38 @@ export function Player({ src, onClose }: { src: PlaySource; onClose: () => void 
               </button>
             ))}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={infoOpen} onOpenChange={(v) => { setInfoOpen(v); if (!v) setPlaying(true); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="font-display">{cur.name}</DialogTitle>
+            <DialogDescription>How to do it well — form, breathing and what to avoid.</DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[60svh] space-y-3 overflow-y-auto pr-1">
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-wide text-foreground/50">Instructions</p>
+              <p className="mt-1 text-[12.5px] leading-relaxed text-foreground/85">{getExercise(cur.exId)?.how ?? "Move with control through the full range. Keep your core engaged and shoulders relaxed."}</p>
+            </div>
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-wide text-foreground/50">Breathing</p>
+              <ul className="mt-1 space-y-0.5 text-[12.5px] leading-relaxed text-foreground/85">
+                <li>• Exhale on the effort (the hard part).</li>
+                <li>• Inhale as you release / return.</li>
+                <li>• Never hold your breath.</li>
+              </ul>
+            </div>
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-wide text-foreground/50">Common mistakes</p>
+              <ul className="mt-1 space-y-0.5 text-[12.5px] leading-relaxed text-foreground/85">
+                <li>• Rushing — keep the pace steady and controlled.</li>
+                <li>• Locking the joints — keep knees & elbows soft.</li>
+                <li>• Losing form to finish faster — quality over speed.</li>
+              </ul>
+            </div>
+          </div>
+          <button onClick={() => { setInfoOpen(false); setPlaying(true); }} className="w-full rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground">Got it</button>
         </DialogContent>
       </Dialog>
 

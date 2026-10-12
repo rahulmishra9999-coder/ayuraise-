@@ -3,7 +3,7 @@
 // The plan content itself is computed live by the engine (clusters.ts) from the
 // saved profile; here we only persist WHAT was chosen + any per-tool time/level tweaks.
 
-export interface ToolOverride { minutes?: number; level?: string }
+export interface ToolOverride { minutes?: number; level?: string; mealMode?: "detailed" | "recos" }
 
 export interface PersonalPlan {
   createdAt: number;

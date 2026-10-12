@@ -3,8 +3,16 @@ import { Link } from "@tanstack/react-router";
 import { RefreshCw, Scale, ChevronDown, BookOpen, Download, Carrot } from "lucide-react";
 
 // Major ingredients the plan leans on — editable in the ingredient sheet.
-const MAIN_INGREDIENTS = ["Paneer", "Tofu", "Dal", "Rajma", "Chana", "Rice", "Roti", "Millet", "Oats", "Curd", "Peanut", "Soya", "Ghee", "Besan", "Makhana"];
+export const MAIN_INGREDIENTS = ["Paneer", "Tofu", "Dal", "Rajma", "Chana", "Rice", "Roti", "Millet", "Oats", "Curd", "Peanut", "Soya", "Ghee", "Besan", "Makhana"];
 const SABZI_OPTIONS = "lauki, bhindi, tinda, cabbage, mixed veg, palak, gobi, tori";
+
+// "Just food tips" mode — per-meal guidance + a static composition example (no fixed 7-day menu).
+const MEAL_RECOS: Record<string, { foods: string; make: string }> = {
+  Breakfast: { foods: "Complex carb + protein + a fruit/veg", make: "1 bowl poha/oats/daliya (or 2 cheela/idli) + a protein (sprouts/curd/peanuts) + a fruit" },
+  Lunch: { foods: "Grain + dal/protein + sabzi + salad/curd", make: "2 roti or 1 cup rice + 1 bowl dal + 1 cup sabzi + salad + small curd" },
+  Snack: { foods: "Light protein or fruit — nothing fried", make: "roasted makhana/chana or a fruit + 5 nuts, with tea/buttermilk" },
+  Dinner: { foods: "Light & early — khichdi/soup + veg", make: "1 bowl khichdi or 2 phulka + light dal + cooked veg (finish by ~8 pm)" },
+};
 import type { GeneratedMealPlan, EatAvoid, FoodMacro } from "@/lib/meal-plan";
 import { TERM_EXAMPLES, FOOD_MACROS } from "@/lib/meal-plan";
 import { getDishDetail, ingredientMacro, dishSeason } from "@/lib/dish-details";
@@ -59,7 +67,7 @@ function EatAvoidRow({ item }: { item: EatAvoid & { note?: string } }) {
 /** Personalized meal plan — calorie need, macros, recommended foods, per-goal +
  *  prakriti + ritucharya favour/limit, and a swappable 7-day schedule with per-dish
  *  quantities, macros and recipes. */
-export function MealPlanView({ plan }: { plan: GeneratedMealPlan }) {
+export function MealPlanView({ plan, mode = "detailed", avoid: avoidProp, onAvoidChange }: { plan: GeneratedMealPlan; mode?: "detailed" | "recos"; avoid?: string[]; onAvoidChange?: (next: string[]) => void }) {
   const todayIdx = (new Date().getDay() + 6) % 7; // Mon = 0
   const [dayIdx, setDayIdx] = useState(todayIdx);
   const [acrossMeal, setAcrossMeal] = useState<string | null>(null); // slot name → that meal across the week
@@ -72,8 +80,16 @@ export function MealPlanView({ plan }: { plan: GeneratedMealPlan }) {
   const [swapReason, setSwapReason] = useState("");
   const [swapPref, setSwapPref] = useState("");
   const [, setSwapReasons] = useState<Record<string, { reason: string; pref: string }>>({});
-  const [avoid, setAvoid] = useState<string[]>([]);
+  const [avoidInner, setAvoidInner] = useState<string[]>([]);
+  const avoid = avoidProp ?? avoidInner;
+  const setAvoid = (fn: (prev: string[]) => string[]) => {
+    const next = fn(avoid);
+    if (onAvoidChange) onAvoidChange(next); else setAvoidInner(next);
+  };
   const [ingOpen, setIngOpen] = useState(false);
+  const [want, setWant] = useState<string[]>([]);     // ingredients the user wants added in
+  const [wantInput, setWantInput] = useState("");
+  const addWant = () => { const v = wantInput.trim(); if (v && !want.includes(v)) setWant((w) => [...w, v]); setWantInput(""); };
 
   const TIP_W = Math.min(250, (typeof window !== "undefined" ? window.innerWidth : 360) - 16);
   const openTip = (text: string, rect: DOMRect, data?: { ex?: string; macro?: FoodMacro }) => {
@@ -260,12 +276,38 @@ export function MealPlanView({ plan }: { plan: GeneratedMealPlan }) {
         </div>
       </Collapse>
 
-      {/* 6 · 1-week plan */}
+      {/* 6 · meals — food tips (per-meal recos) or a full 7-day plan */}
+      {mode === "recos" ? (
+        <div>
+          <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Your meals — recommendations</p>
+          <div className="space-y-2">
+            {(plan.week[0]?.meals ?? []).map((m) => {
+              const r = MEAL_RECOS[m.slot];
+              return (
+                <div key={m.slot} className="rounded-xl bg-secondary/40 p-2.5 ring-1 ring-border/60">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[11.5px] font-bold text-foreground">{m.slot}</span>
+                    <span className="text-[9.5px] text-muted-foreground">{m.time}</span>
+                    <span className="ml-auto text-[10px] font-semibold text-primary">~{m.kcal} kcal</span>
+                  </div>
+                  {r && (
+                    <>
+                      <p className="mt-1 text-[11px] leading-snug text-foreground/85"><b className="text-emerald-600">Include:</b> {r.foods}</p>
+                      <p className="mt-0.5 text-[10.5px] leading-snug text-muted-foreground"><b className="text-foreground/80">A ~{m.kcal} kcal {m.slot.toLowerCase()} =</b> {r.make}</p>
+                    </>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          <p className="mt-2 text-[10px] leading-snug text-muted-foreground">Flexible tips — no fixed menu. Follow them your own way; portions scale with your calorie need.</p>
+        </div>
+      ) : (
       <div>
         <div className="mb-2 flex items-center justify-between gap-2">
           <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">This week</p>
           <div className="flex items-center gap-1.5">
-            <button onClick={() => setIngOpen(true)} title="Ingredients" className={`flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-bold ${avoid.length ? "bg-rose-50 text-rose-600" : "bg-secondary text-foreground/75"}`}><Carrot size={11} /> Ingredients{avoid.length ? ` (${avoid.length}✕)` : ""}</button>
+            <button onClick={() => setIngOpen(true)} title="Add or remove ingredients" className={`flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-bold ${avoid.length ? "bg-rose-50 text-rose-600" : "bg-secondary text-foreground/75"}`}><Carrot size={11} /> Add / remove{avoid.length ? ` (${avoid.length}✕)` : ""}</button>
             <button onClick={() => setDetailAll((q) => !q)} className={`flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-bold ${detailAll ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground/75"}`}><Scale size={11} /> Detail</button>
             <button onClick={downloadPDF} aria-label="Download PDF" title="Download PDF" className="flex h-7 w-7 items-center justify-center rounded-full bg-secondary text-foreground/70"><Download size={12} /></button>
           </div>
@@ -275,11 +317,12 @@ export function MealPlanView({ plan }: { plan: GeneratedMealPlan }) {
             <button key={d.day} onClick={() => setDayIdx(i)} className={`flex-1 rounded-md py-1 text-center text-[10px] font-bold ${i === dayIdx ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground/60"}`}>{d.day}</button>
           ))}
         </div>
-        <p className="mt-1.5 text-[10px] leading-snug text-muted-foreground">We'll create your next week's plan as you progress, based on your feedback.</p>
+        <p className="mt-1.5 text-[10px] leading-snug text-muted-foreground">Use <b>🥕 Add / remove</b> to take out or add ingredients, or <b>⟳</b> to swap a meal — we'll create next week's plan as you progress, based on your feedback.</p>
         <div className="mt-2 space-y-2">
           {plan.week[dayIdx].meals.map((m, si) => renderMeal(m, dayIdx, si, false))}
         </div>
       </div>
+      )}
     </div>
 
     {tip && (
@@ -332,9 +375,11 @@ export function MealPlanView({ plan }: { plan: GeneratedMealPlan }) {
       <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40" onClick={() => setIngOpen(false)}>
         <div className="w-full max-w-xl rounded-t-2xl bg-card p-4 pb-[max(1.25rem,env(safe-area-inset-bottom))]" onClick={(e) => e.stopPropagation()}>
           <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-border" />
-          <p className="text-[13px] font-bold text-foreground">Your main ingredients</p>
-          <p className="mt-0.5 text-[11px] text-muted-foreground">Tap to remove anything you don't want — meals using it are swapped out and the plan adjusts.</p>
-          <div className="mt-2.5 flex flex-wrap gap-1.5">
+          <p className="text-[13px] font-bold text-foreground">Add or remove ingredients</p>
+          <p className="mt-0.5 text-[11px] text-muted-foreground">Remove anything you don't want, or add one you'd like — your meals adjust to match.</p>
+
+          <p className="mt-3 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Tap to remove</p>
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
             {MAIN_INGREDIENTS.map((ing) => {
               const off = avoid.includes(ing);
               return (
@@ -345,8 +390,22 @@ export function MealPlanView({ plan }: { plan: GeneratedMealPlan }) {
               );
             })}
           </div>
-          <p className="mt-2 text-[10px] text-muted-foreground">{avoid.length ? `Avoiding: ${avoid.join(", ")}` : "Nothing removed — tap an item to avoid it."}</p>
-          <button onClick={() => setIngOpen(false)} className="mt-3 w-full rounded-2xl bg-primary py-2.5 text-[13px] font-bold text-primary-foreground active:scale-[0.99]">Done</button>
+          <p className="mt-1.5 text-[10px] text-muted-foreground">{avoid.length ? `Removing: ${avoid.join(", ")} — meals using these are swapped out.` : "Nothing removed — tap an item to take it out."}</p>
+
+          <p className="mt-3 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Add an ingredient you'd like</p>
+          {want.length > 0 && (
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              {want.map((w) => (
+                <button key={w} onClick={() => setWant((a) => a.filter((x) => x !== w))} className="rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-semibold text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300">{w} ✕</button>
+              ))}
+            </div>
+          )}
+          <div className="mt-1.5 flex gap-2">
+            <input value={wantInput} onChange={(e) => setWantInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") addWant(); }} placeholder="e.g. quinoa, mushroom, moringa" className="min-w-0 flex-1 rounded-xl bg-background px-3 py-2 text-[12px] ring-1 ring-border/60 focus:outline-none focus:ring-2 focus:ring-primary/40" />
+            <button onClick={addWant} className="shrink-0 rounded-xl bg-primary px-3.5 py-2 text-[12px] font-bold text-primary-foreground active:scale-95">Add</button>
+          </div>
+
+          <button onClick={() => setIngOpen(false)} className="mt-3.5 w-full rounded-2xl bg-primary py-2.5 text-[13px] font-bold text-primary-foreground active:scale-[0.99]">Done</button>
         </div>
       </div>
     )}

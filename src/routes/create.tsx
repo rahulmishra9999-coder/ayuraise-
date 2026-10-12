@@ -1,11 +1,13 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Info } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
 import { ALL_GOALS, getGoal } from "@/lib/goals";
 import { loadYogaPlans, newPlanId, upsertYogaPlan, WEEKDAYS, type YogaPlan } from "@/lib/yoga-plan";
 import { buildMealPlan } from "@/lib/meal-plan";
-import { MealPlanView } from "@/components/MealPlanView";
+import { MealPlanView, MAIN_INGREDIENTS } from "@/components/MealPlanView";
+import { ING_META, ingredientWhy } from "@/lib/ingredients";
+import { TermList } from "@/components/TermTip";
 import type { ActivityLevel, Sex } from "@/lib/weight-loss";
 import type { Dosha } from "@/lib/diet";
 import { SUPPORT } from "@/lib/support";
@@ -87,6 +89,7 @@ const DIET_PREFS = ["Vegetarian", "Vegan", "Eggetarian", "Jain (no roots)", "No 
 const ALLERGENS = ["Dairy", "Nuts", "Peanuts", "Gluten", "Soy", "Eggs"];
 const MAIN_MEALS = [1, 2, 3];
 const MINI_MEALS_D = [0, 1, 2];
+const SHOW_ING = [...MAIN_INGREDIENTS, "Vegetables"]; // ingredients shown on the "ingredients we'll use" step
 
 // Intermittent-fasting tiers: longer fasts leave room for fewer meals.
 // maxMain / maxMini = the most meals that still fit inside that fasting window.
@@ -201,6 +204,18 @@ function CreatePlan() {
   const [meals, setMeals] = useState<number>(3);
   const [mini, setMini] = useState<number>(1);
   const [mealMode, setMealMode] = useState<"detailed" | "recos">("detailed");
+  const [dietModal, setDietModal] = useState<"detailed" | "recos" | null>(null); // full diet-plan sample popup (ⓘ icons)
+  const [avoidIng, setAvoidIng] = useState<string[]>([]);   // ingredients to leave out — asked BEFORE the plan is made
+  const [ingReplace, setIngReplace] = useState<Record<string, string[]>>({}); // ingredient → chosen replacements
+  const [ingSheet, setIngSheet] = useState<string | null>(null);  // ingredient whose why/replace sheet is open
+  const [replacePick, setReplacePick] = useState<string[]>([]);   // temp replacement selection in the sheet
+  const [keepDishes, setKeepDishes] = useState("");          // dishes the user wants to keep (feedback)
+  const [dietFeedback, setDietFeedback] = useState("");      // free-text dislikes / preferences (feedback)
+  const [feedbackOpen, setFeedbackOpen] = useState(false);   // the "adjust my plan" feedback sheet
+  const [botMsgs, setBotMsgs] = useState<{ from: "you" | "ayu"; text: string }[]>([
+    { from: "ayu", text: "Here's your plan 🌿 Tell me anything to change — an ingredient to drop, lighter dinners, more protein, a cuisine — and I'll adjust it." },
+  ]);
+  const [botInput, setBotInput] = useState("");
   const [ifConflict, setIfConflict] = useState<{ hrs: number; tier: FastTier } | null>(null); // meal-count vs fasting-window clash
   // about
   const [cleared, setCleared] = useState(false);
@@ -224,6 +239,7 @@ function CreatePlan() {
     S<string>(w.focus, setFocus); S<string>(w.equip, setEquip);
     S<"detailed" | "recos">(w.mealMode, setMealMode); S<boolean>(w.dietIF, setDietIF); S<string>(w.ifWindow, setIfWindow); S<number>(w.fastHrs, setFastHrs);
     S<string[]>(w.prefs, setPrefs); S<string[]>(w.allergies, setAllergies); S<number>(w.meals, setMeals);
+    S<string[]>(w.avoidIng, setAvoidIng); S<Record<string, string[]>>(w.ingReplace, setIngReplace); S<string>(w.keepDishes, setKeepDishes); S<string>(w.dietFeedback, setDietFeedback);
     S<Record<string, string>>(w.dq, setDq); S<string>(w.curWt, setCurWt); S<string>(w.tgtWt, setTgtWt); S<string>(w.tgtDate, setTgtDate);
   }, [editId]);
 
@@ -240,22 +256,24 @@ function CreatePlan() {
     if (wantsWeight) s.push("about"); // conditions are asked earlier (in the profile); here only the weight target
     if (hasYoga) s.push("yoga-time");
     if (hasYoga || hasExercise) s.push("protect");
-    if (hasExercise) s.push("ex-duration", "ex-level", "ex-days", "ex-focus", "ex-equip");
+    if (hasExercise) s.push("ex-setup");
     if (hasDiet) {
       if (editTool === "diet") s.push("diet-edit"); // pick-what-to-change menu when editing
-      s.push("diet-meals", "diet-prefs", "diet-allergies"); // IF lives inside the meal-plan page
+      s.push("diet-prefs", "diet-allergies", "diet-meals", "diet-why"); // prefs → allergies → format, then why-this-plan
+      if (mealMode === "detailed") s.push("diet-ingredients"); // ingredients asked BEFORE the plan is built
+      s.push("diet-plan"); // show the diet plan + a feedback button, before the overall review
     }
     s.push("review");
     return s;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [goals, ivs, dietIF]);
+  }, [goals, ivs, dietIF, mealMode]);
   const key = stepKeys[Math.min(step, stepKeys.length - 1)];
 
   // "Edit one tool" deep-link → jump straight to that tool's first question screen
   const jumpedTool = useRef(false);
   useEffect(() => {
     if (jumpedTool.current || !editTool) return;
-    const first = editTool === "yoga" ? "yoga-time" : editTool === "exercise" ? "ex-duration" : "diet-edit";
+    const first = editTool === "yoga" ? "yoga-time" : editTool === "exercise" ? "ex-setup" : "diet-edit";
     const i = stepKeys.indexOf(first);
     if (i >= 0) { jumpedTool.current = true; setStep(i); }
   }, [editTool, stepKeys]);
@@ -278,6 +296,23 @@ function CreatePlan() {
     true;
 
   const goTo = (name: string) => { const i = stepKeys.indexOf(name); if (i >= 0) setStep(i); };
+
+  // Inline AyuBot on the diet-plan screen — acts on what it can (drop ingredients) and notes the rest.
+  const sendBot = () => {
+    const text = botInput.trim();
+    if (!text) return;
+    const low = text.toLowerCase();
+    const dropped = SHOW_ING.filter((ing) => low.includes(ing.toLowerCase()) && (low.includes("no ") || low.includes("remove") || low.includes("without") || low.includes("drop") || low.includes("avoid") || low.includes("don't") || low.includes("dont")));
+    if (dropped.length) setAvoidIng((a) => Array.from(new Set([...a, ...dropped])));
+    setDietFeedback((f) => (f ? f + "\n" : "") + text);
+    let reply = "";
+    if (dropped.length) reply = `Done — I've taken ${dropped.join(", ")} out and swapped those meals. Anything else?`;
+    else if (low.includes("protein")) reply = "Noted — I'll lead more meals with dal, paneer, tofu & sprouts. You can also open Ingredients to fine-tune.";
+    else if (low.includes("light") || low.includes("dinner")) reply = "Got it — lighter, earlier dinners (khichdi, soup, steamed veg). Noted for your plan.";
+    else reply = "Noted 🌿 I've saved that and your plan will adapt. You can also remove ingredients above or swap any meal with ⟳.";
+    setBotMsgs((m) => [...m, { from: "you", text }, { from: "ayu", text: reply }]);
+    setBotInput("");
+  };
 
   // Meal-plan preview for the review step (reads saved profile basics + conditions)
   const reviewMealPlan = useMemo(() => {
@@ -305,7 +340,7 @@ function CreatePlan() {
     if (hasDiet) { if (dietIF) dietBits.push(`IF ${ifWindow}`); dietBits.push(mealMode === "detailed" ? `${meals} main${mini ? `+${mini} mini` : ""}` : "Food tips"); if (prefs.length) dietBits.push(prefs.join("/")); }
     const days = WEEKDAYS.slice(0, hasExercise ? exDays : yogaDays).map((w) => w.id);
     const pid = editId ?? newPlanId();
-    const wizard = { goalIds: goals, ivs, yogaLevel, duration, yogaDays, protect, exLevel, exDays, exDur, focus, equip, mealMode, dietIF, ifWindow, fastHrs, prefs, allergies, meals, mini, dq, curWt, tgtWt, tgtDate };
+    const wizard = { goalIds: goals, ivs, yogaLevel, duration, yogaDays, protect, exLevel, exDays, exDur, focus, equip, mealMode, dietIF, ifWindow, fastHrs, prefs, allergies, meals, mini, avoidIng, ingReplace, keepDishes, dietFeedback, dq, curWt, tgtWt, tgtDate };
     const plan: YogaPlan = {
       id: pid,
       wizard,
@@ -328,9 +363,9 @@ function CreatePlan() {
   const STEP_LABEL: Record<string, string> = {
     goals: "What's your goal?", interventions: "What to personalize", about: "A little about you",
     "yoga-time": "Set up your yoga", protect: "Areas to protect",
-    "ex-level": "Your exercise", "ex-days": "Exercise days", "ex-duration": "Workout length",
-    "ex-focus": "Exercise focus", "ex-equip": "Equipment",
-    "diet-edit": "Edit your diet", "diet-meals": "Let's create your meal plan", "diet-prefs": "Dietary preferences", "diet-allergies": "Allergies", review: "Review your plan",
+    "ex-setup": "Your exercise",
+    "diet-edit": "Edit your diet", "diet-meals": "Let's create your meal plan", "diet-prefs": "Dietary preferences", "diet-allergies": "Allergies",
+    "diet-why": "Why this plan", "diet-ingredients": "Ingredients to leave out", "diet-plan": "Your diet plan", review: "Review your plan",
   };
 
   return (
@@ -457,12 +492,24 @@ function CreatePlan() {
           </Q>
         )}
 
-        {/* EXERCISE — one per screen */}
-        {key === "ex-level" && <Q title="Your exercise level"><div className="flex flex-wrap gap-1.5">{LEVELS.map((l) => <button key={l} onClick={() => setExLevel(l)} className={chip(exLevel === l)}>{l}</button>)}</div></Q>}
-        {key === "ex-days" && <Q title="Exercise days per week"><div className="flex flex-wrap gap-1.5">{DAYS_N.map((d) => <button key={d} onClick={() => setExDays(d)} className={chip(exDays === d)}>{d} days</button>)}</div><p className="mt-3 rounded-2xl bg-primary/10 px-3 py-2.5 text-[11px] leading-snug text-foreground/85 ring-1 ring-primary/20"><b>28 sessions are recommended</b> for real results — at {exDays} days/week that's about <b>{Math.ceil(28 / exDays)} weeks</b>. We'll build the full plan now and keep extending it as you progress, based on your feedback.</p></Q>}
-        {key === "ex-duration" && <Q title="How long each workout?"><div className="flex flex-wrap gap-1.5">{DURATIONS.map((d) => <button key={d} onClick={() => setExDur(d)} className={chip(exDur === d)}>{d} min</button>)}</div></Q>}
-        {key === "ex-focus" && <Q title="Exercise focus"><div className="flex flex-wrap gap-1.5">{EX_FOCUS.map((f) => <button key={f} onClick={() => setFocus(f)} className={chip(focus === f)}>{f}</button>)}</div></Q>}
-        {key === "ex-equip" && <Q title="What equipment do you have?"><div className="flex flex-wrap gap-1.5">{EQUIP.map((e) => <button key={e} onClick={() => setEquip(e)} className={chip(equip === e)}>{e}</button>)}</div></Q>}
+        {/* EXERCISE — everything on one screen, duration prominent at the top */}
+        {key === "ex-setup" && (
+          <div className="space-y-3">
+            {/* duration — big & first, for a quick change */}
+            <div className="rounded-2xl bg-primary/10 p-3 ring-1 ring-primary/25">
+              <p className="mb-1.5 px-0.5 text-[11px] font-bold uppercase tracking-wide text-primary">⏱️ Workout length</p>
+              <div className="flex flex-wrap gap-1.5">{DURATIONS.map((d) => <button key={d} onClick={() => setExDur(d)} className={chip(exDur === d)}>{d} min</button>)}</div>
+            </div>
+            {/* the rest, compact, with the current pick shown */}
+            <div className="space-y-3 rounded-2xl bg-card p-3 ring-1 ring-border/60">
+              <ExRow label="Level">{LEVELS.map((l) => <button key={l} onClick={() => setExLevel(l)} className={smChip(exLevel === l)}>{l}</button>)}</ExRow>
+              <ExRow label="Days per week">{DAYS_N.map((d) => <button key={d} onClick={() => setExDays(d)} className={smChip(exDays === d)}>{d} days</button>)}</ExRow>
+              <ExRow label="Focus">{EX_FOCUS.map((f) => <button key={f} onClick={() => setFocus(f)} className={smChip(focus === f)}>{f}</button>)}</ExRow>
+              <ExRow label="Equipment">{EQUIP.map((e) => <button key={e} onClick={() => setEquip(e)} className={smChip(equip === e)}>{e}</button>)}</ExRow>
+            </div>
+            <p className="rounded-2xl bg-primary/10 px-3 py-2.5 text-[11px] leading-snug text-foreground/85 ring-1 ring-primary/20"><b>28 sessions are recommended</b> for real results — at {exDays} days/week that's about <b>{Math.ceil(28 / exDays)} weeks</b>. We'll build the full plan now and keep extending it as you progress.</p>
+          </div>
+        )}
 
         {key === "diet-edit" && (
           <div className="space-y-2">
@@ -470,29 +517,35 @@ function CreatePlan() {
             <ReviewRow label="Meal format" value={mealMode === "detailed" ? `Detailed · ${meals} main${mini ? ` + ${mini} mini` : ""}` : "Just food tips"} onEdit={() => goTo("diet-meals")} />
             <ReviewRow label="Preferences" value={prefs.join(", ") || "none"} onEdit={() => goTo("diet-prefs")} />
             <ReviewRow label="Allergies / avoid" value={allergies.join(", ") || "none"} onEdit={() => goTo("diet-allergies")} />
+            {mealMode === "detailed" && <ReviewRow label="Ingredients left out" value={avoidIng.join(", ") || "none"} onEdit={() => goTo("diet-ingredients")} />}
+            <ReviewRow label="Diet plan" value="View & give feedback" onEdit={() => goTo("diet-plan")} />
             <button onClick={save} className="mt-2 w-full rounded-2xl bg-primary py-3 text-[13px] font-bold text-primary-foreground active:scale-[0.99]">Save my diet</button>
           </div>
         )}
 
         {key === "diet-meals" && (
           <div>
-            <p className="px-1 text-[12px] leading-snug text-muted-foreground">We recommend 2–3 main meals, plus 1 mini-meal (snack) only if you need it.</p>
+            <p className="px-1 text-[10.5px] leading-snug text-muted-foreground">We recommend 2–3 main meals, plus 1 mini-meal (snack) only if you need it.</p>
 
-            {/* detailed vs food-recos */}
+            {/* detailed vs food-recos — each with an ⓘ that opens a full sample popup */}
             <div className="mt-2.5 flex gap-2">
-              <button onClick={() => setMealMode("detailed")} className={`lf-btn flex-1 rounded-2xl py-2.5 text-[12px] font-bold ring-1 ${mealMode === "detailed" ? "bg-primary/10 text-primary ring-primary" : "bg-card ring-border/60"}`}>Detailed meal plan</button>
-              <button onClick={() => setMealMode("recos")} className={`lf-btn flex-1 rounded-2xl py-2.5 text-[12px] font-bold ring-1 ${mealMode === "recos" ? "bg-primary/10 text-primary ring-primary" : "bg-card ring-border/60"}`}>Just food tips</button>
+              {([["detailed", "Detailed meal plan"], ["recos", "Just food tips"]] as const).map(([m, label]) => (
+                <div key={m} className="flex flex-1 items-stretch gap-1">
+                  <button onClick={() => setMealMode(m)} className={`lf-btn min-w-0 flex-1 rounded-2xl py-2.5 text-[11.5px] font-bold ring-1 ${mealMode === m ? "bg-primary/10 text-primary ring-primary" : "bg-card ring-border/60"}`}>{label}</button>
+                  <button onClick={() => setDietModal(m)} aria-label={`See a full ${label} sample`} title="See a full sample" className="flex w-8 shrink-0 items-center justify-center rounded-2xl bg-card text-muted-foreground ring-1 ring-border/60 active:scale-95"><Info size={14} /></button>
+                </div>
+              ))}
             </div>
 
-            {/* sample of the picked mode */}
-            <div className="mt-2.5 rounded-2xl bg-secondary/40 p-2.5 ring-1 ring-border/60">
-              <p className="mb-1 text-[9px] font-bold uppercase tracking-wide text-muted-foreground">Sample · {mealMode === "detailed" ? "detailed plan" : "food tips"}</p>
+            {/* sample of the picked mode — in a clearly outlined box */}
+            <div className="mt-2.5 rounded-2xl border border-border bg-secondary/30 p-2.5 shadow-sm">
+              <p className="mb-1 text-[9px] font-bold uppercase tracking-wide text-muted-foreground">Sample · {mealMode === "detailed" ? "detailed plan" : "food tips"} — <button onClick={() => setDietModal(mealMode)} className="font-semibold normal-case text-primary">see full →</button></p>
               {mealMode === "detailed" ? (
                 <div className="space-y-0.5 text-[11px] text-foreground/85">
                   <p><b>Breakfast · 8–10am</b> — Vegetable poha + peanuts</p>
-                  <p className="text-[10px] text-muted-foreground">Poha 60g · peanuts 15g · 1 bowl veg · 1 tsp oil · ~460 kcal</p>
+                  <p className="text-[10px] text-muted-foreground">poha 60g · peanuts 15g · 1 bowl veg · ~460 kcal</p>
                   <p><b>Lunch · 1–3pm</b> — Dal + 2 roti + sabzi + salad</p>
-                  <p className="text-[10px] text-muted-foreground">1 bowl dal · 2 phulka · 1 cup sabzi · salad</p>
+                  <p className="text-[10px] text-muted-foreground">1 bowl dal · 2 phulka · 1 cup sabzi</p>
                 </div>
               ) : (
                 <div className="space-y-0.5 text-[11px] text-foreground/85">
@@ -594,6 +647,126 @@ function CreatePlan() {
           </Q>
         )}
 
+        {/* DIET — why this plan: same colourful UI as the meal plan (calorie bar + macros + favour/limit) */}
+        {key === "diet-why" && (() => {
+          const m = reviewMealPlan.macros;
+          const pCal = m.protein * 4, cCal = m.carbs * 4, fCal = m.fat * 9;
+          const tot = Math.max(1, pCal + cCal + fCal);
+          const pc = (v: number) => `${Math.round((v / tot) * 100)}%`;
+          return (
+            <div className="space-y-3">
+              <p className="px-1 text-[12px] leading-snug text-muted-foreground">Before we build your meals, here's <b>what we'll cover and why</b> — the same you'll see in <b>Know your food</b> on your plan.</p>
+              {/* calorie need + macro bar — identical style to the meal plan */}
+              <div className="rounded-xl bg-secondary/60 p-3">
+                <p className="text-[12px] leading-snug text-muted-foreground">
+                  <span className="text-[10px] font-bold uppercase tracking-wide">Your calorie need</span>{" "}
+                  <b className="font-display text-[15px] text-foreground">{reviewMealPlan.kcalTarget.toLocaleString()} kcal/day</b>
+                  <span> · {reviewMealPlan.goalLabel}</span>
+                </p>
+                <div className="mt-2 flex h-2.5 overflow-hidden rounded-full">
+                  <div style={{ width: pc(pCal) }} className="bg-emerald-500" />
+                  <div style={{ width: pc(cCal) }} className="bg-amber-400" />
+                  <div style={{ width: pc(fCal) }} className="bg-rose-400" />
+                </div>
+                <div className="mt-1.5 flex justify-between text-[10.5px] font-semibold">
+                  <span className="text-emerald-600">Protein {m.protein}g</span>
+                  <span className="text-amber-600">Carbs {m.carbs}g</span>
+                  <span className="text-rose-500">Fat {m.fat}g</span>
+                </div>
+                <p className="mt-1.5 text-[10px] leading-snug text-muted-foreground">Set from your age, height, weight & activity, then nudged for your goal — a safe, steady pace.</p>
+              </div>
+              {/* recommended foods — tap an underlined term for details */}
+              <div className="rounded-xl bg-secondary/40 p-3 ring-1 ring-border/60">
+                <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">🍎 Recommended foods for you</p>
+                <div className="space-y-1 text-[11px] leading-snug text-foreground/85">
+                  <p><b className="text-emerald-600">Protein ({m.protein}g):</b> <TermList items={reviewMealPlan.foodRecos.protein} /></p>
+                  <p><b className="text-amber-600">Low-GI carbs ({m.carbs}g):</b> <TermList items={reviewMealPlan.foodRecos.carbs} /></p>
+                  <p><b className="text-rose-500">Healthy fats ({m.fat}g):</b> <TermList items={reviewMealPlan.foodRecos.fats} /></p>
+                </div>
+                <p className="mt-1.5 text-[9.5px] text-muted-foreground">Tap an underlined term for why it helps.</p>
+              </div>
+              {/* why — goal / prakriti / season, favour & limit in colour (terms tappable) */}
+              <div className="rounded-xl bg-secondary/40 p-3 ring-1 ring-border/60">
+                <p className="mb-1.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Why these — goal, body type & season</p>
+                <div className="space-y-1.5">
+                  {reviewMealPlan.perGoal.map((p, i) => (
+                    <div key={i} className="rounded-lg bg-card/70 p-2 ring-1 ring-border/50">
+                      <p className="text-[11px] font-bold capitalize text-foreground">{p.label}</p>
+                      <p className="text-[11px] leading-snug text-foreground/85"><b className="text-emerald-600">Favour:</b> <TermList items={p.eat.slice(0, 3)} /></p>
+                      <p className="text-[11px] leading-snug text-foreground/85"><b className="text-rose-500">Limit:</b> <TermList items={p.avoid.slice(0, 3)} /></p>
+                    </div>
+                  ))}
+                  {reviewMealPlan.prakriti && (
+                    <div className="rounded-lg bg-card/70 p-2 ring-1 ring-border/50">
+                      <p className="text-[11px] font-bold capitalize text-foreground">{reviewMealPlan.prakriti.dosha} body type</p>
+                      <p className="text-[11px] leading-snug text-foreground/85"><b className="text-emerald-600">Favour:</b> <TermList items={reviewMealPlan.prakriti.eat.slice(0, 3)} /></p>
+                    </div>
+                  )}
+                  <div className="rounded-lg bg-card/70 p-2 ring-1 ring-border/50">
+                    <p className="text-[11px] font-bold text-foreground">{reviewMealPlan.ritucharya.label} season</p>
+                    <p className="text-[11px] leading-snug text-foreground/85"><b className="text-emerald-600">Favour:</b> <TermList items={reviewMealPlan.ritucharya.eat.slice(0, 3)} /></p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* DIET — the ingredients we'll build the plan from (asked BEFORE the plan is built) */}
+        {key === "diet-ingredients" && (
+          <div className="space-y-2.5">
+            <p className="px-1 text-[12px] leading-snug text-muted-foreground">We'll use these to build your meals. Tap any one to see <b>why it fits you</b> <Info size={11} className="mb-0.5 inline" /> — and swap it or remove it.</p>
+            <div className="grid grid-cols-4 gap-1.5">
+              {SHOW_ING.map((ing) => {
+                const removed = avoidIng.includes(ing);
+                const repl = ingReplace[ing];
+                return (
+                  <button key={ing} onClick={() => { setIngSheet(ing); setReplacePick(ingReplace[ing] ?? []); }}
+                    className={`relative flex min-h-[40px] flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1.5 text-center ring-1 transition ${removed ? "bg-rose-50/60 ring-rose-200" : "bg-card ring-border/60"}`}>
+                    <Info size={10} className="absolute right-1 top-1 text-muted-foreground/60" />
+                    <span className={`text-[10.5px] font-bold leading-tight ${removed ? "text-rose-600 line-through" : "text-foreground"}`}>{ing}</span>
+                    {removed && (repl?.length ? <span className="text-[8px] font-semibold leading-tight text-rose-500">→ {repl.join(", ")}</span> : <span className="text-[8px] font-semibold text-rose-500">removed</span>)}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="px-1 text-[10.5px] text-muted-foreground">You can also change these anytime later, right from your plan.</p>
+          </div>
+        )}
+
+        {/* DIET — the plan itself, shown before My Plan, with an AyuBot to adjust it */}
+        {key === "diet-plan" && (
+          <div className="space-y-3">
+            <p className="px-1 text-[12px] leading-snug text-muted-foreground">Here's your {mealMode === "recos" ? "food-tips plan" : "meal plan"}. Have a look, then tell AyuBot anything to change before we save.</p>
+            <div className="rounded-2xl bg-card p-2.5 ring-1 ring-border/60">
+              <p className="mb-1.5 px-1 text-[10px] font-bold uppercase tracking-wide text-primary">Preview · your {mealMode === "recos" ? "food tips" : "meal plan"}</p>
+              <MealPlanView plan={reviewMealPlan} mode={mealMode} avoid={avoidIng} onAvoidChange={setAvoidIng} />
+            </div>
+
+            {/* inline AyuBot — adjust the plan with feedback */}
+            <div className="rounded-2xl bg-card p-3 ring-1 ring-border/60">
+              <div className="flex items-center gap-1.5">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full text-[13px] text-primary-foreground" style={{ background: "var(--gradient-violet)" }}>🌿</span>
+                <p className="text-[12px] font-bold text-foreground">AyuBot — adjust your plan</p>
+              </div>
+              <div className="mt-2 space-y-1.5">
+                {botMsgs.map((m, i) => (
+                  <div key={i} className={`flex ${m.from === "you" ? "justify-end" : "justify-start"}`}>
+                    <p className={`max-w-[85%] rounded-2xl px-3 py-1.5 text-[11.5px] leading-snug ${m.from === "you" ? "bg-primary text-primary-foreground" : "bg-secondary/60 text-foreground/85"}`}>{m.text}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-2 flex gap-2">
+                <input value={botInput} onChange={(e) => setBotInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") sendBot(); }} placeholder="e.g. no paneer, lighter dinners, more protein" className="min-w-0 flex-1 rounded-xl bg-background px-3 py-2 text-[12px] ring-1 ring-border/60 focus:outline-none focus:ring-2 focus:ring-primary/40" />
+                <button onClick={sendBot} className="shrink-0 rounded-xl bg-primary px-3.5 py-2 text-[12px] font-bold text-primary-foreground active:scale-95">Send</button>
+              </div>
+              <button onClick={() => setFeedbackOpen(true)} className="mt-2 text-[11px] font-semibold text-primary">More options — ingredients, dishes to keep →</button>
+            </div>
+
+            <p className="rounded-2xl bg-emerald-50 px-3 py-2.5 text-[11px] leading-snug text-emerald-800 ring-1 ring-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-200 dark:ring-emerald-900/40">Happy with it? Tap <b>Next</b> to review &amp; save. You can still change ingredients and <b>swap any meal</b> anytime from your plan as you go.</p>
+          </div>
+        )}
+
         {/* REVIEW */}
         {key === "review" && (
           <div className="space-y-2.5">
@@ -603,16 +776,12 @@ function CreatePlan() {
             <ReviewRow label="Goal" value={goalLabels.join(" + ")} onEdit={() => goTo("goals")} />
             <ReviewRow label="Personalizing" value={ivs.map((k) => `${IV_META[k].emoji} ${IV_META[k].label}`).join("  ·  ")} onEdit={() => goTo("interventions")} />
             {hasYoga && <ReviewRow label="Yoga" value={`${yogaLevel} · ${duration} min/session${protect.length ? ` · protect: ${protect.join(", ")}` : ""}`} onEdit={() => goTo("yoga-time")} />}
-            {hasExercise && <ReviewRow label="Exercise" value={`${exDur} min · ${exLevel} · ${exDays} days · ${focus} · ${equip}`} onEdit={() => goTo("ex-duration")} />}
+            {hasExercise && <ReviewRow label="Exercise" value={`${exDur} min · ${exLevel} · ${exDays} days · ${focus} · ${equip}`} onEdit={() => goTo("ex-setup")} />}
             {hasDiet && <ReviewRow label="Diet" value={`${dietIF ? `IF ${ifWindow} · ` : ""}${mealMode === "detailed" ? `${meals} main${mini ? `+${mini} mini` : ""}` : "Food tips"} · ${prefs.join(", ") || "no prefs"}${allergies.length ? ` · avoid: ${allergies.join(", ")}` : ""}`} onEdit={() => goTo("diet-meals")} />}
             {wantsWeight && dailyDeficit && <ReviewRow label="Target" value={`${tgtWt} kg by ${tgtDate} (≈${dailyDeficit} kcal/day)`} onEdit={() => goTo("about")} />}
 
             {hasDiet && (
-              <div className="rounded-2xl bg-card p-2.5 ring-1 ring-border/60">
-                <p className="mb-0.5 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Your meal plan — a preview</p>
-                <p className="mb-2 text-[10.5px] leading-snug text-muted-foreground">Have a look. <b>Swap</b> any meal (we'll ask why) or tap <b>Ingredients</b> to remove anything you don't want — the plan adjusts.</p>
-                <MealPlanView plan={reviewMealPlan} />
-              </div>
+              <p className="px-1 text-[11px] leading-snug text-muted-foreground">Your {mealMode === "recos" ? "food tips" : "meal plan"} is set from the feedback you gave — you can fine-tune it anytime from your plan.</p>
             )}
 
             {goals.some((g) => { const s = SUPPORT[g]; return s && (s.detox || s.fasting || s.meditation || s.herbs); }) && (
@@ -623,6 +792,101 @@ function CreatePlan() {
         )}
       </div>
 
+      {/* Full diet-plan popup — opened from the ⓘ sample icons and the review "View & edit" button */}
+      {dietModal && (
+        <div className="fixed inset-0 z-[60] flex flex-col bg-black/50" onClick={() => setDietModal(null)}>
+          <div className="mt-auto max-h-[92svh] w-full overflow-y-auto rounded-t-2xl bg-background p-4 pb-[max(1.25rem,env(safe-area-inset-bottom))]" onClick={(e) => e.stopPropagation()}>
+            <div className="mx-auto mb-2 h-1 w-10 rounded-full bg-border" />
+            <div className="mb-1.5 flex items-center justify-between gap-2">
+              <h3 className="font-display text-[15px] font-bold text-foreground">{dietModal === "recos" ? "Food tips" : "Your meal plan"}</h3>
+              <button onClick={() => setDietModal(null)} className="shrink-0 rounded-full bg-secondary px-3.5 py-1.5 text-[11px] font-bold text-foreground active:opacity-70">Done</button>
+            </div>
+            <p className="mb-2.5 text-[10.5px] leading-snug text-muted-foreground">Tap <b>Ingredients</b> to add/remove what you don't want{dietModal === "detailed" ? ", or Swap any meal" : ""} — changes apply right here.</p>
+            <MealPlanView plan={reviewMealPlan} mode={dietModal} avoid={avoidIng} onAvoidChange={setAvoidIng} />
+          </div>
+        </div>
+      )}
+
+      {/* Ingredient sheet — why it fits you, plus replace / remove */}
+      {ingSheet && (() => {
+        const name = ingSheet;
+        const meta = ING_META[name];
+        const why = ingredientWhy(name, goalLabels, reviewMealPlan.prakriti?.dosha, reviewMealPlan.ritucharya.label);
+        const removed = avoidIng.includes(name);
+        const replaceOpts = (meta?.replaceWith ?? []).filter((r) => !SHOW_ING.includes(r)); // don't suggest what's already in the list
+        return (
+          <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50" onClick={() => setIngSheet(null)}>
+            <div className="max-h-[88svh] w-full max-w-xl overflow-y-auto rounded-t-2xl bg-card p-4 pb-[max(1.25rem,env(safe-area-inset-bottom))]" onClick={(e) => e.stopPropagation()}>
+              <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-border" />
+              <p className="text-[15px] font-bold text-foreground">{name}</p>
+              {meta?.kinds && <p className="mt-0.5 text-[11px] text-muted-foreground"><b className="text-foreground/70">Includes:</b> {meta.kinds.join(", ")}</p>}
+              <div className="mt-2 space-y-1">
+                {why.map((l, i) => <p key={i} className="text-[11.5px] leading-snug text-foreground/85">{i === 0 ? "" : "• "}{l}</p>)}
+              </div>
+              {replaceOpts.length > 0 && (
+                <div className="mt-3 rounded-xl bg-secondary/40 p-3 ring-1 ring-border/50">
+                  <p className="text-[10.5px] font-bold uppercase tracking-wide text-muted-foreground">Not for you? Replace with (pick 1–2)</p>
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    {replaceOpts.map((r) => {
+                      const on = replacePick.includes(r);
+                      return <button key={r} onClick={() => setReplacePick((p) => on ? p.filter((x) => x !== r) : p.length >= 2 ? p : [...p, r])} className={`rounded-full px-3 py-1 text-[11px] font-semibold ring-1 ${on ? "bg-primary text-primary-foreground ring-primary" : "bg-card text-foreground/80 ring-border/60"}`}>{r}</button>;
+                    })}
+                  </div>
+                  <button disabled={!replacePick.length} onClick={() => { setIngReplace((m) => ({ ...m, [name]: replacePick })); setAvoidIng((a) => a.includes(name) ? a : [...a, name]); setIngSheet(null); }}
+                    className={`mt-2.5 w-full rounded-xl py-2 text-[12px] font-bold ${replacePick.length ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}>Replace{replacePick.length ? ` with ${replacePick.join(" & ")}` : ""}</button>
+                </div>
+              )}
+              <div className="mt-2 flex gap-2">
+                {removed
+                  ? <button onClick={() => { setAvoidIng((a) => a.filter((x) => x !== name)); setIngReplace((m) => { const n = { ...m }; delete n[name]; return n; }); setIngSheet(null); }} className="flex-1 rounded-xl bg-secondary py-2 text-[12px] font-bold text-foreground">Keep it in my plan</button>
+                  : <button onClick={() => { setAvoidIng((a) => [...a, name]); setIngReplace((m) => { const n = { ...m }; delete n[name]; return n; }); setIngSheet(null); }} className="flex-1 rounded-xl bg-rose-50 py-2 text-[12px] font-bold text-rose-600 ring-1 ring-rose-200">Remove completely</button>}
+                <button onClick={() => setIngSheet(null)} className="flex-1 rounded-xl bg-primary py-2 text-[12px] font-bold text-primary-foreground">Done</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Feedback sheet — adjust the meals (dislikes, preferences, dishes to keep, ingredients to remove) */}
+      {feedbackOpen && (
+        <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50" onClick={() => setFeedbackOpen(false)}>
+          <div className="max-h-[88svh] w-full max-w-xl overflow-y-auto rounded-t-2xl bg-card p-4 pb-[max(1.25rem,env(safe-area-inset-bottom))]" onClick={(e) => e.stopPropagation()}>
+            <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-border" />
+            <p className="text-[14px] font-bold text-foreground">Adjust your meals</p>
+            <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">Tell us what to change — your plan updates right away, and next week's plan learns from it.</p>
+
+            {mealMode === "detailed" && (
+              <div className="mt-3">
+                <p className="mb-1.5 text-[10.5px] font-bold uppercase tracking-wide text-muted-foreground">Ingredients to remove</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {MAIN_INGREDIENTS.map((ing) => {
+                    const off = avoidIng.includes(ing);
+                    return (
+                      <button key={ing} onClick={() => setAvoidIng((a) => off ? a.filter((x) => x !== ing) : [...a, ing])}
+                        className={`rounded-full px-3 py-1 text-[11px] font-semibold ring-1 ${off ? "bg-rose-50 text-rose-600 line-through ring-rose-200" : "bg-secondary text-foreground/80 ring-border/50"}`}>
+                        {ing}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            <div className="mt-3">
+              <p className="mb-1 text-[10.5px] font-bold uppercase tracking-wide text-muted-foreground">Dishes you want to keep</p>
+              <input value={keepDishes} onChange={(e) => setKeepDishes(e.target.value)} placeholder="e.g. keep the poha breakfast, keep khichdi dinner" className="w-full rounded-xl bg-background px-3 py-2 text-[12px] ring-1 ring-border/60 focus:outline-none focus:ring-2 focus:ring-primary/40" />
+            </div>
+
+            <div className="mt-3">
+              <p className="mb-1 text-[10.5px] font-bold uppercase tracking-wide text-muted-foreground">Dislikes / preferences</p>
+              <textarea value={dietFeedback} onChange={(e) => setDietFeedback(e.target.value)} rows={2} placeholder="e.g. don't like karela, prefer lighter dinners, more South-Indian" className="w-full resize-none rounded-xl bg-background px-3 py-2 text-[12px] ring-1 ring-border/60 focus:outline-none focus:ring-2 focus:ring-primary/40" />
+            </div>
+
+            <button onClick={() => setFeedbackOpen(false)} className="mt-4 w-full rounded-2xl bg-primary py-2.5 text-[13px] font-bold text-primary-foreground active:scale-[0.99]">Update my plan →</button>
+          </div>
+        </div>
+      )}
+
       <div className="fixed inset-x-0 z-30 mx-auto flex max-w-xl gap-2 px-4" style={{ bottom: "calc(4.5rem + env(safe-area-inset-bottom))" }}>
         {key !== "review" ? (
           <button onClick={next} disabled={!canNext} className={`w-full rounded-2xl px-4 py-3 text-sm font-bold shadow-lg transition ${canNext ? "bg-primary text-primary-foreground active:scale-[0.99]" : "bg-secondary text-muted-foreground"}`}>Next →</button>
@@ -632,6 +896,16 @@ function CreatePlan() {
       </div>
 
       <BottomNav />
+    </div>
+  );
+}
+
+/** A compact label + wrapping chips row for the single-screen exercise edit. */
+function ExRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <p className="mb-1 px-0.5 text-[10.5px] font-bold uppercase tracking-wide text-muted-foreground">{label}</p>
+      <div className="flex flex-wrap gap-1">{children}</div>
     </div>
   );
 }
