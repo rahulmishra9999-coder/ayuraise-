@@ -214,6 +214,7 @@ function MyPlanPage() {
   const [tab, setTab] = useState<"mine" | "recos">("mine");
   const [wizardMealMode, setWizardMealMode] = useState<"detailed" | "recos" | null>(null); // mealMode saved on a named plan's wizard
   const [dietAvoid, setDietAvoid] = useState<string[]>([]); // ingredients to leave out of the meal plan
+  const [tour, setTour] = useState(false); // one-time "how your plan works" orientation popup
   const changeOv = (tool: string, o: ToolOverride) => { setOvr((p) => ({ ...p, [tool]: { ...(p[tool] ?? {}), ...o } })); setToolOverride(tool, o); };
 
   useEffect(() => {
@@ -234,6 +235,8 @@ function MyPlanPage() {
       if (w.mealMode === "recos" || w.mealMode === "detailed") setWizardMealMode(w.mealMode);
       if (Array.isArray(w.avoidIng)) setDietAvoid(w.avoidIng as string[]);
     }
+    // show the orientation popup only right after a plan is created (flag set by the create flow; cleared on dismiss)
+    try { if (localStorage.getItem("ayuraise.showPlanTour")) setTour(true); } catch { /* ignore */ }
   }, [id]);
 
   // ---- engine + derivations (hooks must run before any early return) ----
@@ -534,6 +537,50 @@ function MyPlanPage() {
 
         <Link to="/home" className="block rounded-2xl bg-primary py-2.5 text-center text-[12.5px] font-bold text-primary-foreground">Done</Link>
       </div>
+      {tour && (
+        <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/50 sm:items-center" onClick={() => { try { localStorage.removeItem("ayuraise.showPlanTour"); } catch { /* ignore */ } setTour(false); }}>
+          <div className="max-h-[88svh] w-full max-w-md overflow-y-auto rounded-t-3xl bg-card p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:rounded-3xl" onClick={(e) => e.stopPropagation()}>
+            <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-border sm:hidden" />
+            <div className="text-center">
+              <span className="text-4xl">🎉</span>
+              <h2 className="mt-2 font-display text-[19px] font-extrabold text-foreground">Your plan is ready!</h2>
+              <p className="mt-1 text-[12px] leading-snug text-muted-foreground">Here's how everything works 👇</p>
+            </div>
+            <div className="mt-4 space-y-2.5">
+              {/* 1 · Built for your goal — most prominent, gradient card */}
+              <div className="rounded-2xl p-3.5 text-primary-foreground shadow-sm" style={{ background: "var(--gradient-violet)" }}>
+                <p className="text-[13px] font-extrabold">🧘 Built around your goal</p>
+                <p className="mt-1 text-[11.5px] leading-snug opacity-95">Your <b>yoga, exercise, diet, herbs and do's &amp; don'ts</b> are all made for your goal — start any of them right from this page.</p>
+              </div>
+              {/* 2 · Supporting plans — important, coloured */}
+              <div className="rounded-2xl bg-amber-50 p-3.5 ring-1 ring-amber-200 dark:bg-amber-900/20 dark:ring-amber-800">
+                <p className="text-[12.5px] font-extrabold text-amber-800 dark:text-amber-200">✨ Supporting plans included</p>
+                <p className="mt-1 text-[11.5px] leading-snug text-amber-900/90 dark:text-amber-100/90">We've also set up <b>detox, meditation, fasting &amp; intermittent fasting</b> that suit your goal — <b>practise them whenever you need</b>.</p>
+              </div>
+              {/* 3 · Track progress — important, coloured */}
+              <div className="rounded-2xl bg-sky-50 p-3.5 ring-1 ring-sky-200 dark:bg-sky-900/20 dark:ring-sky-800">
+                <p className="text-[12.5px] font-extrabold text-sky-800 dark:text-sky-200">📊 Track your progress</p>
+                <p className="mt-1 text-[11.5px] leading-snug text-sky-900/90 dark:text-sky-100/90">Come back to <b>My Plans</b> from the Home screen, and track everything from the <b>Dashboard</b> tab.</p>
+              </div>
+              {/* 4 · Ask Ayu — important, coloured */}
+              <div className="rounded-2xl bg-emerald-50 p-3.5 ring-1 ring-emerald-200 dark:bg-emerald-900/20 dark:ring-emerald-800">
+                <p className="text-[12.5px] font-extrabold text-emerald-800 dark:text-emerald-200">💬 Ask Ayu anything</p>
+                <p className="mt-1 text-[11.5px] leading-snug text-emerald-900/90 dark:text-emerald-100/90"><b>Punch your calories</b> to AyuBot and chat with it anytime for help or to customize your plan.</p>
+              </div>
+              {/* secondary — change goal + ready-made */}
+              <div className="flex gap-3 rounded-2xl bg-secondary/40 p-3 ring-1 ring-border/60">
+                <span className="text-lg leading-none">🎯</span>
+                <p className="flex-1 text-[11px] leading-snug text-muted-foreground"><b className="text-foreground">Change your goal anytime</b> — your yoga, exercise, diet &amp; detox all adjust to match.</p>
+              </div>
+              <div className="flex gap-3 rounded-2xl bg-secondary/40 p-3 ring-1 ring-border/60">
+                <span className="text-lg leading-none">📚</span>
+                <p className="flex-1 text-[11px] leading-snug text-muted-foreground"><b className="text-foreground">Ready-made plans too</b> — open the <b className="text-foreground">Yoga, Exercise, Diet, Detox, Meditation &amp; Fasting</b> sections on the <b className="text-foreground">Home screen</b> for quick, goal-based plans — great for you or for family &amp; friends.</p>
+              </div>
+            </div>
+            <button onClick={() => { try { localStorage.removeItem("ayuraise.showPlanTour"); } catch { /* ignore */ } setTour(false); }} className="mt-4 w-full rounded-2xl bg-primary py-3 text-[13.5px] font-bold text-primary-foreground active:scale-[0.99]">Got it — let's start 💪</button>
+          </div>
+        </div>
+      )}
       {intro && <WorkoutIntro data={intro} onClose={() => setIntro(null)} />}
       {yogaSession && <SessionPlayer title={yogaSession.title} plan={yogaSession.plan} feedback={false} onClose={() => setYogaSession(null)} />}
       {exPlay && <ExercisePlayer src={{ title: exPlay.title, steps: exPlay.steps, startIndex: 0 }} onClose={() => setExPlay(null)} />}

@@ -32,6 +32,13 @@ import {
   loadPlan as loadWLPlan, patchPlan as patchWLPlan, loadPunches, addPunch, removePunch,
   deriveThird, type WLPlan,
 } from "@/lib/weight-loss";
+import { loadYogaPlans, type YogaPlan } from "@/lib/yoga-plan";
+import { loadPersonalPlan } from "@/lib/personalPlan";
+import { SessionPlayer, toYogaGoal } from "@/routes/section.yoga";
+import { Player as ExercisePlayer } from "@/routes/section.exercise";
+import { generatePlan } from "@/lib/yoga";
+import { bundleSteps, CLASSICS, type Step } from "@/lib/exercise";
+import { buildMealPlan } from "@/lib/meal-plan";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -114,6 +121,9 @@ function Dashboard() {
         {/* ---- Pause / travel mode ---- */}
         <PauseControl />
 
+        {/* ---- My plan today: the day's yoga / exercise / diet — tap to open the full plan ---- */}
+        <PlanTodayCard />
+
         {/* ---- Targets row: water (one-tap) + steps ---- */}
         {show("targets") && (
           <div className="mt-5 grid grid-cols-2 gap-3">
@@ -135,6 +145,125 @@ function Dashboard() {
       <CustomizeDialog open={customizeOpen} onClose={() => setCustomizeOpen(false)} />
       <BottomNav />
     </div>
+  );
+}
+
+/** My plan today — do today's yoga / exercise right here, see today's diet & log meals.
+ *  Only "See full plan" goes into My Plan (to change things or see the whole thing). */
+function PlanTodayCard() {
+  const [hasPersonal, setHasPersonal] = useState(false);
+  const [plans, setPlans] = useState<YogaPlan[]>([]);
+  const [goalIds, setGoalIds] = useState<string[]>([]);
+  const [tools, setTools] = useState<string[]>([]);
+  const [ovr, setOvr] = useState<Record<string, { minutes?: number; level?: string }>>({});
+  const [prog, setProg] = useState<{ yoga: { done: number[]; dates: Record<number, string> }; exercise: { done: number[]; dates: Record<number, string> } }>({ yoga: { done: [], dates: {} }, exercise: { done: [], dates: {} } });
+  const [basics, setBasics] = useState<Record<string, any> | null>(null);
+  const [lf, setLf] = useState<Record<string, any> | null>(null);
+  const [dietOpen, setDietOpen] = useState(false);
+  const [logged, setLogged] = useState<string[]>([]);
+  const [yogaSession, setYogaSession] = useState<{ title: string; plan: ReturnType<typeof generatePlan> } | null>(null);
+  const [exPlay, setExPlay] = useState<{ title: string; steps: Step[] } | null>(null);
+
+  useEffect(() => {
+    try { setHasPersonal(!!localStorage.getItem("ayuraise.personalPlan")); } catch { /* ignore */ }
+    try { const pp = loadPersonalPlan(); if (pp) { setTools(pp.tools ?? ["yoga", "exercise", "diet"]); setOvr((pp.overrides ?? {}) as Record<string, { minutes?: number; level?: string }>); setGoalIds(pp.goalIds ?? []); } } catch { /* ignore */ }
+    try { const pr = localStorage.getItem("ayuraise.myplan.prog"); if (pr) setProg(JSON.parse(pr)); } catch { /* ignore */ }
+    try { const b = localStorage.getItem("ayuraise.profile"); setBasics(b ? JSON.parse(b) : null); } catch { /* ignore */ }
+    try { const l = localStorage.getItem("ayuraise.lifestyle"); setLf(l ? JSON.parse(l) : null); } catch { /* ignore */ }
+    setPlans(loadYogaPlans());
+  }, []);
+
+  const primId = plans.find((p) => p.isPrimary)?.id ?? plans[0]?.id;
+  const primary = plans.find((p) => p.id === primId);
+  const wiz = (primary?.wizard ?? {}) as Record<string, unknown>;
+  const g = goalIds.length ? goalIds : ((wiz.goalIds as string[]) ?? []);
+  const mealPlan = useMemo(() => buildMealPlan({
+    age: Number(basics?.age) || undefined,
+    sex: (basics?.gender as any) || undefined,
+    heightCm: Number(basics?.heightCm ?? lf?.cm) || undefined,
+    weightKg: Number(basics?.weightKg ?? lf?.kg) || undefined,
+    activity: (basics?.activity as any) || undefined,
+    dosha: (basics?.prakriti as { dosha?: any } | null)?.dosha || undefined,
+    cuisine: (basics?.cuisineRegion as string) || (basics?.cuisine as string) || (lf?.cuisineRegion as string) || undefined,
+    goalIds: g,
+    conditions: (lf?.conditions as string[]) ?? [],
+  }), [basics, lf, g]);
+
+  const anyPlan = hasPersonal || plans.length > 0;
+  if (!anyPlan) return null;
+  const planParam = hasPersonal ? "me" : (primId ?? "me");
+  const planTools: string[] = hasPersonal ? (tools.length ? tools : ["yoga", "exercise", "diet"]) : ((wiz.ivs as string[]) ?? ["yoga", "exercise", "diet"]);
+  const has = (t: string) => planTools.includes(t);
+  const nextDay = (done: number[]) => { for (let i = 1; i <= 28; i++) if (!done.includes(i)) return i; return 28; };
+  const today = new Date().toISOString().slice(0, 10);
+  const markDone = (tool: "yoga" | "exercise", day: number) => setProg((p) => {
+    if (p[tool].done.includes(day)) return p;
+    const np = { ...p, [tool]: { done: [...p[tool].done, day], dates: { ...p[tool].dates, [day]: today } } };
+    try { localStorage.setItem("ayuraise.myplan.prog", JSON.stringify(np)); } catch { /* ignore */ }
+    return np;
+  });
+  const win = (done: number[]) => { let base = 1; for (let i = 1; i <= 28; i++) if (!done.includes(i)) { base = i; break; } base = Math.min(base, 26); return [base, base + 1, base + 2]; };
+  const playYoga = (d: number) => { markDone("yoga", d); setYogaSession({ title: `Yoga · Day ${d}`, plan: generatePlan("none", toYogaGoal(g[0] ?? "wellness"), Number(ovr.yoga?.minutes) || 20) }); };
+  const playEx = (d: number) => { markDone("exercise", d); setExPlay({ title: `Exercise · Day ${d}`, steps: bundleSteps(CLASSICS.slice(0, 6).map((e) => ({ exId: e.id, sets: 1, sec: e.sec }))) }); };
+
+  const todayIdx = (new Date().getDay() + 6) % 7; // Mon = 0
+  const todayMeals = mealPlan.week[todayIdx]?.meals ?? [];
+  const logMeal = (slot: string, dish: string, kcal: number) => { addCalEntry({ kind: "in", label: `${slot} · ${dish}`, kcal }); setLogged((l) => [...l, slot]); toast.success(`${kcal} kcal added to cal-in 🍽️`); };
+
+  const DayBar = ({ done, onPlay, min }: { done: number[]; onPlay: (d: number) => void; min: number }) => (
+    <div className="flex gap-1.5">
+      {win(done).map((d) => {
+        const dn = done.includes(d);
+        return (
+          <button key={d} onClick={() => onPlay(d)} className={`flex h-8 flex-1 items-center justify-center gap-1 rounded-lg text-[11px] font-bold ${dn ? "bg-secondary text-foreground/55 ring-1 ring-border/50" : "bg-primary text-primary-foreground"}`}>
+            Day {d} {dn ? <span className="text-[10px]">✓</span> : <Play size={10} className="opacity-90" />}
+          </button>
+        );
+      })}
+      <span className="flex items-center text-[9px] font-semibold text-muted-foreground">{min}m</span>
+    </div>
+  );
+
+  return (
+    <section className="mt-5 surface p-4">
+      <div className="flex items-center justify-between">
+        <h2 className="flex items-center gap-2 font-display text-[15px] font-semibold">🌿 My plan today</h2>
+        <Link to="/myplan/$id" params={{ id: planParam }} className="flex items-center gap-1 rounded-full bg-secondary px-2.5 py-1.5 text-[11px] font-semibold text-foreground/75">See full plan →</Link>
+      </div>
+
+      {has("yoga") && (
+        <div className="mt-3">
+          <p className="mb-1 px-0.5 text-[11.5px] font-bold text-foreground">🧘 Yoga</p>
+          <DayBar done={prog.yoga.done} onPlay={playYoga} min={Number(ovr.yoga?.minutes) || 20} />
+        </div>
+      )}
+      {has("exercise") && (
+        <div className="mt-2.5">
+          <p className="mb-1 px-0.5 text-[11.5px] font-bold text-foreground">🏋️ Exercise</p>
+          <DayBar done={prog.exercise.done} onPlay={playEx} min={Number(ovr.exercise?.minutes) || 30} />
+        </div>
+      )}
+      {has("diet") && (
+        <div className="mt-3">
+          <p className="mb-1 flex items-baseline justify-between px-0.5"><span className="text-[11.5px] font-bold text-foreground">🥗 Today's diet</span> <span className="text-[10px] font-semibold text-muted-foreground">~{mealPlan.kcalTarget.toLocaleString()} kcal</span></p>
+          <div className="space-y-0.5">
+            {todayMeals.map((m) => {
+              const dish = m.options[0] ?? "";
+              const done = logged.includes(m.slot);
+              return (
+                <div key={m.slot} className="flex items-center gap-2">
+                  <p className="min-w-0 flex-1 text-[10.5px] leading-tight text-foreground/75"><b className="text-foreground/90">{m.slot}</b> <span className="text-primary">{m.time}</span> — {dish} <span className="text-muted-foreground">~{m.kcal}</span></p>
+                  <button onClick={() => logMeal(m.slot, dish, m.kcal)} disabled={done} className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold ${done ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300" : "bg-secondary text-foreground/70"}`}>{done ? "✓" : "+ ate"}</button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {yogaSession && <SessionPlayer title={yogaSession.title} plan={yogaSession.plan} feedback={false} onDone={() => setYogaSession(null)} onClose={() => setYogaSession(null)} />}
+      {exPlay && <ExercisePlayer src={{ title: exPlay.title, steps: exPlay.steps, startIndex: 0 }} onClose={() => setExPlay(null)} />}
+    </section>
   );
 }
 

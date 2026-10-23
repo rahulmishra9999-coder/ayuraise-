@@ -243,9 +243,11 @@ export function buildMealPlan(input: MealPlanInput): GeneratedMealPlan {
     ? calcTDEE(input.sex!, kg, input.heightCm!, input.age!, input.activity!)
     : input.sex === "male" ? 2200 : 1900;
 
+  // weight-loss deficit: ~0.4 kg/week, 1 kg fat ≈ 9,000 kcal → 3,600/week ÷ 7 ≈ 514 kcal/day
+  const LOSS_DEFICIT = Math.round((0.4 * 9000) / 7);
   let kcalTarget = maintenance;
   let goalLabel = "to maintain a healthy weight";
-  if (wantsLoss) { kcalTarget = maintenance - 400; goalLabel = "to lose weight gently (~0.4 kg/week)"; }
+  if (wantsLoss) { kcalTarget = maintenance - LOSS_DEFICIT; goalLabel = "to lose weight gently (~0.4 kg/week)"; }
   else if (wantsGain) { kcalTarget = maintenance + 250; goalLabel = "to build muscle steadily"; }
   const floor = input.sex === "male" ? 1500 : 1200;
   kcalTarget = Math.max(floor, Math.round(kcalTarget / 10) * 10);

@@ -1881,8 +1881,155 @@ function ExHistoryList() {
 
 /* ================= Learn ================= */
 
+// Noom-style micro-quizzes — pick an answer, see why, learn as you go. A template we can reuse per topic.
+type QuizOption = { label: string; correct?: boolean; feedback: string };
+type QuizQuestion = { q: string; options: QuizOption[] };
+type Quiz = { id: string; emoji: string; title: string; questions: QuizQuestion[]; outro: string };
+
+const QUIZZES: Quiz[] = [
+  {
+    id: "move-myths", emoji: "🏃", title: "Move more, myth-bust",
+    questions: [
+      {
+        q: "To lose fat, what matters most day to day?",
+        options: [
+          { label: "Sweating a lot in one workout", feedback: "Sweat is mostly your body cooling down — not fat leaving. It's the overall energy balance across the day that counts." },
+          { label: "Total movement + eating a bit less", correct: true, feedback: "Exactly. Fat loss = a small, steady calorie deficit. Everyday movement (walking, chores) adds up more than one hard session." },
+          { label: "Only long gym sessions", feedback: "Not needed. Short, regular sessions plus daily steps beat the occasional long grind." },
+        ],
+      },
+      {
+        q: "You take a 10-min walk after each meal. That mainly…",
+        options: [
+          { label: "Does nothing unless you sweat", feedback: "Actually it does a lot — gentle movement after eating helps blood sugar and digestion." },
+          { label: "Helps blood sugar & digestion", correct: true, feedback: "Yes! A short post-meal walk blunts the sugar spike and eases digestion — a tiny habit with real payoff." },
+          { label: "Replaces your workout", feedback: "It's a great add-on, but your yoga / strength still build fitness. Both matter." },
+        ],
+      },
+      {
+        q: "Motivation dips. Best way to keep going?",
+        options: [
+          { label: "Wait until you feel motivated", feedback: "Motivation comes and goes — waiting for it often means waiting forever." },
+          { label: "Shrink the task — do just 5 minutes", correct: true, feedback: "Spot on. Making it tiny beats skipping. Starting is the hard part; 5 minutes often turns into more." },
+          { label: "Skip today, do double tomorrow", feedback: "'Tomorrow' rarely pays the debt. A small bit today keeps the habit alive." },
+        ],
+      },
+    ],
+    outro: "The theme? Small and steady beats big and rare. Consistency is the real superpower. 💪",
+  },
+  {
+    id: "habit-stick", emoji: "🌱", title: "Build a habit that sticks",
+    questions: [
+      {
+        q: "The easiest way to start a new habit is to…",
+        options: [
+          { label: "Attach it to something you already do", correct: true, feedback: "Yes — \"after my morning tea, I stretch for 5 min.\" Anchoring a new habit to an old one makes it automatic." },
+          { label: "Rely on willpower alone", feedback: "Willpower is a limited battery. Systems and anchors beat willpower every time." },
+          { label: "Set one huge, bold goal", feedback: "Big goals inspire but overwhelm. Tiny, specific starts are what actually stick." },
+        ],
+      },
+      {
+        q: "You missed a day. Best move?",
+        options: [
+          { label: "Give up — the streak's broken", feedback: "One miss is normal, not failure. Quitting over one slip is the real setback." },
+          { label: "Never miss twice — restart tomorrow", correct: true, feedback: "Exactly. Missing once is an accident; missing twice starts a new (unwanted) habit. Just restart." },
+          { label: "Punish yourself with extra work", feedback: "Guilt makes habits feel bad — so you avoid them. Be kind and simply restart." },
+        ],
+      },
+      {
+        q: "Habits stick faster when they feel…",
+        options: [
+          { label: "Hard and painful", feedback: "Pain makes your brain avoid the habit. We repeat what feels good." },
+          { label: "Satisfying and a little rewarding", correct: true, feedback: "Right — a small reward (a tick, a good feeling, visible progress) tells your brain \"do that again.\"" },
+          { label: "Invisible — never tracked", feedback: "Seeing progress is motivating. A simple tick or streak makes the habit feel real." },
+        ],
+      },
+    ],
+    outro: "Anchor it, keep it tiny, make it satisfying, and never miss twice. That's how habits last. 🌟",
+  },
+];
+
+function NoomQuiz({ quiz }: { quiz: Quiz }) {
+  const [open, setOpen] = useState(false);
+  const [qi, setQi] = useState(0);
+  const [picked, setPicked] = useState<number | null>(null);
+  const [score, setScore] = useState(0);
+  const [finished, setFinished] = useState(false);
+  const q = quiz.questions[qi];
+  const reset = () => { setQi(0); setPicked(null); setScore(0); setFinished(false); };
+  const choose = (i: number) => { if (picked !== null) return; setPicked(i); if (q.options[i].correct) setScore((s) => s + 1); };
+  const next = () => { if (qi < quiz.questions.length - 1) { setQi(qi + 1); setPicked(null); } else setFinished(true); };
+
+  return (
+    <div className="overflow-hidden rounded-3xl bg-card ring-1 ring-border/60">
+      <button onClick={() => { setOpen(!open); if (!open) reset(); }} className="flex w-full items-center gap-3 p-4 text-left">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-xl text-primary-foreground" style={{ background: "var(--gradient-violet)" }}>{quiz.emoji}</span>
+        <div className="min-w-0 flex-1">
+          <p className="font-display text-[14.5px] font-bold text-foreground">{quiz.title}</p>
+          <p className="text-[11px] text-muted-foreground">{quiz.questions.length}-question quiz · tap to learn</p>
+        </div>
+        <ChevronRight size={16} className={`text-muted-foreground transition-transform ${open ? "rotate-90" : ""}`} />
+      </button>
+      {open && (
+        <div className="border-t border-border/60 p-4">
+          {finished ? (
+            <div className="text-center">
+              <span className="text-4xl">🎉</span>
+              <p className="mt-2 font-display text-[16px] font-bold text-foreground">You got {score}/{quiz.questions.length}</p>
+              <p className="mx-auto mt-1 max-w-xs text-[12px] leading-relaxed text-foreground/80">{quiz.outro}</p>
+              <button onClick={reset} className="mt-3 rounded-full bg-secondary px-4 py-2 text-[12px] font-bold text-foreground">Try again</button>
+            </div>
+          ) : (
+            <>
+              <div className="mb-3 flex items-center gap-1.5">
+                {quiz.questions.map((_, i) => <span key={i} className={`h-1.5 flex-1 rounded-full ${i < qi ? "bg-primary" : i === qi ? "bg-primary/60" : "bg-secondary"}`} />)}
+              </div>
+              <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Question {qi + 1} of {quiz.questions.length}</p>
+              <p className="mt-1 text-[14px] font-bold leading-snug text-foreground">{q.q}</p>
+              <div className="mt-3 space-y-2">
+                {q.options.map((o, i) => {
+                  const answered = picked !== null;
+                  const isPicked = picked === i;
+                  const show = answered && (o.correct || isPicked);
+                  const cls = !answered
+                    ? "bg-secondary/50 ring-border/60 text-foreground/85"
+                    : o.correct
+                    ? "bg-emerald-50 ring-emerald-300 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200"
+                    : isPicked
+                    ? "bg-rose-50 ring-rose-300 text-rose-700 dark:bg-rose-900/30 dark:text-rose-200"
+                    : "bg-secondary/30 ring-border/50 text-foreground/50";
+                  return (
+                    <div key={i}>
+                      <button disabled={answered} onClick={() => choose(i)} className={`flex w-full items-center gap-2 rounded-2xl px-3.5 py-2.5 text-left text-[12.5px] font-semibold ring-1 transition ${cls}`}>
+                        <span className="flex-1">{o.label}</span>
+                        {answered && o.correct && <Check size={15} className="shrink-0" />}
+                        {answered && isPicked && !o.correct && <X size={15} className="shrink-0" />}
+                      </button>
+                      {show && <p className="mt-1 px-1 text-[11px] leading-snug text-muted-foreground">{o.feedback}</p>}
+                    </div>
+                  );
+                })}
+              </div>
+              {picked !== null && (
+                <button onClick={next} className="mt-3 w-full rounded-2xl bg-primary py-2.5 text-[13px] font-bold text-primary-foreground active:scale-[0.99]">{qi < quiz.questions.length - 1 ? "Continue →" : "See result"}</button>
+              )}
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function LearnTab() {
-  return <div className="space-y-2 py-4">{WORKOUT_LEARN.map((s) => <LearnBlock key={s.id} s={s} />)}</div>;
+  return (
+    <div className="space-y-2 py-4">
+      <p className="px-1 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">🧠 Quick quizzes</p>
+      {QUIZZES.map((qz) => <NoomQuiz key={qz.id} quiz={qz} />)}
+      <p className="px-1 pt-3 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">📖 Articles</p>
+      {WORKOUT_LEARN.map((s) => <LearnBlock key={s.id} s={s} />)}
+    </div>
+  );
 }
 
 function LearnBlock({ s }: { s: (typeof WORKOUT_LEARN)[number] }) {

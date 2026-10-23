@@ -77,7 +77,7 @@ export function upsertYogaPlan(p: YogaPlan): YogaPlan[] {
   const list = loadYogaPlans();
   const i = list.findIndex((x) => x.id === p.id);
   if (i >= 0) list[i] = p; else list.push(p);
-  const next = list.slice(0, MAX_PLANS);
+  const next = list.slice(-MAX_PLANS); // keep the most recent MAX_PLANS (so a newly-saved plan is never the one dropped)
   saveYogaPlans(next);
   return next;
 }

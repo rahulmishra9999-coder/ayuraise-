@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, Info } from "lucide-react";
+import { ArrowLeft, Info, Mic, MicOff, X, Repeat } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
 import { ALL_GOALS, getGoal } from "@/lib/goals";
 import { loadYogaPlans, newPlanId, upsertYogaPlan, WEEKDAYS, type YogaPlan } from "@/lib/yoga-plan";
@@ -8,7 +8,9 @@ import { buildMealPlan } from "@/lib/meal-plan";
 import { MealPlanView, MAIN_INGREDIENTS } from "@/components/MealPlanView";
 import { ING_META, ingredientWhy } from "@/lib/ingredients";
 import { TermList } from "@/components/TermTip";
-import type { ActivityLevel, Sex } from "@/lib/weight-loss";
+import { CuisinePicker } from "@/components/CuisinePicker";
+import { cuisineRegion } from "@/lib/cuisines";
+import { calcBMR, ACTIVITY_LABEL, type ActivityLevel, type Sex } from "@/lib/weight-loss";
 import type { Dosha } from "@/lib/diet";
 import { SUPPORT } from "@/lib/support";
 
@@ -90,6 +92,368 @@ const ALLERGENS = ["Dairy", "Nuts", "Peanuts", "Gluten", "Soy", "Eggs"];
 const MAIN_MEALS = [1, 2, 3];
 const MINI_MEALS_D = [0, 1, 2];
 const SHOW_ING = [...MAIN_INGREDIENTS, "Vegetables"]; // ingredients shown on the "ingredients we'll use" step
+
+// kcal/min ranges for yoga & exercise, by level — the "know your meal" activity-burn screen
+const YOGA_RATE: Record<string, [number, number]> = { Beginner: [4, 5], Intermediate: [5, 6], Advanced: [6, 7] };
+const EX_RATE: Record<string, [number, number]> = { Beginner: [7.5, 9], Intermediate: [9, 10.5], Advanced: [10.5, 12] };
+const r5 = (n: number) => Math.round(n / 5) * 5;
+// incidental daily movement (walking + chores) by the activity level the user picked, as rough ranges
+const BASE_ACTS: Record<string, { label: string; lo: number; hi: number }[]> = {
+  sedentary: [{ label: "Mostly sitting · little walking", lo: 80, hi: 160 }],
+  light: [{ label: "~30-min walk · ~5,000 steps", lo: 200, hi: 250 }, { label: "Office + light household chores", lo: 80, hi: 120 }],
+  moderate: [{ label: "Walking · ~7,500 steps", lo: 280, hi: 350 }, { label: "On-your-feet work + chores", lo: 120, hi: 180 }],
+  active: [{ label: "Walking · ~7,500 steps", lo: 280, hi: 350 }, { label: "On-your-feet work + chores", lo: 120, hi: 180 }],
+  very: [{ label: "Lots of walking · ~10,000+ steps", lo: 420, hi: 520 }, { label: "Physical work / chores", lo: 160, hi: 240 }],
+  very_active: [{ label: "Lots of walking · ~10,000+ steps", lo: 420, hi: 520 }, { label: "Physical work / chores", lo: 160, hi: 240 }],
+};
+// combined incidental daily burn (walking + chores + job) by activity level — one line, rough range
+const BASE_ACTS_COMBINED: Record<string, { label: string; lo: number; hi: number }> = {
+  sedentary: { label: "Mostly sitting — desk / driving, little walking", lo: 100, hi: 200 },
+  light: { label: "Office work + household chores + ~5–7k steps walking", lo: 300, hi: 380 },
+  moderate: { label: "On-your-feet work + chores + ~7.5–10k steps", lo: 420, hi: 520 },
+  active: { label: "On-your-feet work + chores + ~7.5–10k steps", lo: 420, hi: 520 },
+  very: { label: "Physical work + chores + 10k+ steps", lo: 600, hi: 760 },
+  very_active: { label: "Physical work + chores + 10k+ steps", lo: 600, hi: 760 },
+};
+// calorie sense — common foods (page 1 of "know your meal")
+const CAL_FOODS: { emoji: string; name: string; cal: string }[] = [
+  { emoji: "🫓", name: "1 roti/phulka", cal: "~100" },
+  { emoji: "🍚", name: "1 bowl rice", cal: "~200" },
+  { emoji: "🥣", name: "1 bowl dal", cal: "~120" },
+  { emoji: "🥬", name: "1 cup sabzi", cal: "~150" },
+  { emoji: "🥛", name: "1 glass milk", cal: "~120" },
+  { emoji: "🧈", name: "1 tsp ghee/oil", cal: "~45" },
+  { emoji: "🥄", name: "1 tsp sugar", cal: "~20" },
+  { emoji: "🍎", name: "1 fruit bowl", cal: "~90" },
+];
+const CAL_ZERO = ["💧 Water", "🍵 Green / black tea", "☕ Black coffee (no sugar)", "🫚 Ginger water", "🍋 Lemon water"];
+// calorie sense — common activities (calories OUT), rough everyday burns
+const CAL_OUT: { emoji: string; name: string; cal: string }[] = [
+  { emoji: "🚶", name: "5,000 steps", cal: "~200" },
+  { emoji: "🧘", name: "20 min yoga", cal: "~90" },
+  { emoji: "🏋️", name: "20 min exercise", cal: "~180" },
+  { emoji: "🚴", name: "20 min cycling", cal: "~160" },
+  { emoji: "🏊", name: "20 min swimming", cal: "~200" },
+  { emoji: "🧹", name: "30 min housework", cal: "~80" },
+];
+
+// "science of weight loss" cards — enjoyable, not plan-text
+const SCIENCE_CARDS: { emoji: string; title: string; body: string }[] = [
+  { emoji: "🍉", title: "Fill up on water-rich foods", body: "Fruits & salads are mostly water — they fill your stomach for very few calories, so you feel full and eat less." },
+  { emoji: "✅", title: "Lean on near-zero-calorie foods", body: "Water, green & herbal tea, black coffee, most veg and spices barely count — enjoy them freely." },
+  { emoji: "🚫", title: "Go easy on calorie-dense stuff", body: "Sweets, fried & processed food pack lots of fat + sugar into small bites — easy to overeat, hard to burn off." },
+  { emoji: "🥚", title: "Make protein your friend", body: "Protein keeps you full for hours — so you naturally want to eat less later." },
+  { emoji: "🌱", title: "Eat some things raw", body: "Raw sprouts & salads take effort to chew and fill you up — you simply can't eat as much, so intake drops." },
+  { emoji: "🌾", title: "Choose low-GI foods", body: "Millets, lentils & besan digest slowly — steady energy, fewer cravings, full for longer." },
+  { emoji: "⏱️", title: "Try a little fasting", body: "Once every 1–2 weeks, cap the day at ~500–600 kcal. Or try intermittent fasting — eat within a window like 12:12, 14:10 or 16:8." },
+];
+
+// per-meal "strategy" pages — a ritual, timing, pick-one option groups, and tips
+type MealStrat = { emoji: string; title: string; share: number; time: string; start?: { note: string; items: string[] }; groups: { label: string; options: string[] }[]; plates: string[]; tips: string[] };
+const MEAL_STRATEGY: Record<string, MealStrat> = {
+  breakfast: {
+    emoji: "🌅", title: "Breakfast", share: 0.25, time: "~9–10 am (about 30 min after your warm drink)",
+    start: { note: "Start on an empty stomach, ~8–8:30 am", items: ["Turmeric + warm water", "Ginger + warm water", "Lemon + warm water"] },
+    groups: [
+      { label: "Base", options: ["2 besan chilla", "2 moong-dal chilla", "2 ragi + dal chilla", "2 parathas (very little ghee)", "½ plate daliya upma", "1 plate kodo-millet upma", "4 idlis (samak rice)", "1 plate veg poha"] },
+      { label: "+ a protein", options: ["1 bowl moong sprouts", "1 bowl chana sprouts", "1 bowl curd", "paneer / tofu bhurji", "boiled moong", "a few soaked nuts"] },
+      { label: "+ a fruit", options: ["1 apple", "1 bowl papaya", "1 pear", "1 guava", "1 orange", "1 bowl melon", "½ banana"] },
+    ],
+    plates: [
+      "2 besan chilla + 1 bowl moong sprouts + 1 apple",
+      "2 moong-dal chilla + 1 bowl curd + 1 pear",
+      "1 plate veg poha + a few soaked nuts + 1 orange",
+      "½ plate daliya upma + boiled moong + 1 guava",
+      "4 idlis (samak rice) + sambar / chutney + 1 bowl papaya",
+      "2 ragi + dal chilla + paneer / tofu bhurji + 1 bowl melon",
+      "1 plate kodo-millet upma + 1 bowl curd + ½ banana",
+      "2 oats chilla + 1 bowl moong sprouts + 1 apple",
+      "veg vermicelli upma + paneer bhurji + 1 orange",
+      "2 multigrain toast + peanut butter + 1 banana",
+    ],
+    tips: ["Tea / coffee only ~45 min after food (better absorption).", "Skip sugar & milk — prefer green or herbal tea."],
+  },
+  lunch: {
+    emoji: "🍛", title: "Lunch", share: 0.35, time: "~1–2 pm — your biggest meal",
+    start: { note: "Start with a plate of salad + warm water", items: ["Cucumber–carrot–tomato salad", "Warm water"] },
+    groups: [
+      { label: "Grain", options: ["2 roti", "1 cup rice", "2 bajra roti", "2 jowar roti", "ragi roti", "veg khichdi", "daliya"] },
+      { label: "+ dal / protein", options: ["1 bowl dal", "rajma", "chana", "paneer sabzi", "tofu", "soya chunks", "sprouts curry"] },
+      { label: "+ veg & curd", options: ["1 cup sabzi", "lauki / tinda sabzi", "palak / methi", "1 bowl curd / buttermilk", "steamed veg", "more salad"] },
+    ],
+    plates: [
+      "2 roti + 1 bowl dal + 1 cup sabzi + salad",
+      "1 cup rice + rajma + lauki sabzi + buttermilk",
+      "2 bajra roti + chana + palak + 1 bowl curd",
+      "veg khichdi + 1 bowl curd + steamed veg + salad",
+      "2 jowar roti + paneer sabzi + methi + salad",
+      "ragi roti + soya-chunk curry + mixed veg + buttermilk",
+      "1 cup rice + sprouts curry + lauki / tinda + curd",
+      "2 multigrain roti + mixed dal + bhindi sabzi + salad",
+      "quinoa pulao + rajma + 1 bowl raita",
+      "2 roti + kadhi + aloo-methi + buttermilk",
+    ],
+    tips: ["Chew slowly; stop at about 80% full.", "Keep lunch the heaviest meal of your day."],
+  },
+  snack: {
+    emoji: "🫐", title: "Mini-meal (snack)", share: 0.12, time: "~4–5 pm — only if you need it",
+    groups: [
+      { label: "Light options", options: ["Roasted makhana + green tea", "Roasted chana", "1 fruit + 5 nuts", "sprouts chaat", "buttermilk + jeera", "coconut water", "hummus + carrot/cucumber sticks", "roasted peanuts"] },
+    ],
+    plates: [
+      "Roasted makhana + green tea",
+      "1 fruit + 5 soaked nuts",
+      "1 bowl sprouts chaat",
+      "Buttermilk + roasted jeera",
+      "Roasted chana (1 small bowl)",
+      "Hummus + carrot / cucumber sticks",
+      "Coconut water + a few roasted peanuts",
+      "1 bowl fruit chaat",
+      "Roasted makhana + a handful of peanuts",
+      "1 bowl curd + flaxseeds",
+    ],
+    tips: ["Keep it light — it just bridges lunch & dinner.", "Avoid fried snacks & packaged namkeen."],
+  },
+  dinner: {
+    emoji: "🌙", title: "Dinner", share: 0.28, time: "~7–8 pm — light & early",
+    start: { note: "A little salad + warm water first", items: ["Small salad", "Warm water"] },
+    groups: [
+      { label: "Light base", options: ["2 phulka", "millet roti", "small moong khichdi", "veg soup + 1 toast", "small bowl rice", "daliya"] },
+      { label: "+ dal / protein", options: ["light dal", "grilled paneer", "tofu stir-fry", "masoor dal", "sprouts"] },
+      { label: "+ cooked veg", options: ["lauki sabzi", "mixed veg", "palak", "steamed veg", "sautéed greens"] },
+    ],
+    plates: [
+      "2 phulka + light dal + lauki sabzi",
+      "millet roti + grilled paneer + mixed veg",
+      "small moong khichdi + sautéed greens + salad",
+      "veg soup + 1 toast + tofu stir-fry",
+      "small bowl rice + masoor dal + palak",
+      "daliya + sprouts + steamed veg",
+      "2 phulka + light dal + sautéed greens + small salad",
+      "2 jowar roti + baked lauki kofta + salad",
+      "moong dosa + sambar + steamed veg",
+      "vegetable stew + 1 millet roti + salad",
+    ],
+    tips: ["Finish by ~8 pm for better sleep & digestion.", "Optional: warm turmeric milk before bed."],
+  },
+};
+const MEAL_ORDER = ["breakfast", "lunch", "snack", "dinner"];
+// "ways to make it" for staples — e.g. roti → wheat, wheat+20% multigrain, bajra …
+const MAKE_OPTIONS: Record<string, string[]> = {
+  roti: ["whole wheat", "wheat + 20% multigrain", "bajra", "jowar", "ragi"],
+  phulka: ["whole wheat", "multigrain", "bajra", "jowar"],
+  paratha: ["whole wheat (little ghee)", "multigrain", "stuffed veg"],
+  rice: ["brown rice", "hand-pounded", "samak (barnyard millet)", "small white portion"],
+  khichdi: ["moong + rice", "moong + samak", "millet khichdi"],
+  chilla: ["besan", "moong dal", "ragi + dal", "oats"],
+  upma: ["daliya", "kodo millet", "oats", "samak"],
+  idli: ["samak rice", "oats", "ragi", "regular (now & then)"],
+  poha: ["red poha", "thin poha + peanuts", "millet poha"],
+  dal: ["moong", "masoor", "toor", "chana dal", "mixed"],
+};
+function makeFor(opt: string): string[] | null {
+  const low = opt.toLowerCase();
+  for (const k of Object.keys(MAKE_OPTIONS)) if (low.includes(k)) return MAKE_OPTIONS[k];
+  return null;
+}
+
+// why-we-recommend-it + rough macros for the meal options (matched by keyword, longest wins)
+const FOOD_INFO: { k: string; why: string; macro: string }[] = [
+  { k: "besan chilla", why: "Gram-flour protein + fibre, low-GI — keeps you full.", macro: "~180 kcal · P 9 · C 20 · F 6" },
+  { k: "moong dal chilla", why: "Moong-dal protein, light and low-GI.", macro: "~170 kcal · P 10 · C 20 · F 4" },
+  { k: "ragi", why: "Ragi = calcium + low-GI — slow, steady energy.", macro: "~150 kcal · P 4 · C 28 · F 2" },
+  { k: "paratha", why: "Whole-grain carbs — keep the ghee minimal.", macro: "~250 kcal · P 6 · C 35 · F 9" },
+  { k: "daliya", why: "Broken wheat — fibre and slow carbs.", macro: "~180 kcal · P 6 · C 34 · F 2" },
+  { k: "upma", why: "Light carbs + veg; a millet/daliya base is best.", macro: "~200 kcal · P 5 · C 32 · F 6" },
+  { k: "kodo", why: "Kodo millet — low-GI, high fibre, great for blood sugar.", macro: "~160 kcal · P 4 · C 30 · F 2" },
+  { k: "idli", why: "Fermented & steamed — light and easy to digest.", macro: "~40 kcal each · P 2 · C 8 · F 0" },
+  { k: "samak", why: "Samak = barnyard millet — a low-GI swap for rice.", macro: "~150 kcal · P 4 · C 30 · F 1" },
+  { k: "poha", why: "Light carbs; peanuts add protein and crunch.", macro: "~250 kcal · P 6 · C 40 · F 7" },
+  { k: "sprouts", why: "Raw protein + fibre — you can't overeat, so it's low-cal and very filling.", macro: "~120 kcal/cup · P 8 · C 20 · F 1" },
+  { k: "curd", why: "Probiotic protein — cooling and good for the gut.", macro: "~95 kcal/bowl · P 5 · C 7 · F 5" },
+  { k: "paneer", why: "High protein — keeps you full and builds muscle.", macro: "~200 kcal/100g · P 18 · C 4 · F 14" },
+  { k: "tofu", why: "Light plant protein, low in fat.", macro: "~120 kcal/100g · P 12 · C 2 · F 7" },
+  { k: "nuts", why: "Healthy fats + protein — satiating in small amounts.", macro: "~130 kcal · P 4 · C 3 · F 12" },
+  { k: "apple", why: "Water-rich & fibre — fills you for few calories.", macro: "~90 kcal · fibre-rich" },
+  { k: "papaya", why: "Water-rich, aids digestion, low-cal.", macro: "~60 kcal/bowl" },
+  { k: "banana", why: "Quick energy + potassium; half is plenty.", macro: "~90 kcal each" },
+  { k: "melon", why: "Mostly water — very low-cal and hydrating.", macro: "~50 kcal/bowl" },
+  { k: "guava", why: "High fibre + vitamin C, low-GI.", macro: "~70 kcal" },
+  { k: "pear", why: "Fibre-rich and water-heavy.", macro: "~90 kcal" },
+  { k: "orange", why: "Vitamin C + water, fibre in the pulp.", macro: "~70 kcal" },
+  { k: "fruit", why: "Water-rich, fibre & vitamins — fills you for few calories.", macro: "~60–90 kcal" },
+  { k: "phulka", why: "Whole-grain fibre & steady energy.", macro: "~100 kcal each · P 3 · C 18 · F 1" },
+  { k: "bajra", why: "Pearl millet — low-GI, iron & fibre.", macro: "~120 kcal/roti · P 4 · C 22 · F 1" },
+  { k: "jowar", why: "Sorghum — gluten-free, low-GI, filling.", macro: "~115 kcal/roti · P 3 · C 24 · F 1" },
+  { k: "roti", why: "Whole-grain fibre — millet flours add even more.", macro: "~100 kcal each · P 3 · C 18 · F 1" },
+  { k: "khichdi", why: "Moong + rice — light, complete and easy to digest.", macro: "~300 kcal/bowl · P 10 · C 50 · F 5" },
+  { k: "rice", why: "Easy energy — pair with dal for complete protein.", macro: "~200 kcal/cup · P 4 · C 44 · F 0" },
+  { k: "rajma", why: "Protein + fibre — slow-digesting, keeps you full.", macro: "~140 kcal/bowl · P 8 · C 22 · F 1" },
+  { k: "chana", why: "Protein, fibre & iron — low-GI, steadies blood sugar.", macro: "~160 kcal/bowl · P 9 · C 27 · F 3" },
+  { k: "soya", why: "High protein — great for building muscle.", macro: "~170 kcal · P 16 · C 9 · F 7" },
+  { k: "dal", why: "Plant protein + fibre — gentle on digestion.", macro: "~120 kcal/bowl · P 7 · C 18 · F 1" },
+  { k: "salad", why: "Raw & water-rich — fills you with almost no calories.", macro: "~50 kcal" },
+  { k: "buttermilk", why: "Light probiotic — cooling, very few calories.", macro: "~40 kcal/glass" },
+  { k: "makhana", why: "Light roasted snack — low-cal with a good crunch.", macro: "~90 kcal/bowl · P 3 · C 18 · F 1" },
+  { k: "coconut water", why: "Hydrating and light — natural electrolytes.", macro: "~45 kcal/glass" },
+  { k: "hummus", why: "Chickpea protein + fibre.", macro: "~70 kcal/2 tbsp" },
+  { k: "soup", why: "Warm & filling — low-cal, great before dinner.", macro: "~80 kcal/bowl" },
+  { k: "toast", why: "Light carbs — pick multigrain.", macro: "~70 kcal/slice" },
+  { k: "palak", why: "Iron + fibre, low-cal greens.", macro: "~60 kcal" },
+  { k: "lauki", why: "Gourd — light, cooling, very low-cal.", macro: "~50 kcal/cup" },
+  { k: "peanut", why: "Protein + healthy fat; keep the portion small.", macro: "~160 kcal/handful" },
+  { k: "turmeric milk", why: "Calming & anti-inflammatory — good before bed.", macro: "~120 kcal/cup" },
+  { k: "greens", why: "Fibre + micronutrients, very low-cal.", macro: "~50 kcal" },
+  { k: "sabzi", why: "Fibre + vitamins — high volume, low calories.", macro: "~120 kcal/cup · P 3 · C 12 · F 6" },
+  { k: "veg", why: "Fibre & micronutrients — fills you for few calories.", macro: "~80–150 kcal" },
+];
+function foodInfo(opt: string) {
+  const low = opt.toLowerCase();
+  let best: (typeof FOOD_INFO)[number] | null = null;
+  for (const f of FOOD_INFO) if (low.includes(f.k) && (!best || f.k.length > best.k.length)) best = f;
+  return best;
+}
+/** Option chips — each tappable to show why it's recommended + rough macros. */
+function MealOptions({ options }: { options: string[] }) {
+  const [tip, setTip] = useState<{ title: string; why: string; macro: string; left: number; top: number } | null>(null);
+  const W = Math.min(260, (typeof window !== "undefined" ? window.innerWidth : 360) - 16);
+  const open = (opt: string, rect: DOMRect) => {
+    const f = foodInfo(opt); if (!f) return;
+    const vw = typeof window !== "undefined" ? window.innerWidth : 360;
+    setTip({ title: opt, why: f.why, macro: f.macro, left: Math.max(8, Math.min(rect.left, vw - W - 8)), top: rect.bottom + 6 });
+  };
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {options.map((o) => foodInfo(o)
+        ? <button key={o} onClick={(e) => open(o, e.currentTarget.getBoundingClientRect())} className="rounded-full bg-secondary px-2.5 py-1 text-[11px] font-semibold text-foreground/80 underline decoration-dotted underline-offset-2">{o}</button>
+        : <span key={o} className="rounded-full bg-secondary px-2.5 py-1 text-[11px] font-semibold text-foreground/80">{o}</span>)}
+      {tip && (
+        <>
+          <div onClick={() => setTip(null)} className="fixed inset-0 z-40" />
+          <div className="fixed z-50 rounded-xl bg-card p-3 shadow-xl ring-1 ring-border/70" style={{ left: tip.left, top: tip.top, width: W }}>
+            <b className="mb-0.5 block text-[12px] text-foreground">{tip.title}</b>
+            <span className="block text-[11.5px] leading-snug text-foreground/85">{tip.why}</span>
+            <span className="mt-1.5 block border-t border-border/50 pt-1.5 text-[10.5px] font-semibold text-primary">{tip.macro}</span>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+/** A full plate ("2 roti + 1 bowl dal + salad") — each dish underlined & tappable for why / cal / ways to make. */
+function PlateDishes({ plate }: { plate: string }) {
+  const [tip, setTip] = useState<{ title: string; why: string; macro: string; makes: string[] | null; left: number; top: number } | null>(null);
+  const W = Math.min(265, (typeof window !== "undefined" ? window.innerWidth : 360) - 16);
+  const open = (opt: string, rect: DOMRect) => {
+    const f = foodInfo(opt); if (!f) return;
+    const vw = typeof window !== "undefined" ? window.innerWidth : 360;
+    setTip({ title: opt, why: f.why, macro: f.macro, makes: makeFor(opt), left: Math.max(8, Math.min(rect.left, vw - W - 8)), top: rect.bottom + 6 });
+  };
+  const parts = plate.split(" + ");
+  return (
+    <span className="text-[12px] leading-relaxed text-foreground/90">
+      {parts.flatMap((p, i) => {
+        const nodes = i > 0 ? [<span key={`s${i}`} className="text-muted-foreground"> + </span>] : [];
+        nodes.push(foodInfo(p)
+          ? <button key={`d${i}`} onClick={(e) => open(p, e.currentTarget.getBoundingClientRect())} className="underline decoration-dotted underline-offset-2 active:text-primary">{p}</button>
+          : <span key={`d${i}`}>{p}</span>);
+        return nodes;
+      })}
+      {tip && (
+        <>
+          <span onClick={() => setTip(null)} className="fixed inset-0 z-40 block" />
+          <span className="fixed z-50 block rounded-xl bg-card p-3 shadow-xl ring-1 ring-border/70" style={{ left: tip.left, top: tip.top, width: W }}>
+            <b className="mb-0.5 block text-[12px] text-foreground">{tip.title}</b>
+            <span className="block text-[11.5px] leading-snug text-foreground/85">{tip.why}</span>
+            <span className="mt-1.5 block border-t border-border/50 pt-1.5 text-[10.5px] font-semibold text-primary">{tip.macro}</span>
+            {tip.makes && <span className="mt-1.5 block border-t border-border/50 pt-1.5 text-[10.5px] leading-snug text-muted-foreground"><b className="text-foreground/70">Ways to make it:</b> {tip.makes.join(" · ")}</span>}
+          </span>
+        </>
+      )}
+    </span>
+  );
+}
+
+/** One meal in the pick-&-choose "strategy" style, with a "ways to make it" expander. */
+function MealStratCompact({ meal, kcalTarget }: { meal: string; kcalTarget: number }) {
+  const [makeOpen, setMakeOpen] = useState(false);
+  const s = MEAL_STRATEGY[meal];
+  if (!s) return null;
+  const kcal = Math.round((kcalTarget * s.share) / 10) * 10;
+  const makes = s.groups.flatMap((grp) => grp.options).map((o) => ({ o, m: makeFor(o) })).filter((x) => x.m);
+  const seen = new Set<string>();
+  const uniqueMakes = makes.filter(({ m }) => { const key = m!.join(); if (seen.has(key)) return false; seen.add(key); return true; });
+  return (
+    <div className="rounded-2xl bg-card p-3 ring-1 ring-border/60">
+      <div className="flex items-center justify-between">
+        <p className="text-[12.5px] font-bold text-foreground">{s.emoji} {s.title.replace(" (snack)", "")}</p>
+        <p className="text-[11px] font-bold text-primary">~{kcal} kcal · {s.time.split("—")[0].trim()}</p>
+      </div>
+      {s.groups.map((grp, gi) => (
+        <div key={gi} className="mt-1.5">
+          <p className="mb-1 text-[10px] font-bold text-foreground/55">{grp.label.replace("Pick ", "").replace("+ ", "+ ")}</p>
+          <MealOptions options={grp.options} />
+        </div>
+      ))}
+      {uniqueMakes.length > 0 && (
+        <>
+          <button onClick={() => setMakeOpen((o) => !o)} className="mt-1.5 text-[10px] font-bold text-primary">💡 Ways to make it {makeOpen ? "▲" : "▼"}</button>
+          {makeOpen && (
+            <div className="mt-1 space-y-0.5">
+              {uniqueMakes.map(({ o, m }) => <p key={o} className="text-[10px] leading-snug text-muted-foreground"><b className="text-foreground/70">{o.replace(/^\d+\s*/, "").replace(/\s*\(.*\)/, "")}:</b> {m!.join(" · ")}</p>)}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+function levelFromFactor(f: number): string {
+  if (f < 1.3) return "Sedentary";
+  if (f < 1.46) return "Lightly active";
+  if (f < 1.64) return "Moderately active";
+  if (f < 1.8) return "Very active";
+  return "Extra active";
+}
+
+// Rough kcal for common foods, used to estimate current intake from the free-text "describe your meals".
+const EAT_KCAL: { re: RegExp; k: number }[] = [
+  { re: /green tea/, k: 5 },
+  { re: /\b(tea|chai|coffee)\b/, k: 60 },
+  { re: /(turmeric|haldi)?\s*(milk|doodh)/, k: 120 },
+  { re: /paratha/, k: 250 },
+  { re: /\b(roti|phulka|chapati|chapatti)\b/, k: 110 },
+  { re: /\b(rice|chawal|pulao|biryani|khichdi)\b/, k: 200 },
+  { re: /\b(dal|daal)\b/, k: 120 },
+  { re: /\b(sabzi|sabji|bhaji|vegetable|veg)\b/, k: 150 },
+  { re: /\b(curd|dahi|yogurt|raita)\b/, k: 100 },
+  { re: /\bsalad\b/, k: 50 },
+  { re: /\bpaneer\b/, k: 200 },
+  { re: /\b(biscuit|cookie)\b/, k: 35 },
+  { re: /\bidli\b/, k: 60 },
+  { re: /\bdosa\b/, k: 150 },
+  { re: /\b(poha|upma|daliya)\b/, k: 250 },
+  { re: /\b(bread|toast|sandwich)\b/, k: 90 },
+  { re: /\b(samosa|pakora|kachori|vada)\b/, k: 150 },
+  { re: /\b(banana|apple|mango|fruit|orange)\b/, k: 90 },
+  { re: /\b(nuts|almond|peanut|cashew|makhana)\b/, k: 160 },
+  { re: /\b(egg|omelette|omelet)\b/, k: 80 },
+];
+function estimateMeals(text: string): { kcal: number; found: number } {
+  const t = text.toLowerCase();
+  let kcal = 0, found = 0;
+  for (const { re, k } of EAT_KCAL) {
+    const idx = t.search(re);
+    if (idx < 0) continue;
+    const before = t.slice(Math.max(0, idx - 10), idx);
+    const num = before.match(/(\d+)\D*$/);
+    const qty = num ? Math.min(8, Math.max(1, parseInt(num[1], 10))) : 1;
+    kcal += k * qty; found++;
+  }
+  return { kcal: Math.round(kcal / 10) * 10, found };
+}
+const EAT_EXAMPLE = "e.g. 8am: tea, 2 biscuits. Lunch ~1:30: 2 bowls rice, 1 bowl dal, 1 bowl curd, salad. Evening: tea + 3 biscuits, or green tea. Dinner: 2 rotis, 1 bowl sabzi. Before bed: turmeric milk.";
 
 // Intermittent-fasting tiers: longer fasts leave room for fewer meals.
 // maxMain / maxMini = the most meals that still fit inside that fasting window.
@@ -176,7 +540,16 @@ function CreatePlan() {
   const { goal: preGoal, edit: editId, goals: preGoals, tool: preTool } = Route.useSearch();
   const editTool = preTool && SELECTABLE.includes(preTool as IvKey) ? (preTool as IvKey) : null; // "edit one tool" deep-link
 
-  const seedGoals = preGoals ? preGoals.split(",").filter((id) => ALL_GOALS[id]).slice(0, 2) : (preGoal && ALL_GOALS[preGoal] ? [preGoal] : []);
+  // Fitness is its own track (independent of the ≤2 "primary" condition/organ/etc. goals), so it always carries through.
+  const FITNESS_SET = new Set(["weight-loss", "general-wellness", "strength", "muscle-building", "muscles", "flexibility", "mobility"]);
+  const seedGoals = preGoals
+    ? (() => {
+        const all = preGoals.split(",").filter((id) => ALL_GOALS[id]);
+        const primary = all.filter((id) => !FITNESS_SET.has(id)).slice(0, 2);
+        const fitness = all.filter((id) => FITNESS_SET.has(id));
+        return [...primary, ...fitness];
+      })()
+    : (preGoal && ALL_GOALS[preGoal] ? [preGoal] : []);
   // came from the profile with goals already chosen → skip the goal page (start at "what to personalize")
   const [step, setStep] = useState(preGoals && seedGoals.length && !editId ? 1 : 0);
   const [goals, setGoals] = useState<string[]>(seedGoals);
@@ -204,14 +577,26 @@ function CreatePlan() {
   const [meals, setMeals] = useState<number>(3);
   const [mini, setMini] = useState<number>(1);
   const [mealMode, setMealMode] = useState<"detailed" | "recos">("detailed");
+  // cuisine + "describe your meals" — now part of the diet flow (seeded from any earlier lifestyle answers)
+  const [cuisinePath, setCuisinePath] = useState<string[]>(() => { try { return (JSON.parse(localStorage.getItem("ayuraise.lifestyle") ?? "{}")?.cuisinePath as string[]) ?? []; } catch { return []; } });
+  const [describeText, setDescribeText] = useState(() => { try { return (JSON.parse(localStorage.getItem("ayuraise.lifestyle") ?? "{}")?.eatText as string) ?? ""; } catch { return ""; } });
+  const [listening, setListening] = useState(false);
+  const recognitionRef = useRef<any>(null);
   const [dietModal, setDietModal] = useState<"detailed" | "recos" | null>(null); // full diet-plan sample popup (ⓘ icons)
-  const [avoidIng, setAvoidIng] = useState<string[]>([]);   // ingredients to leave out — asked BEFORE the plan is made
+  const [avoidIng, setAvoidIng] = useState<string[]>([]);   // ingredients removed / swapped out — asked BEFORE the plan is made
   const [ingReplace, setIngReplace] = useState<Record<string, string[]>>({}); // ingredient → chosen replacements
-  const [ingSheet, setIngSheet] = useState<string | null>(null);  // ingredient whose why/replace sheet is open
-  const [replacePick, setReplacePick] = useState<string[]>([]);   // temp replacement selection in the sheet
+  const [addedIng, setAddedIng] = useState<string[]>([]);   // ingredients the user added
+  const [addInput, setAddInput] = useState("");
+  const [infoIng, setInfoIng] = useState<string | null>(null);    // ingredient whose info (ⓘ) popup is open
+  const [swapIng, setSwapIng] = useState<string | null>(null);    // ingredient whose swap popup is open
+  const [replacePick, setReplacePick] = useState<string[]>([]);   // temp replacement selection in the swap popup
   const [keepDishes, setKeepDishes] = useState("");          // dishes the user wants to keep (feedback)
   const [dietFeedback, setDietFeedback] = useState("");      // free-text dislikes / preferences (feedback)
   const [feedbackOpen, setFeedbackOpen] = useState(false);   // the "adjust my plan" feedback sheet
+  const [savePopup, setSavePopup] = useState(false);         // "good to go?" confirm before saving
+  const [botOpen, setBotOpen] = useState(false);             // show AyuBot chat only when the user wants changes
+  const [calPopup, setCalPopup] = useState(false);           // "estimate my calories" popup on the describe step
+  const [dietView, setDietView] = useState<"meals" | "plan">("meals"); // diet-plan step: pick-&-choose meals vs day-wise plan
   const [botMsgs, setBotMsgs] = useState<{ from: "you" | "ayu"; text: string }[]>([
     { from: "ayu", text: "Here's your plan 🌿 Tell me anything to change — an ingredient to drop, lighter dinners, more protein, a cuisine — and I'll adjust it." },
   ]);
@@ -239,7 +624,8 @@ function CreatePlan() {
     S<string>(w.focus, setFocus); S<string>(w.equip, setEquip);
     S<"detailed" | "recos">(w.mealMode, setMealMode); S<boolean>(w.dietIF, setDietIF); S<string>(w.ifWindow, setIfWindow); S<number>(w.fastHrs, setFastHrs);
     S<string[]>(w.prefs, setPrefs); S<string[]>(w.allergies, setAllergies); S<number>(w.meals, setMeals);
-    S<string[]>(w.avoidIng, setAvoidIng); S<Record<string, string[]>>(w.ingReplace, setIngReplace); S<string>(w.keepDishes, setKeepDishes); S<string>(w.dietFeedback, setDietFeedback);
+    S<string[]>(w.avoidIng, setAvoidIng); S<Record<string, string[]>>(w.ingReplace, setIngReplace); S<string[]>(w.addedIng, setAddedIng); S<string>(w.keepDishes, setKeepDishes); S<string>(w.dietFeedback, setDietFeedback);
+    S<string[]>(w.cuisinePath, setCuisinePath); S<string>(w.describeText, setDescribeText);
     S<Record<string, string>>(w.dq, setDq); S<string>(w.curWt, setCurWt); S<string>(w.tgtWt, setTgtWt); S<string>(w.tgtDate, setTgtDate);
   }, [editId]);
 
@@ -259,7 +645,10 @@ function CreatePlan() {
     if (hasExercise) s.push("ex-setup");
     if (hasDiet) {
       if (editTool === "diet") s.push("diet-edit"); // pick-what-to-change menu when editing
-      s.push("diet-prefs", "diet-allergies", "diet-meals", "diet-why"); // prefs → allergies → format, then why-this-plan
+      // + "Know your meal": BMR → calorie sense → science → foods → prakriti → numbers → macros → each meal
+      s.push("diet-cuisine", "diet-describe", "diet-prefs", "diet-allergies", "diet-meals",
+        "diet-bmr", "diet-cal-learn", "diet-cal", "diet-science", "diet-foods", "diet-prakriti", "diet-macros",
+        "diet-meal-breakfast", "diet-meal-lunch", "diet-meal-snack", "diet-meal-dinner");
       if (mealMode === "detailed") s.push("diet-ingredients"); // ingredients asked BEFORE the plan is built
       s.push("diet-plan"); // show the diet plan + a feedback button, before the overall review
     }
@@ -326,11 +715,78 @@ function CreatePlan() {
       weightKg: Number(b.weightKg ?? lf.kg) || undefined,
       activity: (b.activity as ActivityLevel) || undefined,
       dosha: ((b.prakriti as { dosha?: Dosha } | undefined)?.dosha) || undefined,
-      cuisine: (b.cuisineRegion as string) || (b.cuisine as string) || (lf.cuisineRegion as string) || undefined,
+      cuisine: cuisinePath.length ? cuisineRegion(cuisinePath) : ((b.cuisineRegion as string) || (b.cuisine as string) || (lf.cuisineRegion as string) || undefined),
       goalIds: goals,
       conditions: (lf.conditions as string[]) ?? [],
     });
-  }, [goals]);
+  }, [goals, cuisinePath]);
+
+  // Calorie breakdown for the "Know your meal" screens — BMR, maintenance, deficit & the daily target
+  const calInfo = useMemo(() => {
+    let b: Record<string, any> = {}, lf: Record<string, any> = {};
+    try { b = JSON.parse(localStorage.getItem("ayuraise.profile") ?? "{}") ?? {}; } catch { /* ignore */ }
+    try { lf = JSON.parse(localStorage.getItem("ayuraise.lifestyle") ?? "{}") ?? {}; } catch { /* ignore */ }
+    const sex = (b.gender as Sex) || undefined;
+    const age = Number(b.age) || 0;
+    const heightCm = Number(b.heightCm ?? lf.cm) || 0;
+    const weightKg = Number(b.weightKg ?? lf.kg) || 0;
+    const activity = (b.activity as ActivityLevel) || "light";
+    const complete = !!(sex && age && heightCm && weightKg);
+    const bmr = complete ? Math.round(calcBMR(sex!, weightKg, heightCm, age)) : 0;
+    const maintenance = reviewMealPlan.maintenance;
+    const kcalTarget = reviewMealPlan.kcalTarget;
+    const deficit = Math.max(0, maintenance - kcalTarget);
+    const surplus = Math.max(0, kcalTarget - maintenance);
+    const lossKg = (deficit * 7) / 9000; // 1 kg fat ≈ 9,000 kcal
+    return { complete, bmr, maintenance, kcalTarget, deficit, surplus, lossKg, weightKg: weightKg || 65, activity };
+  }, [reviewMealPlan]);
+
+  // Rough workout cal-out (what the chosen yoga / exercise burns), scaled by body weight
+  const wScale = (calInfo.weightKg || 65) / 65;
+  const yogaKcal = hasYoga ? Math.round(duration * 4 * wScale) : 0;
+  const exKcal = hasExercise ? Math.round(exDur * 7 * wScale) : 0;
+
+  // activity-burn as ranges — one combined "daily movement" line + yoga/exercise (level-aware)
+  const YR = YOGA_RATE[yogaLevel] ?? YOGA_RATE.Beginner;
+  const ER = EX_RATE[exLevel] ?? EX_RATE.Beginner;
+  const yogaR: [number, number] | null = hasYoga ? [r5(duration * YR[0] * wScale), r5(duration * YR[1] * wScale)] : null;
+  const exR: [number, number] | null = hasExercise ? [r5(exDur * ER[0] * wScale), r5(exDur * ER[1] * wScale)] : null;
+  const ACT_LABEL: Record<string, string> = { sedentary: "mostly sitting", light: "slightly active", moderate: "moderately active", active: "active", very: "very active", very_active: "very active" };
+  const baseC = BASE_ACTS_COMBINED[calInfo.activity] ?? BASE_ACTS_COMBINED.light;
+  const actRows: { label: string; lo: number; hi: number; kind: "base" | "yoga" | "exercise" }[] = [
+    { label: ACT_LABEL[calInfo.activity] ?? "slightly active", lo: baseC.lo, hi: baseC.hi, kind: "base" as const },
+    ...(yogaR ? [{ label: `${duration} min yoga`, lo: yogaR[0], hi: yogaR[1], kind: "yoga" as const }] : []),
+    ...(exR ? [{ label: `${exDur} min exercise`, lo: exR[0], hi: exR[1], kind: "exercise" as const }] : []),
+  ];
+  const actLo = actRows.reduce((s, a) => s + a.lo, 0);
+  const actHi = actRows.reduce((s, a) => s + a.hi, 0);
+  const actMid = Math.round((actLo + actHi) / 2);
+  const effMaintenance = calInfo.bmr + actMid;
+  const effTarget = Math.max(1000, effMaintenance - calInfo.deficit + calInfo.surplus);
+
+  // "add yoga / exercise" from the calorie screen — keep the user on the diet-cal step after ivs changes
+  const pinToCal = useRef(false);
+  useEffect(() => { if (pinToCal.current) { pinToCal.current = false; goTo("diet-cal"); } }, [stepKeys]); // eslint-disable-line react-hooks/exhaustive-deps
+  const addInterventionHere = (k: IvKey) => { pinToCal.current = true; if (!ivs.includes(k)) setIvs((c) => [...c, k]); };
+
+  // rough estimate of current intake from the free-text "describe your meals"
+  const eatEstimate = useMemo(() => estimateMeals(describeText), [describeText]);
+
+  // voice dictation into the describe box (Web Speech API, where supported)
+  const voiceSupported = typeof window !== "undefined" && !!((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
+  const toggleVoice = () => {
+    if (listening) { recognitionRef.current?.stop(); return; }
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR) return;
+    const rec = new SR();
+    rec.lang = "en-IN"; rec.interimResults = false; rec.continuous = true;
+    rec.onresult = (e: any) => { let add = ""; for (let i = e.resultIndex; i < e.results.length; i++) add += e.results[i][0].transcript; if (add) setDescribeText((t) => (t ? t + " " : "") + add.trim()); };
+    rec.onend = () => setListening(false);
+    rec.onerror = () => setListening(false);
+    recognitionRef.current = rec;
+    try { rec.start(); setListening(true); } catch { setListening(false); }
+  };
+
   const back = () => (step === 0 ? navigate({ to: "/home" }) : setStep((s) => s - 1));
   const next = () => { if (canNext) setStep((s) => Math.min(stepKeys.length - 1, s + 1)); };
 
@@ -340,7 +796,14 @@ function CreatePlan() {
     if (hasDiet) { if (dietIF) dietBits.push(`IF ${ifWindow}`); dietBits.push(mealMode === "detailed" ? `${meals} main${mini ? `+${mini} mini` : ""}` : "Food tips"); if (prefs.length) dietBits.push(prefs.join("/")); }
     const days = WEEKDAYS.slice(0, hasExercise ? exDays : yogaDays).map((w) => w.id);
     const pid = editId ?? newPlanId();
-    const wizard = { goalIds: goals, ivs, yogaLevel, duration, yogaDays, protect, exLevel, exDays, exDur, focus, equip, mealMode, dietIF, ifWindow, fastHrs, prefs, allergies, meals, mini, avoidIng, ingReplace, keepDishes, dietFeedback, dq, curWt, tgtWt, tgtDate };
+    const wizard = { goalIds: goals, ivs, yogaLevel, duration, yogaDays, protect, exLevel, exDays, exDur, focus, equip, mealMode, dietIF, ifWindow, fastHrs, prefs, allergies, meals, mini, avoidIng, ingReplace, addedIng, keepDishes, dietFeedback, cuisinePath, describeText, dq, curWt, tgtWt, tgtDate };
+    // keep cuisine + what-you-eat on the lifestyle profile so the meal plan & coach can use them
+    try {
+      const lf = JSON.parse(localStorage.getItem("ayuraise.lifestyle") ?? "{}") ?? {};
+      if (describeText.trim()) lf.eatText = describeText.trim();
+      if (cuisinePath.length) { lf.cuisinePath = cuisinePath; lf.cuisine = cuisinePath[cuisinePath.length - 1] ?? ""; lf.cuisineRegion = cuisineRegion(cuisinePath); }
+      localStorage.setItem("ayuraise.lifestyle", JSON.stringify(lf));
+    } catch { /* ignore */ }
     const plan: YogaPlan = {
       id: pid,
       wizard,
@@ -357,6 +820,7 @@ function CreatePlan() {
       updatedAt: Date.now(),
     };
     upsertYogaPlan(plan);
+    try { localStorage.setItem("ayuraise.showPlanTour", "1"); } catch { /* ignore */ } // show the orientation popup once, on landing
     navigate({ to: "/myplan/$id", params: { id: pid } });
   };
 
@@ -365,7 +829,10 @@ function CreatePlan() {
     "yoga-time": "Set up your yoga", protect: "Areas to protect",
     "ex-setup": "Your exercise",
     "diet-edit": "Edit your diet", "diet-meals": "Let's create your meal plan", "diet-prefs": "Dietary preferences", "diet-allergies": "Allergies",
-    "diet-why": "Why this plan", "diet-ingredients": "Ingredients to leave out", "diet-plan": "Your diet plan", review: "Review your plan",
+    "diet-cuisine": "Cuisine you prefer", "diet-describe": "Describe your meals",
+    "diet-bmr": "Basal Metabolic Rate (BMR)", "diet-cal-learn": "A quick calorie sense", "diet-cal": "Your daily calorie goal", "diet-science": "Know your meal", "diet-macros": "Know your meal", "diet-foods": "Know your meal", "diet-prakriti": "Know your meal",
+    "diet-meal-breakfast": "Your breakfast", "diet-meal-lunch": "Your lunch", "diet-meal-snack": "Your mini-meal", "diet-meal-dinner": "Your dinner",
+    "diet-ingredients": "Ingredients I'll use", "diet-plan": "Your diet plan", review: "Review your plan",
   };
 
   return (
@@ -374,7 +841,6 @@ function CreatePlan() {
         <div className="relative flex items-center gap-2.5 text-primary-foreground">
           <button onClick={back} className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/15"><ArrowLeft size={15} /></button>
           <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-semibold uppercase tracking-wide opacity-80">Create my plan</p>
             <h1 className="truncate font-display text-[17px] font-extrabold leading-tight">{STEP_LABEL[key]}</h1>
           </div>
         </div>
@@ -383,7 +849,7 @@ function CreatePlan() {
         </div>
       </div>
 
-      <div className="mx-auto max-w-xl px-4 pt-4">
+      <div className="mx-auto max-w-xl px-4 pt-3">
         {/* GOALS */}
         {key === "goals" && (
           <div className="space-y-4">
@@ -517,9 +983,39 @@ function CreatePlan() {
             <ReviewRow label="Meal format" value={mealMode === "detailed" ? `Detailed · ${meals} main${mini ? ` + ${mini} mini` : ""}` : "Just food tips"} onEdit={() => goTo("diet-meals")} />
             <ReviewRow label="Preferences" value={prefs.join(", ") || "none"} onEdit={() => goTo("diet-prefs")} />
             <ReviewRow label="Allergies / avoid" value={allergies.join(", ") || "none"} onEdit={() => goTo("diet-allergies")} />
-            {mealMode === "detailed" && <ReviewRow label="Ingredients left out" value={avoidIng.join(", ") || "none"} onEdit={() => goTo("diet-ingredients")} />}
+            {mealMode === "detailed" && <ReviewRow label="Ingredients" value={`${avoidIng.length ? `−${avoidIng.length}` : ""}${addedIng.length ? ` +${addedIng.length}` : ""}`.trim() || "default set"} onEdit={() => goTo("diet-ingredients")} />}
             <ReviewRow label="Diet plan" value="View & give feedback" onEdit={() => goTo("diet-plan")} />
             <button onClick={save} className="mt-2 w-full rounded-2xl bg-primary py-3 text-[13px] font-bold text-primary-foreground active:scale-[0.99]">Save my diet</button>
+          </div>
+        )}
+
+        {/* CUISINE — layered picker, now in the diet flow */}
+        {key === "diet-cuisine" && (
+          <div>
+            <p className="mb-3 px-1 text-[12px] text-muted-foreground">Pick a region, then narrow it down — your meal plan will use food you enjoy.</p>
+            <CuisinePicker
+              path={cuisinePath}
+              setPath={(p) => {
+                setCuisinePath(p);
+                try { const lf = JSON.parse(localStorage.getItem("ayuraise.lifestyle") ?? "{}") ?? {}; lf.cuisinePath = p; lf.cuisine = p[p.length - 1] ?? ""; lf.cuisineRegion = cuisineRegion(p); localStorage.setItem("ayuraise.lifestyle", JSON.stringify(lf)); } catch { /* ignore */ }
+              }}
+            />
+          </div>
+        )}
+
+        {/* DESCRIBE YOUR MEALS — just type (or dictate); estimate shown in a popup */}
+        {key === "diet-describe" && (
+          <div className="space-y-2.5">
+            <p className="px-1 text-[11.5px] leading-snug text-muted-foreground">In your own words — a typical day of eating, with rough <b>amounts &amp; timings</b>. Prefer not to? You can skip.</p>
+            <div className="relative">
+              <textarea value={describeText} onChange={(e) => setDescribeText(e.target.value)} rows={5} placeholder={EAT_EXAMPLE} className="w-full rounded-2xl bg-card px-3 py-2.5 pb-10 text-[11.5px] leading-relaxed ring-1 ring-border/60 placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/40" />
+              {voiceSupported && (
+                <button onClick={toggleVoice} aria-label={listening ? "Stop voice" : "Speak it"} className={`absolute bottom-2.5 right-2.5 flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-[11px] font-bold ring-1 ${listening ? "animate-pulse bg-rose-500 text-white ring-rose-500" : "bg-primary text-primary-foreground ring-primary"}`}>
+                  {listening ? <><MicOff size={12} /> Listening…</> : <><Mic size={12} /> Speak</>}
+                </button>
+              )}
+            </div>
+            <button onClick={() => setCalPopup(true)} className="rounded-full bg-secondary px-3.5 py-1.5 text-[11.5px] font-bold text-foreground active:scale-95">🔢 Estimate my calories</button>
           </div>
         )}
 
@@ -537,21 +1033,21 @@ function CreatePlan() {
               ))}
             </div>
 
-            {/* sample of the picked mode — in a clearly outlined box */}
-            <div className="mt-2.5 rounded-2xl border border-border bg-secondary/30 p-2.5 shadow-sm">
-              <p className="mb-1 text-[9px] font-bold uppercase tracking-wide text-muted-foreground">Sample · {mealMode === "detailed" ? "detailed plan" : "food tips"} — <button onClick={() => setDietModal(mealMode)} className="font-semibold normal-case text-primary">see full →</button></p>
+            {/* sample of the picked mode — same sky-tinted card as the "Your calorie goal" boxes */}
+            <div className="mt-2.5 rounded-2xl bg-sky-50 p-3 ring-1 ring-sky-200 dark:bg-sky-900/30 dark:ring-sky-800">
+              <p className="mb-1.5 flex items-center justify-between text-[9.5px] font-bold uppercase tracking-wide text-sky-800 dark:text-sky-200"><span>👀 Sample · {mealMode === "detailed" ? "detailed plan" : "food tips"}</span> <button onClick={() => setDietModal(mealMode)} className="rounded-full bg-sky-600 px-2 py-0.5 text-[9px] font-bold normal-case text-white">see full →</button></p>
               {mealMode === "detailed" ? (
-                <div className="space-y-0.5 text-[11px] text-foreground/85">
-                  <p><b>Breakfast · 8–10am</b> — Vegetable poha + peanuts</p>
-                  <p className="text-[10px] text-muted-foreground">poha 60g · peanuts 15g · 1 bowl veg · ~460 kcal</p>
-                  <p><b>Lunch · 1–3pm</b> — Dal + 2 roti + sabzi + salad</p>
-                  <p className="text-[10px] text-muted-foreground">1 bowl dal · 2 phulka · 1 cup sabzi</p>
+                <div className="space-y-0.5 text-[11px] text-sky-900/85 dark:text-sky-100/85">
+                  <p><b className="text-sky-800 dark:text-sky-200">Breakfast · 8–10am</b> — Vegetable poha + peanuts</p>
+                  <p className="text-[10px] text-sky-700/80 dark:text-sky-300/80">poha 60g · peanuts 15g · 1 bowl veg · ~460 kcal</p>
+                  <p><b className="text-sky-800 dark:text-sky-200">Lunch · 1–3pm</b> — Dal + 2 roti + sabzi + salad</p>
+                  <p className="text-[10px] text-sky-700/80 dark:text-sky-300/80">1 bowl dal · 2 phulka · 1 cup sabzi</p>
                 </div>
               ) : (
-                <div className="space-y-0.5 text-[11px] text-foreground/85">
+                <div className="space-y-0.5 text-[11px] text-sky-900/85 dark:text-sky-100/85">
                   <p><b className="text-emerald-600">Favour:</b> dal, millets, lots of veg, curd; biggest meal at lunch</p>
                   <p><b className="text-rose-500">Limit:</b> sugar, maida, fried, late-night snacking</p>
-                  <p className="text-[10px] text-muted-foreground">Flexible — no fixed menu, follow it your own way.</p>
+                  <p className="text-[10px] text-sky-700/80 dark:text-sky-300/80">Flexible — no fixed menu, follow it your own way.</p>
                 </div>
               )}
             </div>
@@ -647,123 +1143,307 @@ function CreatePlan() {
           </Q>
         )}
 
-        {/* DIET — why this plan: same colourful UI as the meal plan (calorie bar + macros + favour/limit) */}
-        {key === "diet-why" && (() => {
-          const m = reviewMealPlan.macros;
-          const pCal = m.protein * 4, cCal = m.carbs * 4, fCal = m.fat * 9;
-          const tot = Math.max(1, pCal + cCal + fCal);
-          const pc = (v: number) => `${Math.round((v / tot) * 100)}%`;
+        {/* KNOW YOUR MEAL · BMR — first, what your body needs at rest */}
+        {key === "diet-bmr" && (
+          <div className="space-y-3">
+            <div className="relative overflow-hidden rounded-3xl p-4 text-center text-primary-foreground shadow-[var(--shadow-glow)]" style={{ background: "var(--gradient-violet)" }}>
+              <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10 blur-xl" />
+              <div className="absolute -bottom-8 -left-6 h-28 w-28 rounded-full bg-white/10 blur-xl" />
+              <p className="relative text-[10px] font-bold uppercase tracking-[0.18em] opacity-85">🔥 Your BMR =</p>
+              <p className="relative mt-0.5 font-display text-[32px] font-extrabold leading-none">{calInfo.complete ? calInfo.bmr.toLocaleString() : "~1,400"}</p>
+              <p className="relative mt-1 text-[10.5px] font-semibold opacity-90">Kcal your body burns at rest, every single day</p>
+            </div>
+            {calInfo.complete && <p className="px-1 text-center text-[10.5px] text-muted-foreground">Calculated from your age, gender, height &amp; weight.</p>}
+            <p className="px-1 text-[12.5px] leading-relaxed text-foreground/85"><b className="text-foreground">BMR</b> is the amount of energy (calories) your body needs at complete rest to keep you alive.</p>
+            <div className="rounded-2xl bg-indigo-50 p-3 ring-1 ring-indigo-200 dark:bg-indigo-900/20 dark:ring-indigo-900/40">
+              <p className="text-[10px] font-bold uppercase tracking-wide text-indigo-700 dark:text-indigo-300">How weight works</p>
+              <div className="mt-1 space-y-1 text-[11.5px] leading-snug text-indigo-900/90 dark:text-indigo-100/90">
+                <p>Weight change = <b>Kcal in − Kcal out</b>.</p>
+                <p>Eat a little <b>less</b>, or move a little <b>more</b> → you lose weight.</p>
+              </div>
+            </div>
+            {!calInfo.complete && (
+              <button onClick={() => navigate({ to: "/onboarding", search: { step: "profile", returnTo: "/create", profileId: undefined } })} className="px-1 text-[10.5px] font-semibold text-primary underline">Add your age, height &amp; weight for your exact BMR →</button>
+            )}
+          </div>
+        )}
+
+        {/* KNOW YOUR MEAL · the science of eating for weight loss */}
+        {key === "diet-science" && (
+          <div className="space-y-2.5">
+            <p className="px-1 text-[13px] font-bold text-foreground">The science of eating for weight loss 🔬</p>
+            <p className="-mt-1 px-1 text-[11px] leading-snug text-muted-foreground">A few simple ideas that make eating less feel easy — not like starving.</p>
+            {SCIENCE_CARDS.map((c) => (
+              <div key={c.title} className="flex gap-2.5 rounded-2xl bg-card p-3 ring-1 ring-border/60">
+                <span className="text-[20px] leading-none">{c.emoji}</span>
+                <div className="min-w-0"><p className="text-[12.5px] font-bold text-foreground">{c.title}</p><p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">{c.body}</p></div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* KNOW YOUR MEAL · macros — how the day's calories split */}
+        {key === "diet-macros" && (
+          <div className="space-y-2.5">
+            <p className="px-1 text-[13px] font-bold text-foreground">Your daily macros 🍱</p>
+            <p className="-mt-1 px-1 text-[11px] leading-snug text-muted-foreground">How your ~{reviewMealPlan.kcalTarget.toLocaleString()} kcal splits across the day.</p>
+            {[
+              { emoji: "🥚", name: "Protein", amt: reviewMealPlan.macros.protein, chip: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300", why: "builds & repairs muscle and keeps you full for longer." },
+              { emoji: "🌾", name: "Carbs (low-GI)", amt: reviewMealPlan.macros.carbs, chip: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300", why: "your main energy — slow carbs give steady fuel, no spikes." },
+              { emoji: "🥑", name: "Fats (healthy)", amt: reviewMealPlan.macros.fat, chip: "bg-rose-100 text-rose-600 dark:bg-rose-900/40 dark:text-rose-300", why: "supports hormones & skin — a little goes a long way." },
+            ].map((m) => (
+              <div key={m.name} className="flex items-center gap-2.5 rounded-2xl bg-card p-3 ring-1 ring-border/60">
+                <span className="text-[20px]">{m.emoji}</span>
+                <div className="min-w-0 flex-1"><p className="text-[12.5px] font-bold text-foreground">{m.name}</p><p className="text-[10.5px] leading-snug text-muted-foreground">{m.why}</p></div>
+                <span className={`shrink-0 rounded-full px-2.5 py-1 text-[12px] font-bold ${m.chip}`}>{m.amt}g</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* KNOW YOUR MEAL · per-meal strategy (breakfast / lunch / snack / dinner) */}
+        {key.startsWith("diet-meal-") && (() => {
+          const meal = key.replace("diet-meal-", "");
+          const s = MEAL_STRATEGY[meal];
+          if (!s) return null;
+          const kcal = Math.round((reviewMealPlan.kcalTarget * s.share) / 10) * 10;
+          const idx = MEAL_ORDER.indexOf(meal);
           return (
-            <div className="space-y-3">
-              <p className="px-1 text-[12px] leading-snug text-muted-foreground">Before we build your meals, here's <b>what we'll cover and why</b> — the same you'll see in <b>Know your food</b> on your plan.</p>
-              {/* calorie need + macro bar — identical style to the meal plan */}
-              <div className="rounded-xl bg-secondary/60 p-3">
-                <p className="text-[12px] leading-snug text-muted-foreground">
-                  <span className="text-[10px] font-bold uppercase tracking-wide">Your calorie need</span>{" "}
-                  <b className="font-display text-[15px] text-foreground">{reviewMealPlan.kcalTarget.toLocaleString()} kcal/day</b>
-                  <span> · {reviewMealPlan.goalLabel}</span>
-                </p>
-                <div className="mt-2 flex h-2.5 overflow-hidden rounded-full">
-                  <div style={{ width: pc(pCal) }} className="bg-emerald-500" />
-                  <div style={{ width: pc(cCal) }} className="bg-amber-400" />
-                  <div style={{ width: pc(fCal) }} className="bg-rose-400" />
-                </div>
-                <div className="mt-1.5 flex justify-between text-[10.5px] font-semibold">
-                  <span className="text-emerald-600">Protein {m.protein}g</span>
-                  <span className="text-amber-600">Carbs {m.carbs}g</span>
-                  <span className="text-rose-500">Fat {m.fat}g</span>
-                </div>
-                <p className="mt-1.5 text-[10px] leading-snug text-muted-foreground">Set from your age, height, weight & activity, then nudged for your goal — a safe, steady pace.</p>
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between rounded-2xl bg-secondary/50 px-3 py-2">
+                <p className="text-[13px] font-bold text-foreground">{s.emoji} {s.title}</p>
+                <p className="text-[12.5px] font-bold text-primary">~{kcal} kcal</p>
               </div>
-              {/* recommended foods — tap an underlined term for details */}
-              <div className="rounded-xl bg-secondary/40 p-3 ring-1 ring-border/60">
-                <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">🍎 Recommended foods for you</p>
-                <div className="space-y-1 text-[11px] leading-snug text-foreground/85">
-                  <p><b className="text-emerald-600">Protein ({m.protein}g):</b> <TermList items={reviewMealPlan.foodRecos.protein} /></p>
-                  <p><b className="text-amber-600">Low-GI carbs ({m.carbs}g):</b> <TermList items={reviewMealPlan.foodRecos.carbs} /></p>
-                  <p><b className="text-rose-500">Healthy fats ({m.fat}g):</b> <TermList items={reviewMealPlan.foodRecos.fats} /></p>
+              <p className="px-1 text-[11px] text-muted-foreground">⏰ {s.time}</p>
+              {s.start && (
+                <div className="rounded-2xl bg-amber-50 p-3 ring-1 ring-amber-200 dark:bg-amber-900/20 dark:ring-amber-800/50">
+                  <p className="text-[11px] font-bold text-amber-800 dark:text-amber-200">☀️ {s.start.note}</p>
+                  <p className="mt-1 text-[11px] text-amber-900/85 dark:text-amber-100/85">{s.start.items.join(" · ")}</p>
                 </div>
-                <p className="mt-1.5 text-[9.5px] text-muted-foreground">Tap an underlined term for why it helps.</p>
-              </div>
-              {/* why — goal / prakriti / season, favour & limit in colour (terms tappable) */}
-              <div className="rounded-xl bg-secondary/40 p-3 ring-1 ring-border/60">
-                <p className="mb-1.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Why these — goal, body type & season</p>
-                <div className="space-y-1.5">
-                  {reviewMealPlan.perGoal.map((p, i) => (
-                    <div key={i} className="rounded-lg bg-card/70 p-2 ring-1 ring-border/50">
-                      <p className="text-[11px] font-bold capitalize text-foreground">{p.label}</p>
-                      <p className="text-[11px] leading-snug text-foreground/85"><b className="text-emerald-600">Favour:</b> <TermList items={p.eat.slice(0, 3)} /></p>
-                      <p className="text-[11px] leading-snug text-foreground/85"><b className="text-rose-500">Limit:</b> <TermList items={p.avoid.slice(0, 3)} /></p>
-                    </div>
-                  ))}
-                  {reviewMealPlan.prakriti && (
-                    <div className="rounded-lg bg-card/70 p-2 ring-1 ring-border/50">
-                      <p className="text-[11px] font-bold capitalize text-foreground">{reviewMealPlan.prakriti.dosha} body type</p>
-                      <p className="text-[11px] leading-snug text-foreground/85"><b className="text-emerald-600">Favour:</b> <TermList items={reviewMealPlan.prakriti.eat.slice(0, 3)} /></p>
-                    </div>
-                  )}
-                  <div className="rounded-lg bg-card/70 p-2 ring-1 ring-border/50">
-                    <p className="text-[11px] font-bold text-foreground">{reviewMealPlan.ritucharya.label} season</p>
-                    <p className="text-[11px] leading-snug text-foreground/85"><b className="text-emerald-600">Favour:</b> <TermList items={reviewMealPlan.ritucharya.eat.slice(0, 3)} /></p>
+              )}
+              <p className="px-1 text-[11px] font-semibold text-muted-foreground">Complete plates — each ≈ your {s.title.toLowerCase().replace(" (snack)", "")} goal of ~{kcal} kcal. Tap any underlined dish for why it helps, its calories &amp; ways to make it.</p>
+              <div className="space-y-1.5">
+                {s.plates.map((p, pi) => (
+                  <div key={pi} className="flex items-start gap-2 rounded-2xl bg-card p-2.5 ring-1 ring-border/60">
+                    <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[9px] font-bold text-primary">{pi + 1}</span>
+                    <span className="min-w-0 flex-1"><PlateDishes plate={p} /></span>
+                    <span className="mt-0.5 shrink-0 text-[10px] font-bold text-primary">~{kcal}</span>
                   </div>
-                </div>
+                ))}
               </div>
+              <div className="rounded-2xl bg-emerald-50 p-3 ring-1 ring-emerald-200 dark:bg-emerald-900/20 dark:ring-emerald-900/40">
+                <ul className="space-y-0.5">{s.tips.map((t, i) => <li key={i} className="text-[10.5px] leading-snug text-emerald-900/85 dark:text-emerald-100/85">• {t}</li>)}</ul>
+              </div>
+              {idx === MEAL_ORDER.length - 1 && <p className="px-1 text-[11px] leading-snug text-muted-foreground">Next — we'll turn these into a <b>day-wise plan</b> you can follow &amp; tweak.</p>}
             </div>
           );
         })()}
 
-        {/* DIET — the ingredients we'll build the plan from (asked BEFORE the plan is built) */}
-        {key === "diet-ingredients" && (
-          <div className="space-y-2.5">
-            <p className="px-1 text-[12px] leading-snug text-muted-foreground">We'll use these to build your meals. Tap any one to see <b>why it fits you</b> <Info size={11} className="mb-0.5 inline" /> — and swap it or remove it.</p>
-            <div className="grid grid-cols-4 gap-1.5">
-              {SHOW_ING.map((ing) => {
-                const removed = avoidIng.includes(ing);
-                const repl = ingReplace[ing];
-                return (
-                  <button key={ing} onClick={() => { setIngSheet(ing); setReplacePick(ingReplace[ing] ?? []); }}
-                    className={`relative flex min-h-[40px] flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1.5 text-center ring-1 transition ${removed ? "bg-rose-50/60 ring-rose-200" : "bg-card ring-border/60"}`}>
-                    <Info size={10} className="absolute right-1 top-1 text-muted-foreground/60" />
-                    <span className={`text-[10.5px] font-bold leading-tight ${removed ? "text-rose-600 line-through" : "text-foreground"}`}>{ing}</span>
-                    {removed && (repl?.length ? <span className="text-[8px] font-semibold leading-tight text-rose-500">→ {repl.join(", ")}</span> : <span className="text-[8px] font-semibold text-rose-500">removed</span>)}
-                  </button>
-                );
-              })}
+        {/* KNOW YOUR MEAL · calorie sense — what calories mean, before the numbers */}
+        {key === "diet-cal-learn" && (
+          <div className="space-y-1">
+            <div className="rounded-2xl bg-card p-2.5 ring-1 ring-border/60">
+              <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">🍽️ Calories IN</p>
+              <div className="grid grid-cols-2 gap-x-2 gap-y-0.5">
+                {CAL_FOODS.map((f) => (
+                  <div key={f.name} className="flex items-center gap-1">
+                    <span className="shrink-0 text-[13px]">{f.emoji}</span>
+                    <span className="min-w-0 flex-1 text-[10.5px] leading-tight text-foreground/85">{f.name}</span>
+                    <span className="shrink-0 text-[12px] font-bold tabular-nums text-primary">{f.cal}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-            <p className="px-1 text-[10.5px] text-muted-foreground">You can also change these anytime later, right from your plan.</p>
+            <div className="rounded-2xl bg-card p-2.5 ring-1 ring-border/60">
+              <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">🔥 Calories OUT</p>
+              <div className="grid grid-cols-2 gap-x-2 gap-y-0.5">
+                {CAL_OUT.map((f) => (
+                  <div key={f.name} className="flex items-center gap-1">
+                    <span className="shrink-0 text-[13px]">{f.emoji}</span>
+                    <span className="min-w-0 flex-1 text-[10.5px] leading-tight text-foreground/85">{f.name}</span>
+                    <span className="shrink-0 text-[12px] font-bold tabular-nums text-emerald-600 dark:text-emerald-400">{f.cal}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="rounded-2xl bg-emerald-50 p-2.5 ring-1 ring-emerald-200 dark:bg-emerald-900/20 dark:ring-emerald-900/40">
+              <p className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300">✅ Almost zero calories (&lt; 5 kcal)</p>
+              <p className="mt-0.5 text-[11px] leading-snug text-emerald-900/90 dark:text-emerald-100/90">{CAL_ZERO.join(" · ")}</p>
+            </div>
           </div>
         )}
+
+        {/* KNOW YOUR MEAL · your calorie goal: BMR → activity burn → deficit → target */}
+        {key === "diet-cal" && (
+          <div className="space-y-2">
+            {/* result — compact */}
+            <div className="flex items-center justify-between gap-2 rounded-2xl px-3.5 py-1.5 text-primary-foreground shadow-sm" style={{ background: "var(--gradient-violet)" }}>
+              <p className="min-w-0 flex-1 text-[11px] font-semibold opacity-90">🎯 {reviewMealPlan.goalLabel}</p>
+              <p className="shrink-0 font-display text-[20px] font-extrabold leading-none">{effTarget.toLocaleString()}<span className="ml-1 text-[10px] font-semibold opacity-80">kcal</span></p>
+            </div>
+
+            <div className="space-y-1.5">
+              <p className="px-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">How we got here</p>
+              {!calInfo.complete && <p className="rounded-xl bg-secondary/50 px-3 py-2.5 text-[11px] leading-snug text-muted-foreground">We've used a typical estimate for now. Add your age, height &amp; weight below for your exact BMR &amp; breakdown.</p>}
+              {calInfo.complete && <>
+              <CalRow emoji="😴" tint="slate" label="At rest (BMR)" value={calInfo.bmr} unit="kcal/day" />
+
+              {/* activity burn — one simple line (level base + yoga + exercise) */}
+              <div className="rounded-xl bg-sky-50 p-2.5 ring-1 ring-sky-200 dark:bg-sky-900/30 dark:ring-sky-800">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[11.5px] font-bold text-sky-800 dark:text-sky-200">🚶 + Your activity burn</p>
+                  <span className="font-display text-[15px] font-extrabold tabular-nums text-sky-800 dark:text-sky-200">~{actMid}</span>
+                </div>
+                <p className="mt-1 text-[10px] leading-snug text-sky-900/85 dark:text-sky-100/85">{actRows.map((a) => a.label).join(", ")}</p>
+              </div>
+
+              {(calInfo.deficit > 0 || calInfo.surplus > 0) && <CalRow emoji="🍽️" tint="sky" label="= Maintain your weight" value={effMaintenance} unit="kcal/day" />}
+
+              {calInfo.deficit > 0 && (
+                <CalRow emoji="📉" tint="amber" label={`− To lose ~${calInfo.lossKg.toFixed(1)} kg/week`} sub={`A safe, steady pace — ${calInfo.deficit} kcal/day below maintenance`} value={`−${calInfo.deficit}`} unit="kcal/day" />
+              )}
+              {calInfo.surplus > 0 && <CalRow emoji="📈" tint="amber" label="+ To build muscle steadily" value={`+${calInfo.surplus}`} unit="kcal/day" />}
+              </>}
+
+              <CalRow emoji="🎯" tint="emerald" label="Your target — eat around" sub={calInfo.complete && calInfo.deficit > 0 ? `${effMaintenance.toLocaleString()} − ${calInfo.deficit} — burn more than you eat` : undefined} value={effTarget} unit="kcal/day" highlight />
+            </div>
+            {!calInfo.complete && (
+              <button onClick={() => navigate({ to: "/onboarding", search: { step: "profile", returnTo: "/create", profileId: undefined } })} className="px-1 text-[10.5px] font-semibold text-primary underline">Add your age, height &amp; weight for exact numbers →</button>
+            )}
+          </div>
+        )}
+
+        {/* KNOW YOUR MEAL · 2 — one comprehensive "what to eat & why" (macros + goal extras + limits) */}
+        {key === "diet-foods" && (() => {
+          const goalFavour = Array.from(new Set(reviewMealPlan.perGoal.flatMap((p) => p.eat))).slice(0, 6);
+          const limits = Array.from(new Set([...reviewMealPlan.perGoal.flatMap((p) => p.avoid), ...(reviewMealPlan.prakriti?.avoid ?? []), ...reviewMealPlan.ritucharya.avoid])).slice(0, 8);
+          const MacroCard = ({ emoji, name, amt, chip, foods, why }: { emoji: string; name: string; amt: number; chip: string; foods: string[]; why: string }) => (
+            <div className="rounded-2xl bg-card p-3 ring-1 ring-border/60">
+              <div className="flex items-center gap-2">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent/50 text-lg">{emoji}</span>
+                <p className="flex-1 text-[13px] font-bold text-foreground">{name}</p>
+                <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${chip}`}>{amt}g/day</span>
+              </div>
+              <p className="mt-1.5 text-[11.5px] leading-snug text-foreground/85"><TermList items={foods} /></p>
+              <p className="mt-1 text-[10.5px] leading-snug text-muted-foreground"><b className="text-foreground/70">Why:</b> {why}</p>
+            </div>
+          );
+          return (
+            <div className="space-y-2.5">
+              <p className="px-1 text-[13px] font-bold text-foreground">What to eat — and why 🍎</p>
+              <p className="-mt-1 px-1 text-[10px] text-muted-foreground">Tap any underlined food for an example & its macros.</p>
+              <MacroCard emoji="🥚" name="Protein" amt={reviewMealPlan.macros.protein} chip="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300" foods={reviewMealPlan.foodRecos.protein} why="keeps you full and protects muscle — so you eat less without feeling hungry." />
+              <MacroCard emoji="🌾" name="Low-GI carbs" amt={reviewMealPlan.macros.carbs} chip="bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300" foods={reviewMealPlan.foodRecos.carbs} why="steady energy with fewer sugar spikes & cravings — millets, oats & whole grains over white rice/maida." />
+              <MacroCard emoji="🥑" name="Healthy fats" amt={reviewMealPlan.macros.fat} chip="bg-rose-100 text-rose-600 dark:bg-rose-900/40 dark:text-rose-300" foods={reviewMealPlan.foodRecos.fats} why="support hormones & skin, and keep you satisfied — in small amounts." />
+              <div className="rounded-2xl bg-card p-3 ring-1 ring-border/60">
+                <div className="flex items-center gap-2"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent/50 text-lg">🍉</span><p className="flex-1 text-[13px] font-bold text-foreground">Water-rich fruit &amp; veg</p></div>
+                <p className="mt-1 text-[10.5px] leading-snug text-muted-foreground"><b className="text-foreground/70">Why:</b> they fill you up for fewer calories and keep you hydrated.</p>
+              </div>
+              {goalFavour.length > 0 && (
+                <div className="rounded-2xl bg-emerald-50 p-3 ring-1 ring-emerald-200 dark:bg-emerald-900/20 dark:ring-emerald-900/40">
+                  <p className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300">✅ Extra for your goal ({reviewMealPlan.perGoal.map((p) => p.label).join(", ")})</p>
+                  <p className="mt-1 text-[11.5px] leading-snug text-emerald-900/90 dark:text-emerald-100/90"><TermList items={goalFavour} /></p>
+                </div>
+              )}
+              {limits.length > 0 && (
+                <div className="rounded-2xl bg-rose-50 p-3 ring-1 ring-rose-200 dark:bg-rose-900/20 dark:ring-rose-900/40">
+                  <p className="text-[11px] font-bold text-rose-600 dark:text-rose-300">⛔ Go easy on</p>
+                  <p className="mt-1 text-[11.5px] leading-snug text-rose-900/90 dark:text-rose-100/90"><TermList items={limits} /></p>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* KNOW YOUR MEAL · 3 — body type (prakriti) & season (ritucharya), smooth visual cards */}
+        {key === "diet-prakriti" && (
+          <div className="space-y-2.5">
+            <p className="px-1 text-[13px] font-bold text-foreground">Tuned to you &amp; the season 🧘</p>
+            {reviewMealPlan.prakriti && (
+              <div className="rounded-2xl bg-card p-3 ring-1 ring-border/60">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent/50 text-lg">{reviewMealPlan.prakriti.dosha === "vata" ? "🌬️" : reviewMealPlan.prakriti.dosha === "pitta" ? "🔥" : "🌊"}</span>
+                  <p className="flex-1 text-[12.5px] font-bold capitalize text-foreground">Your {reviewMealPlan.prakriti.dosha} body type</p>
+                </div>
+                {reviewMealPlan.prakriti.note && <p className="mt-1 text-[10.5px] leading-snug text-muted-foreground">{reviewMealPlan.prakriti.note}</p>}
+                <p className="mt-1 text-[11.5px] leading-snug text-foreground/85"><b className="text-emerald-600">Favour:</b> <TermList items={reviewMealPlan.prakriti.eat} /></p>
+                <p className="text-[11.5px] leading-snug text-foreground/85"><b className="text-rose-500">Go easy:</b> <TermList items={reviewMealPlan.prakriti.avoid} /></p>
+              </div>
+            )}
+            <div className="rounded-2xl bg-card p-3 ring-1 ring-border/60">
+              <div className="flex items-center gap-2">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent/50 text-lg">🍂</span>
+                <p className="flex-1 text-[12.5px] font-bold text-foreground">This season — {reviewMealPlan.ritucharya.label}</p>
+              </div>
+              <p className="mt-1 text-[11.5px] leading-snug text-foreground/85"><b className="text-emerald-600">Favour:</b> <TermList items={reviewMealPlan.ritucharya.eat} /></p>
+              <p className="text-[11.5px] leading-snug text-foreground/85"><b className="text-rose-500">Go easy:</b> <TermList items={reviewMealPlan.ritucharya.avoid} /></p>
+            </div>
+            <p className="rounded-2xl bg-primary/10 px-3 py-2.5 text-[11px] leading-snug text-foreground/85 ring-1 ring-primary/20">Tap any underlined food for details. Next — the <b>ingredients</b> we'll build your meals from.</p>
+          </div>
+        )}
+
+        {/* DIET — the ingredients we'll build the plan from (asked BEFORE the plan is built) */}
+        {key === "diet-ingredients" && (() => {
+          const active = [...SHOW_ING.filter((i) => !avoidIng.includes(i)), ...addedIng];
+          const addIngredient = () => { const v = addInput.trim(); if (v && !active.includes(v) && !addedIng.includes(v)) setAddedIng((a) => [...a, v]); setAddInput(""); };
+          return (
+            <div className="space-y-2.5">
+              <p className="px-1 text-[12px] leading-snug text-muted-foreground">These are the ingredients I'll use to create your meal plan. <b>Add</b> any you'd like, or <b>remove</b> / <b>swap</b> ones you don't. Tap <Info size={11} className="mb-0.5 inline" /> to see why each fits you.</p>
+
+              {/* add your own */}
+              <div className="flex gap-2">
+                <input value={addInput} onChange={(e) => setAddInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") addIngredient(); }} placeholder="Add an ingredient — e.g. quinoa, mushroom" className="min-w-0 flex-1 rounded-xl bg-card px-3 py-2 text-[12px] ring-1 ring-border/60 focus:outline-none focus:ring-2 focus:ring-primary/40" />
+                <button onClick={addIngredient} className="shrink-0 rounded-xl bg-primary px-3.5 py-2 text-[12px] font-bold text-primary-foreground active:scale-95">+ Add</button>
+              </div>
+
+              {/* active ingredients — compact grid; ✕ remove + ⇄ swap icons, ⓘ for the rest */}
+              <div className="grid grid-cols-2 gap-1.5">
+                {active.map((ing) => {
+                  const known = !!ING_META[ing];
+                  const custom = addedIng.includes(ing);
+                  return (
+                    <div key={ing} className="flex items-center gap-1.5 rounded-xl bg-card p-2 ring-1 ring-border/60">
+                      {known
+                        ? <button onClick={() => setInfoIng(ing)} aria-label={`Why ${ing}`} className="shrink-0 text-muted-foreground/70 active:scale-90"><Info size={13} /></button>
+                        : <span className="shrink-0 text-[11px]">🥕</span>}
+                      <p className="min-w-0 flex-1 truncate text-[11.5px] font-bold text-foreground">{ing}</p>
+                      {known && <button onClick={() => { setSwapIng(ing); setReplacePick(ingReplace[ing] ?? []); }} aria-label={`Swap ${ing}`} className="shrink-0 text-foreground/55 active:scale-90"><Repeat size={13} /></button>}
+                      <button onClick={() => custom ? setAddedIng((a) => a.filter((x) => x !== ing)) : setAvoidIng((a) => [...a, ing])} aria-label={`Remove ${ing}`} className="shrink-0 text-rose-500 active:scale-90"><X size={14} /></button>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* changes summary — removed / swapped shown here, not on the tiles */}
+              {(avoidIng.length > 0) && (
+                <div className="rounded-2xl bg-secondary/40 p-3 ring-1 ring-border/60">
+                  <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Your changes</p>
+                  <div className="space-y-1">
+                    {avoidIng.map((ing) => (
+                      <div key={ing} className="flex items-center gap-2 text-[11px]">
+                        <span className="flex-1 text-foreground/85">{ingReplace[ing]?.length ? <><span className="line-through text-muted-foreground">{ing}</span> → <b className="text-emerald-600">{ingReplace[ing].join(", ")}</b></> : <span className="line-through text-muted-foreground">{ing} (removed)</span>}</span>
+                        <button onClick={() => { setAvoidIng((a) => a.filter((x) => x !== ing)); setIngReplace((m) => { const n = { ...m }; delete n[ing]; return n; }); }} className="shrink-0 text-[10.5px] font-bold text-primary">undo</button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <p className="px-1 text-[10.5px] text-muted-foreground">You can also change these anytime later, right from your plan.</p>
+            </div>
+          );
+        })()}
 
         {/* DIET — the plan itself, shown before My Plan, with an AyuBot to adjust it */}
         {key === "diet-plan" && (
           <div className="space-y-3">
-            <p className="px-1 text-[12px] leading-snug text-muted-foreground">Here's your {mealMode === "recos" ? "food-tips plan" : "meal plan"}. Have a look, then tell AyuBot anything to change before we save.</p>
             <div className="rounded-2xl bg-card p-2.5 ring-1 ring-border/60">
-              <p className="mb-1.5 px-1 text-[10px] font-bold uppercase tracking-wide text-primary">Preview · your {mealMode === "recos" ? "food tips" : "meal plan"}</p>
+              <p className="mb-1.5 px-1 text-[10px] font-bold uppercase tracking-wide text-primary">Your day-wise plan — tap underlined foods for why &amp; macros</p>
               <MealPlanView plan={reviewMealPlan} mode={mealMode} avoid={avoidIng} onAvoidChange={setAvoidIng} />
             </div>
 
-            {/* inline AyuBot — adjust the plan with feedback */}
-            <div className="rounded-2xl bg-card p-3 ring-1 ring-border/60">
-              <div className="flex items-center gap-1.5">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full text-[13px] text-primary-foreground" style={{ background: "var(--gradient-violet)" }}>🌿</span>
-                <p className="text-[12px] font-bold text-foreground">AyuBot — adjust your plan</p>
-              </div>
-              <div className="mt-2 space-y-1.5">
-                {botMsgs.map((m, i) => (
-                  <div key={i} className={`flex ${m.from === "you" ? "justify-end" : "justify-start"}`}>
-                    <p className={`max-w-[85%] rounded-2xl px-3 py-1.5 text-[11.5px] leading-snug ${m.from === "you" ? "bg-primary text-primary-foreground" : "bg-secondary/60 text-foreground/85"}`}>{m.text}</p>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-2 flex gap-2">
-                <input value={botInput} onChange={(e) => setBotInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") sendBot(); }} placeholder="e.g. no paneer, lighter dinners, more protein" className="min-w-0 flex-1 rounded-xl bg-background px-3 py-2 text-[12px] ring-1 ring-border/60 focus:outline-none focus:ring-2 focus:ring-primary/40" />
-                <button onClick={sendBot} className="shrink-0 rounded-xl bg-primary px-3.5 py-2 text-[12px] font-bold text-primary-foreground active:scale-95">Send</button>
-              </div>
-              <button onClick={() => setFeedbackOpen(true)} className="mt-2 text-[11px] font-semibold text-primary">More options — ingredients, dishes to keep →</button>
-            </div>
-
-            <p className="rounded-2xl bg-emerald-50 px-3 py-2.5 text-[11px] leading-snug text-emerald-800 ring-1 ring-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-200 dark:ring-emerald-900/40">Happy with it? Tap <b>Next</b> to review &amp; save. You can still change ingredients and <b>swap any meal</b> anytime from your plan as you go.</p>
+            <button onClick={save} className="w-full rounded-2xl bg-primary py-3 text-[13.5px] font-bold text-primary-foreground shadow-[var(--shadow-glow)] active:scale-[0.99]">✅ Looks good — save my plan</button>
+            <button onClick={() => { setBotOpen(true); setSavePopup(true); }} className="w-full rounded-2xl bg-secondary py-2.5 text-[12.5px] font-semibold text-foreground active:scale-[0.99]">💬 Want to change something? Talk to AyuBot</button>
+            <p className="px-1 text-[10.5px] leading-snug text-muted-foreground">You can change ingredients or swap any meal anytime from your plan.</p>
           </div>
         )}
 
@@ -807,41 +1487,95 @@ function CreatePlan() {
         </div>
       )}
 
-      {/* Ingredient sheet — why it fits you, plus replace / remove */}
-      {ingSheet && (() => {
-        const name = ingSheet;
-        const meta = ING_META[name];
-        const why = ingredientWhy(name, goalLabels, reviewMealPlan.prakriti?.dosha, reviewMealPlan.ritucharya.label);
-        const removed = avoidIng.includes(name);
-        const replaceOpts = (meta?.replaceWith ?? []).filter((r) => !SHOW_ING.includes(r)); // don't suggest what's already in the list
+      {/* Estimate my calories — popup */}
+      {calPopup && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-6" onClick={() => setCalPopup(false)}>
+          <div className="w-full max-w-xs rounded-3xl bg-card p-5 text-center shadow-xl" onClick={(e) => e.stopPropagation()}>
+            {eatEstimate.found >= 3 ? (
+              <>
+                <span className="text-3xl">🌿</span>
+                <p className="mt-2 text-[12.5px] leading-relaxed text-foreground">You're eating about<br /><b className="font-display text-[22px] text-primary">~{eatEstimate.kcal.toLocaleString()} kcal/day</b></p>
+                <p className="mt-1 text-[11px] leading-snug text-muted-foreground">Rough estimate from what you wrote. If it looks off, add amounts or timings.</p>
+              </>
+            ) : (
+              <>
+                <span className="text-3xl">✍️</span>
+                <p className="mt-2 text-[13px] font-bold text-foreground">A little more detail?</p>
+                <p className="mt-1 text-[11.5px] leading-snug text-muted-foreground">To estimate your calories, add rough <b>amounts &amp; timings</b> — e.g. "2 rotis, 1 bowl dal, 1 cup curd". It also helps us learn your eating habits. Don't want to? You can skip.</p>
+              </>
+            )}
+            <button onClick={() => setCalPopup(false)} className="mt-4 w-full rounded-2xl bg-primary py-2.5 text-[13px] font-bold text-primary-foreground">{eatEstimate.found >= 3 ? "Got it" : "OK"}</button>
+          </div>
+        </div>
+      )}
+
+      {/* AyuBot — adjust the plan, then save (opened from "Want to change something?") */}
+      {savePopup && (
+        <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50" onClick={() => setSavePopup(false)}>
+          <div className="max-h-[88svh] w-full max-w-xl overflow-y-auto rounded-t-2xl bg-card p-4 pb-[max(1.25rem,env(safe-area-inset-bottom))]" onClick={(e) => e.stopPropagation()}>
+            <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-border" />
+            <p className="font-display text-[15px] font-bold text-foreground">💬 Tell AyuBot what to change</p>
+            <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">It keeps adjusting your plan as you ask.</p>
+            <div className="mt-2.5 rounded-2xl bg-secondary/40 p-3 ring-1 ring-border/60">
+              <div className="space-y-1.5">
+                {botMsgs.map((m, i) => (
+                  <div key={i} className={`flex ${m.from === "you" ? "justify-end" : "justify-start"}`}>
+                    <p className={`max-w-[85%] rounded-2xl px-3 py-1.5 text-[11.5px] leading-snug ${m.from === "you" ? "bg-primary text-primary-foreground" : "bg-card text-foreground/85 ring-1 ring-border/50"}`}>{m.text}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-2 flex gap-2">
+                <input value={botInput} onChange={(e) => setBotInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") sendBot(); }} placeholder="e.g. no paneer, lighter dinners, more protein" className="min-w-0 flex-1 rounded-xl bg-background px-3 py-2 text-[12px] ring-1 ring-border/60 focus:outline-none focus:ring-2 focus:ring-primary/40" />
+                <button onClick={sendBot} className="shrink-0 rounded-xl bg-primary px-3.5 py-2 text-[12px] font-bold text-primary-foreground active:scale-95">Send</button>
+              </div>
+              <button onClick={() => setFeedbackOpen(true)} className="mt-2 text-[11px] font-semibold text-primary">More options — ingredients, dishes to keep →</button>
+            </div>
+            <button onClick={save} className="mt-3 w-full rounded-2xl bg-primary py-3 text-[13.5px] font-bold text-primary-foreground active:scale-[0.99]">💾 Save my plan →</button>
+            <button onClick={() => setSavePopup(false)} className="mt-2 w-full rounded-2xl bg-secondary py-2.5 text-[12.5px] font-semibold text-foreground">← Back</button>
+          </div>
+        </div>
+      )}
+
+      {/* Ingredient INFO popup — ⓘ just explains why it fits you (no action buttons) */}
+      {infoIng && (() => {
+        const meta = ING_META[infoIng];
+        const why = ingredientWhy(infoIng, goalLabels, reviewMealPlan.prakriti?.dosha, reviewMealPlan.ritucharya.label);
         return (
-          <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50" onClick={() => setIngSheet(null)}>
+          <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50" onClick={() => setInfoIng(null)}>
             <div className="max-h-[88svh] w-full max-w-xl overflow-y-auto rounded-t-2xl bg-card p-4 pb-[max(1.25rem,env(safe-area-inset-bottom))]" onClick={(e) => e.stopPropagation()}>
               <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-border" />
-              <p className="text-[15px] font-bold text-foreground">{name}</p>
+              <p className="text-[15px] font-bold text-foreground">{infoIng}</p>
               {meta?.kinds && <p className="mt-0.5 text-[11px] text-muted-foreground"><b className="text-foreground/70">Includes:</b> {meta.kinds.join(", ")}</p>}
               <div className="mt-2 space-y-1">
                 {why.map((l, i) => <p key={i} className="text-[11.5px] leading-snug text-foreground/85">{i === 0 ? "" : "• "}{l}</p>)}
               </div>
-              {replaceOpts.length > 0 && (
-                <div className="mt-3 rounded-xl bg-secondary/40 p-3 ring-1 ring-border/50">
-                  <p className="text-[10.5px] font-bold uppercase tracking-wide text-muted-foreground">Not for you? Replace with (pick 1–2)</p>
-                  <div className="mt-1.5 flex flex-wrap gap-1.5">
-                    {replaceOpts.map((r) => {
-                      const on = replacePick.includes(r);
-                      return <button key={r} onClick={() => setReplacePick((p) => on ? p.filter((x) => x !== r) : p.length >= 2 ? p : [...p, r])} className={`rounded-full px-3 py-1 text-[11px] font-semibold ring-1 ${on ? "bg-primary text-primary-foreground ring-primary" : "bg-card text-foreground/80 ring-border/60"}`}>{r}</button>;
-                    })}
-                  </div>
-                  <button disabled={!replacePick.length} onClick={() => { setIngReplace((m) => ({ ...m, [name]: replacePick })); setAvoidIng((a) => a.includes(name) ? a : [...a, name]); setIngSheet(null); }}
-                    className={`mt-2.5 w-full rounded-xl py-2 text-[12px] font-bold ${replacePick.length ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}>Replace{replacePick.length ? ` with ${replacePick.join(" & ")}` : ""}</button>
-                </div>
-              )}
-              <div className="mt-2 flex gap-2">
-                {removed
-                  ? <button onClick={() => { setAvoidIng((a) => a.filter((x) => x !== name)); setIngReplace((m) => { const n = { ...m }; delete n[name]; return n; }); setIngSheet(null); }} className="flex-1 rounded-xl bg-secondary py-2 text-[12px] font-bold text-foreground">Keep it in my plan</button>
-                  : <button onClick={() => { setAvoidIng((a) => [...a, name]); setIngReplace((m) => { const n = { ...m }; delete n[name]; return n; }); setIngSheet(null); }} className="flex-1 rounded-xl bg-rose-50 py-2 text-[12px] font-bold text-rose-600 ring-1 ring-rose-200">Remove completely</button>}
-                <button onClick={() => setIngSheet(null)} className="flex-1 rounded-xl bg-primary py-2 text-[12px] font-bold text-primary-foreground">Done</button>
+              <div className="mt-3 flex gap-2">
+                <button onClick={() => { const n = infoIng; setInfoIng(null); setSwapIng(n); setReplacePick(ingReplace[n] ?? []); }} className="flex-1 rounded-xl bg-secondary py-2 text-[12px] font-bold text-foreground active:scale-95">⇄ Swap</button>
+                <button onClick={() => { setAvoidIng((a) => a.includes(infoIng) ? a : [...a, infoIng]); setInfoIng(null); }} className="flex-1 rounded-xl bg-rose-50 py-2 text-[12px] font-bold text-rose-600 ring-1 ring-rose-200 active:scale-95 dark:bg-rose-900/30 dark:text-rose-300">Remove</button>
               </div>
+              <button onClick={() => setInfoIng(null)} className="mt-2 w-full rounded-2xl bg-primary py-2.5 text-[13px] font-bold text-primary-foreground">Got it</button>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Ingredient SWAP popup — pick 1–2 alternatives (not ones already in the list) */}
+      {swapIng && (() => {
+        const replaceOpts = (ING_META[swapIng]?.replaceWith ?? []).filter((r) => !SHOW_ING.includes(r));
+        return (
+          <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50" onClick={() => setSwapIng(null)}>
+            <div className="w-full max-w-xl rounded-t-2xl bg-card p-4 pb-[max(1.25rem,env(safe-area-inset-bottom))]" onClick={(e) => e.stopPropagation()}>
+              <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-border" />
+              <p className="text-[14px] font-bold text-foreground">Swap {swapIng}</p>
+              <p className="mt-0.5 text-[11px] text-muted-foreground">Pick 1–2 alternatives that fill the same need.</p>
+              <div className="mt-2.5 flex flex-wrap gap-1.5">
+                {replaceOpts.map((r) => {
+                  const on = replacePick.includes(r);
+                  return <button key={r} onClick={() => setReplacePick((p) => on ? p.filter((x) => x !== r) : p.length >= 2 ? p : [...p, r])} className={`rounded-full px-3 py-1 text-[11.5px] font-semibold ring-1 ${on ? "bg-primary text-primary-foreground ring-primary" : "bg-card text-foreground/80 ring-border/60"}`}>{r}</button>;
+                })}
+              </div>
+              <button disabled={!replacePick.length} onClick={() => { setIngReplace((m) => ({ ...m, [swapIng]: replacePick })); setAvoidIng((a) => a.includes(swapIng) ? a : [...a, swapIng]); setSwapIng(null); }}
+                className={`mt-3 w-full rounded-2xl py-2.5 text-[13px] font-bold ${replacePick.length ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}>Swap{replacePick.length ? ` → ${replacePick.join(" & ")}` : ""}</button>
             </div>
           </div>
         );
@@ -887,15 +1621,38 @@ function CreatePlan() {
         </div>
       )}
 
-      <div className="fixed inset-x-0 z-30 mx-auto flex max-w-xl gap-2 px-4" style={{ bottom: "calc(4.5rem + env(safe-area-inset-bottom))" }}>
+      <div className="fixed inset-x-0 z-30 mx-auto flex max-w-xl justify-center gap-2 px-4" style={{ bottom: "calc(4.5rem + env(safe-area-inset-bottom))" }}>
         {key !== "review" ? (
-          <button onClick={next} disabled={!canNext} className={`w-full rounded-2xl px-4 py-3 text-sm font-bold shadow-lg transition ${canNext ? "bg-primary text-primary-foreground active:scale-[0.99]" : "bg-secondary text-muted-foreground"}`}>Next →</button>
+          <button onClick={next} disabled={!canNext} className={`mx-auto w-full max-w-[18rem] rounded-2xl px-6 py-2.5 text-sm font-bold shadow-lg transition ${canNext ? "bg-primary text-primary-foreground active:scale-[0.99]" : "bg-secondary text-muted-foreground"}`}>Next →</button>
         ) : (
-          <button onClick={save} className="w-full rounded-2xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground shadow-lg active:scale-[0.99]">💾 Save to My Plans</button>
+          <button onClick={save} className="mx-auto w-full max-w-[18rem] rounded-2xl bg-primary px-6 py-2.5 text-sm font-bold text-primary-foreground shadow-lg active:scale-[0.99]">💾 Save to My Plans</button>
         )}
       </div>
 
       <BottomNav />
+    </div>
+  );
+}
+
+/** One coloured step in the calorie breakdown — label on the left, big number on the right. */
+const CAL_TINT: Record<string, string> = {
+  slate: "bg-slate-100 text-slate-700 ring-slate-200 dark:bg-slate-800/50 dark:text-slate-200 dark:ring-slate-700",
+  sky: "bg-sky-50 text-sky-700 ring-sky-200 dark:bg-sky-900/30 dark:text-sky-200 dark:ring-sky-800",
+  amber: "bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-900/30 dark:text-amber-200 dark:ring-amber-800",
+  emerald: "bg-emerald-50 text-emerald-800 ring-emerald-300 dark:bg-emerald-900/30 dark:text-emerald-200 dark:ring-emerald-800",
+};
+function CalRow({ emoji, tint, label, sub, value, unit, highlight }: { emoji: string; tint: keyof typeof CAL_TINT; label: string; sub?: string; value: string | number; unit: string; highlight?: boolean }) {
+  return (
+    <div className={`flex items-center gap-2 rounded-xl px-3 py-1.5 ring-1 ${CAL_TINT[tint]} ${highlight ? "ring-2" : ""}`}>
+      <span className="text-base leading-none">{emoji}</span>
+      <div className="min-w-0 flex-1">
+        <p className="text-[12px] font-bold leading-tight">{label}</p>
+        {sub && <p className="text-[9.5px] font-medium leading-tight opacity-70">{sub}</p>}
+      </div>
+      <div className="shrink-0 text-right">
+        <p className={`font-display font-extrabold leading-none tabular-nums ${highlight ? "text-[19px]" : "text-[15px]"}`}>{typeof value === "number" ? value.toLocaleString() : value}</p>
+        <p className="mt-0.5 text-[8px] font-bold uppercase tracking-wide opacity-70">{unit}</p>
+      </div>
     </div>
   );
 }

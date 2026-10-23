@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { ArrowLeft } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
 import { conditionSeverity, conditionMeta, resolveConflicts } from "@/lib/clusters";
@@ -313,6 +314,23 @@ const EVERYDAY_ITEMS = [
 const REST_CALM = [
   { id: "better-sleep", label: "Better Sleep", emoji: "🌙" }, { id: "stress", label: "De-stress", emoji: "🧘" },
 ];
+/** Collapsible category section for the unified "pick your goals" page. */
+function CatSection({ open, onToggle, emoji, title, hint, count, children }: { open: boolean; onToggle: () => void; emoji: string; title: string; hint?: string; count: number; children: ReactNode }) {
+  return (
+    <div className="overflow-hidden rounded-2xl bg-card ring-1 ring-border/60">
+      <button onClick={onToggle} className="lf-btn flex w-full items-center gap-2.5 p-3 text-left">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent/50 text-[17px]">{emoji}</span>
+        <div className="min-w-0 flex-1">
+          <p className="text-[13px] font-bold text-foreground">{title}</p>
+          {hint && <p className="text-[10px] text-muted-foreground">{hint}</p>}
+        </div>
+        {count > 0 && <span className="shrink-0 rounded-full bg-primary px-1.5 py-0.5 text-[9px] font-bold text-primary-foreground">{count}</span>}
+        <span className="shrink-0 text-[11px] text-muted-foreground">{open ? "▾" : "▸"}</span>
+      </button>
+      {open && <div className="border-t border-border/50 p-3">{children}</div>}
+    </div>
+  );
+}
 const WOMEN_ITEMS = [
   { id: "pregnancy", label: "Pregnancy", emoji: "🤰" }, { id: "post-natal", label: "Post-natal", emoji: "👶" },
   { id: "premenopause", label: "Pre-menopause", emoji: "🌼" }, { id: "postmenopause", label: "Post-menopause", emoji: "🌺" },
@@ -322,7 +340,7 @@ const WOMEN_ITEMS = [
 const HEAD: Record<string, string> = {
   about: "A few basics", movement: "How active are you?", cuisine: "Cuisine you prefer",
   eating: "Your food & meals", habits: "Your eating habits", "eat-text": "Describe your meals",
-  sleep: "Let's start with your sleep", digestion: "Your digestion", mind: "Mental wellbeing", gate: "How would you like to begin?", areas: "Pick your focus areas", conditions: "Any health conditions?", disease: "Manage a condition?", prevention: "Improve & strengthen", women: "Women's health & life stages", everyday: "Hair & skin care", fitness: "Fitness goal", seniors: "Seeing & moving", cycle: "Your cycle", goals: "Your focus for building plan",
+  sleep: "Let's start with your sleep", digestion: "Your digestion", mind: "Mental wellbeing", gate: "How would you like to begin?", areas: "Pick your focus areas", conditions: "Any health conditions?", disease: "Manage a condition?", prevention: "Improve & strengthen", women: "Women's health & life stages", everyday: "Hair & skin care", fitness: "Fitness goal", seniors: "Seeing & moving", cycle: "Your cycle", goals: "Your focus for building plan", "pick-all": "Pick your top goals",
 };
 
 function chip(on: boolean) {
@@ -371,6 +389,8 @@ function smChip(on: boolean) {
 
 function LifestylePage() {
   const navigate = useNavigate();
+  const [openCat, setOpenCat] = useState<string | null>(null); // which goal category is expanded on the unified pick page
+  const [noGoalPopup, setNoGoalPopup] = useState(false); // confirm before leaving pick-all with nothing selected
   const { start, mode, preselect, only } = Route.useSearch();
   const onlyOne = only === "1"; // "Make this a focus area" — just this one screen + focus
   const unified = mode === "unified";                 // Create flow: full wizard, no basics
@@ -430,25 +450,15 @@ function LifestylePage() {
   // list → focus → fitness goal (basics are captured in onboarding); full flow runs everything.
   const showWomen = female || (((a.women as string[]) ?? []).length > 0); // show if female, or a women's item was picked (e.g. from Browse)
   const stepKeys = useMemo(() => unified
-    ? (() => { // Create wizard — the clicked category (preselect) leads, the rest follow, focus last
-        const base = ["disease", "prevention", ...(showWomen ? ["women"] : []), "fitness"];
-        const tk = !preselect ? null
-          : WOMEN_ITEMS.some((o) => o.id === preselect) ? "women"
-          : COND_LABEL[preselect] ? "disease"
-          : FITNESS_GOALS.some((o) => o.id === preselect) ? "fitness"
-          : "prevention"; // organs, hair/skin/eyes, sleep & stress all live on Improve & strengthen
-        if (onlyOne && tk) return [tk, "goals"]; // single-screen customize: just this part + focus
-        const ordered = tk && base.includes(tk) ? [tk, ...base.filter((p) => p !== tk)] : base;
-        return [...ordered, "goals"];
-      })()
+    ? ["pick-all", "goals"] // Create wizard — one collapsible page for every goal category, then focus
     : planFlow
     ? ["conditions", ...(female ? ["cycle"] : []), "goals"]          // disease-first short flow
-    : [ // profile: basics → gate → the 3 core screens → focus
-        "about", "movement", "sleep", "eating", "habits", "eat-text", "cuisine", "digestion", "mind", "gate",
-        "disease", "prevention", ...(showWomen ? ["women"] : []), "fitness",
+    : [ // profile: basics → gate → the 3 core screens → one goal page → focus
+        "about", "movement", "sleep", "eating", "habits", "mind", "gate",
+        "pick-all",
         ...(older ? ["seniors"] : []),
         "goals",
-      ], [older, female, planFlow, unified, showWomen, preselect, onlyOne]);
+      ], [older, female, planFlow, unified]);
   const key = stepKeys[Math.min(step, stepKeys.length - 1)];
 
   const cm = a.heightUnit === "ft" ? ((parseFloat(a.heightFt) || 0) * 30.48 + (parseFloat(a.heightIn) || 0) * 2.54) : (parseFloat(a.heightCm) || 0);
@@ -491,6 +501,16 @@ function LifestylePage() {
   const activeFocus = ovAF.length ? ovAF.filter((id) => candidates.some((cc) => cc.id === id)) : autoActive;
   const togActive = (id: string) => setA((p) => { const base = (p.activeFocus as string[])?.length ? (p.activeFocus as string[]) : autoActive; const cur = base.includes(id) ? base.filter((x) => x !== id) : base.length >= 2 ? [...base.slice(1), id] : [...base, id]; return { ...p, activeFocus: cur }; });
   const pickGoal = (id: string) => setA((p) => { const cur = (p.chosenGoals as string[]) ?? []; return { ...p, chosenGoals: cur.includes(id) ? [] : [id] }; }); // only one common goal at a time
+  // clear everything the user picked inside one goal category (from the tile badge or the popup)
+  const clearCat = (cat: string) => setA((p) => {
+    if (cat === "condition") return { ...p, conditions: [], openCond: null };
+    if (cat === "organ") return { ...p, prevention: [] };
+    if (cat === "fitness") return { ...p, chosenGoals: [] };
+    if (cat === "hairskin") return { ...p, everyday: ((p.everyday as string[]) ?? []).filter((x) => !EVERYDAY_ITEMS.some((o) => o.id === x)) };
+    if (cat === "calm") return { ...p, everyday: ((p.everyday as string[]) ?? []).filter((x) => !REST_CALM.some((o) => o.id === x)) };
+    if (cat === "women") return { ...p, women: [] };
+    return p;
+  });
   // goals the user explicitly added become focus areas too — but in the Create flow fitness stays
   // its OWN section, never mixed into the primary health focus.
   const pickedCands = wizard ? [] : chosen.filter((id) => !candidates.some((cc) => cc.id === id)).map((id) => ({ id, label: COND_LABEL[id] ?? FITNESS_GOALS.find((x) => x.id === id)?.label ?? id, pri: 1 }));
@@ -554,35 +574,40 @@ function LifestylePage() {
   const condGroupBody = (grp: (typeof CONDITIONS)[number], compact = false) => {
     const openC = grp.items.find((c) => c.id === a.openCond);
     const cd = openC ? ((a.condDetail as Record<string, Record<string, string>>)[openC.id] ?? {}) : {};
+    // open the detail right under the row that holds the tapped chip (full-width), not at the bottom of the grid
+    const openIdx = openC && openC.subs ? grp.items.findIndex((c) => c.id === openC.id) : -1;
+    const rowEndIdx = openIdx < 0 ? -1 : (openIdx % 2 === 0 ? Math.min(openIdx + 1, grp.items.length - 1) : openIdx);
+    const detail = openC && openC.subs ? (
+      <div key="__detail" className="col-span-2 space-y-2 rounded-2xl bg-card/70 p-3 ring-1 ring-border/60">
+        <p className="text-[11.5px] font-bold text-foreground">{openC.emoji} {openC.label}</p>
+        {openC.note && <p className="-mt-1 text-[10.5px] text-muted-foreground">{openC.note}</p>}
+        {openC.subs.filter((s) => !s.showIf || s.showIf(cd)).map((s) => (
+          <div key={s.key}>
+            <p className="mb-1 text-[11px] font-semibold text-muted-foreground">{s.q}</p>
+            {s.input
+              ? <input value={cd[s.key] ?? ""} onChange={(e) => setCondSub(openC.id, s.key, e.target.value)} placeholder={s.ph} className="w-full rounded-xl bg-card px-3 py-2 text-[12px] font-semibold ring-1 ring-border/60 placeholder:text-muted-foreground/50" />
+              : s.multi
+                ? <div className="flex flex-wrap gap-1.5">{(s.opts ?? []).map((o) => { const sel = (cd[s.key] ?? "").split(",").filter(Boolean).includes(o); return <button key={o} onClick={() => toggleCondMulti(openC.id, s.key, o)} className={`lf-chip rounded-full px-3 py-1.5 text-[11.5px] font-semibold ${sel ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground/75"}`}>{o}</button>; })}</div>
+                : <div className="flex flex-wrap gap-1.5">{(s.opts ?? []).map((o) => <button key={o} onClick={() => setCondSub(openC.id, s.key, o)} className={`lf-chip rounded-full px-3 py-1.5 text-[11.5px] font-semibold ${cd[s.key] === o ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground/75"}`}>{o}</button>)}</div>}
+          </div>
+        ))}
+        {openC.id === "hair-fall" && hairOutlook(cd) && <p className="rounded-xl bg-primary/10 px-3 py-2 text-[11px] leading-snug text-foreground/85 ring-1 ring-primary/20">{hairOutlook(cd)}</p>}
+        <button onClick={() => set("openCond", null)} className="mt-1 w-full rounded-xl bg-primary py-2 text-[12px] font-bold text-primary-foreground active:scale-[0.99]">Done</button>
+      </div>
+    ) : null;
     return (
-      <>
-        <div className="grid grid-cols-2 gap-1.5">
-          {grp.items.map((c) => { const on = conds.includes(c.id); const open = a.openCond === c.id; return (
-            <button key={c.id} onClick={() => clickCond(c)} className={`lf-chip flex items-center gap-1.5 rounded-xl py-1.5 pl-1.5 pr-2 ${compact ? "text-[11px]" : "text-[11.5px]"} font-semibold ring-1 ${on ? "bg-primary/10 ring-primary" : "bg-card text-foreground/85 ring-border/60"}`}>
+      <div className="grid grid-cols-2 gap-1.5">
+        {grp.items.map((c, i) => { const on = conds.includes(c.id); const open = a.openCond === c.id; return (
+          <Fragment key={c.id}>
+            <button onClick={() => clickCond(c)} className={`lf-chip flex items-center gap-1.5 rounded-xl py-1.5 pl-1.5 pr-2 ${compact ? "text-[11px]" : "text-[11.5px]"} font-semibold ring-1 ${on ? "bg-primary/10 ring-primary" : "bg-card text-foreground/85 ring-border/60"}`}>
               <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[12px]" style={{ background: "var(--gradient-water)" }}>{c.emoji}</span>
               <span className="min-w-0 flex-1 truncate text-left">{c.label}</span>
               {c.subs ? <span className="text-[9px] text-muted-foreground">{open ? "▾" : "▸"}</span> : null}
             </button>
-          ); })}
-        </div>
-        {openC && openC.subs && (
-          <div className="mt-1.5 space-y-2 rounded-2xl bg-card/70 p-3 ring-1 ring-border/60">
-            <p className="text-[11.5px] font-bold text-foreground">{openC.emoji} {openC.label}</p>
-            {openC.note && <p className="-mt-1 text-[10.5px] text-muted-foreground">{openC.note}</p>}
-            {openC.subs.filter((s) => !s.showIf || s.showIf(cd)).map((s) => (
-              <div key={s.key}>
-                <p className="mb-1 text-[11px] font-semibold text-muted-foreground">{s.q}</p>
-                {s.input
-                  ? <input value={cd[s.key] ?? ""} onChange={(e) => setCondSub(openC.id, s.key, e.target.value)} placeholder={s.ph} className="w-full rounded-xl bg-card px-3 py-2 text-[12px] font-semibold ring-1 ring-border/60 placeholder:text-muted-foreground/50" />
-                  : s.multi
-                    ? <div className="flex flex-wrap gap-1.5">{(s.opts ?? []).map((o) => { const sel = (cd[s.key] ?? "").split(",").filter(Boolean).includes(o); return <button key={o} onClick={() => toggleCondMulti(openC.id, s.key, o)} className={`lf-chip rounded-full px-3 py-1.5 text-[11.5px] font-semibold ${sel ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground/75"}`}>{o}</button>; })}</div>
-                    : <div className="flex flex-wrap gap-1.5">{(s.opts ?? []).map((o) => <button key={o} onClick={() => setCondSub(openC.id, s.key, o)} className={`lf-chip rounded-full px-3 py-1.5 text-[11.5px] font-semibold ${cd[s.key] === o ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground/75"}`}>{o}</button>)}</div>}
-              </div>
-            ))}
-            {openC.id === "hair-fall" && hairOutlook(cd) && <p className="rounded-xl bg-primary/10 px-3 py-2 text-[11px] leading-snug text-foreground/85 ring-1 ring-primary/20">{hairOutlook(cd)}</p>}
-          </div>
-        )}
-      </>
+            {i === rowEndIdx && detail}
+          </Fragment>
+        ); })}
+      </div>
     );
   };
 
@@ -801,6 +826,156 @@ function LifestylePage() {
           </div>
         )}
 
+        {/* PICK-ALL — a grid of goal areas; tap one to pick from it, or skip to explore */}
+        {key === "pick-all" && (() => {
+          const cats = [
+            { id: "condition", emoji: "🩺", title: "Manage a condition", hint: "Pick any number", grad: "var(--gradient-water)", preview: "Diabetes · BP · thyroid · cholesterol · fatty liver · asthma · migraine · gout · auto-immune · hernia · joints · indigestion…", count: conds.length },
+            { id: "organ", emoji: "🫀", title: "Strengthen an organ", hint: "Pick up to 2", grad: "var(--gradient-leaf)", preview: "Heart · liver · gut · lungs\n· kidney · pancreas · Brain & Nervous System · eyes · bones", count: prevention.length + autoOrgans.length },
+            { id: "fitness", emoji: "💪", title: "Fitness/Weight Loss", hint: "Pick just 1", grad: "var(--gradient-gold)", preview: "Weight loss · strength\n· muscle · flexibility · mobility", count: chosen.length },
+            { id: "hairskin", emoji: "✨", title: "Hair & Skin", hint: "Pick any", grad: "var(--gradient-gold)", preview: "Hair fall · skin / glow", count: EVERYDAY_ITEMS.filter((o) => everyday.includes(o.id)).length },
+            { id: "calm", emoji: "🌙", title: "Calm & Rest", hint: "Pick any", grad: "var(--gradient-violet)", preview: "Better sleep · de-stress", count: REST_CALM.filter((o) => everyday.includes(o.id)).length },
+            { id: "women", emoji: "🌸", title: "Women's health", hint: "Pick any", grad: "var(--gradient-violet)", preview: "Pregnancy · post-natal · menopause · PCOD", count: women.length },
+          ];
+          const active = cats.find((c) => c.id === openCat);
+          return (
+            <div className="space-y-2.5">
+              <div className="grid grid-cols-2 gap-1.5">
+                {cats.map((c) => (
+                  <button key={c.id} onClick={() => setOpenCat(openCat === c.id ? null : c.id)} className={`lf-btn relative flex flex-col rounded-xl p-2 text-left ring-1 transition ${openCat === c.id ? "bg-primary/10 ring-primary" : "bg-card ring-border/60"}`}>
+                    {c.count > 0 && (
+                      <div className="absolute right-1.5 top-1.5 flex flex-col items-end gap-1">
+                        <span className="rounded-full bg-primary px-1.5 text-[8px] font-bold leading-[15px] text-primary-foreground">{c.count}</span>
+                        <span role="button" onClick={(e) => { e.stopPropagation(); clearCat(c.id); }} aria-label="Clear selections" title="Clear" className="rounded-full bg-secondary px-1.5 py-0.5 text-[8px] font-bold text-foreground/70 active:scale-90">Clear</span>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-1.5">
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[13px] text-primary-foreground shadow-sm" style={{ background: c.grad }}>{c.emoji}</span>
+                      <p className="min-w-0 flex-1 text-[11px] font-bold leading-tight text-foreground">{c.title}</p>
+                    </div>
+                    <p className="mt-0.5 whitespace-pre-line text-[8px] leading-[1.2] text-muted-foreground/80">{c.preview}</p>
+                  </button>
+                ))}
+              </div>
+
+              {/* options open as a popup — tap outside or ✕ to close; a portal to <body> escapes the wizard's animated container so the backdrop truly covers the viewport */}
+              {active && typeof document !== "undefined" && createPortal(
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/55 p-4" onClick={() => setOpenCat(null)}>
+                  <div className="max-h-[80svh] w-full max-w-sm overflow-y-auto rounded-2xl bg-card p-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
+                    <div className="mb-2 flex items-center justify-between gap-2">
+                      <p className="min-w-0 flex-1 text-[13px] font-bold text-foreground">{active.emoji} {active.title} <span className="text-[10px] font-medium text-muted-foreground">· {active.hint}</span></p>
+                      {active.count > 0 && <button onClick={() => clearCat(active.id)} className="shrink-0 rounded-full bg-secondary px-2.5 py-1 text-[10px] font-bold text-foreground/70 active:scale-95">Clear</button>}
+                      <button onClick={() => setOpenCat(null)} aria-label="Close" className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-secondary text-[14px] font-bold text-foreground/70 active:scale-95">✕</button>
+                    </div>
+
+                  {openCat === "condition" && (() => {
+                    const hc = CONDITIONS.find((g) => g.g === "Health conditions")!;
+                    return (
+                      <div className="space-y-2.5">
+                        {condGroupBody(hc, true)}
+                        <div className="grid grid-cols-2 gap-1.5">
+                          {["Joint & Spine", "Gut & Digestion"].map((gname) => {
+                            const grp = CONDITIONS.find((g) => g.g === gname)!;
+                            const sel = grp.items.filter((x) => conds.includes(x.id)).length;
+                            const open = a.openGroup === gname;
+                            return (
+                              <button key={gname} onClick={() => set("openGroup", open ? null : gname)} className={`lf-chip flex items-center gap-1.5 rounded-xl py-1.5 pl-1.5 pr-2 text-[11px] font-semibold ring-1 ${open ? "bg-primary/10 ring-primary" : "bg-card text-foreground/85 ring-border/60"}`}>
+                                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[12px]" style={{ background: "var(--gradient-water)" }}>{GROUP_EMOJI[gname]}</span>
+                                <span className="min-w-0 flex-1 truncate text-left">{gname}</span>
+                                {sel > 0 && <span className="shrink-0 rounded-full bg-primary px-1 text-[8px] font-bold text-primary-foreground">{sel}</span>}
+                                <span className="shrink-0 text-[9px] text-muted-foreground">{open ? "▾" : "▸"}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                        {(a.openGroup === "Joint & Spine" || a.openGroup === "Gut & Digestion") && condGroupBody(CONDITIONS.find((g) => g.g === a.openGroup)!, true)}
+                      </div>
+                    );
+                  })()}
+
+                  {openCat === "organ" && (
+                    <div className="space-y-2">
+                      {autoOrgans.length > 0 && <p className="rounded-xl bg-primary/10 px-3 py-2 text-[10.5px] leading-snug text-foreground/85 ring-1 ring-primary/20">From your conditions, <b>{autoOrgans.map((id) => PREVENTION_ORGANS.find((o) => o.id === id)?.label ?? id).join(", ")}</b> is covered automatically.</p>}
+                      <div className="grid grid-cols-2 gap-1.5">
+                        {PREVENTION_ORGANS.map((o) => {
+                          const auto = autoOrgans.includes(o.id);
+                          const on = prevention.includes(o.id);
+                          if (auto) return (
+                            <span key={o.id} className="flex items-center gap-1.5 rounded-xl bg-primary/10 py-1.5 pl-1.5 pr-2 text-[11.5px] font-semibold text-foreground/70 ring-1 ring-primary/30">
+                              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[12px]" style={{ background: "var(--gradient-leaf)" }}>{o.emoji}</span>
+                              <span className="min-w-0 flex-1 truncate text-left">{o.label}</span>
+                              <span className="shrink-0 text-[8.5px] font-bold uppercase text-primary/70">auto</span>
+                            </span>
+                          );
+                          return (
+                            <button key={o.id} onClick={() => togCap("prevention", o.id, 2)} className={`lf-chip flex items-center gap-1.5 rounded-xl py-1.5 pl-1.5 pr-2 text-[11.5px] font-semibold ring-1 ${on ? "bg-primary/10 ring-primary" : "bg-card text-foreground/85 ring-border/60"}`}>
+                              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[12px]" style={{ background: "var(--gradient-leaf)" }}>{o.emoji}</span>
+                              <span className="min-w-0 flex-1 truncate text-left">{o.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {openCat === "hairskin" && (
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {EVERYDAY_ITEMS.map((o) => { const on = everyday.includes(o.id); return (
+                        <button key={o.id} onClick={() => togIn("everyday", o.id)} className={`lf-chip flex items-center gap-1.5 rounded-xl py-1.5 pl-1.5 pr-2 text-[11.5px] font-semibold ring-1 ${on ? "bg-primary/10 ring-primary" : "bg-card text-foreground/85 ring-border/60"}`}>
+                          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[12px]" style={{ background: "var(--gradient-gold)" }}>{o.emoji}</span>
+                          <span className="min-w-0 flex-1 truncate text-left">{o.label}</span>
+                        </button>
+                      ); })}
+                    </div>
+                  )}
+
+                  {openCat === "calm" && (
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {REST_CALM.map((o) => { const on = everyday.includes(o.id); return (
+                        <button key={o.id} onClick={() => togIn("everyday", o.id)} className={`lf-chip flex items-center gap-1.5 rounded-xl py-1.5 pl-1.5 pr-2 text-[11.5px] font-semibold ring-1 ${on ? "bg-primary/10 ring-primary" : "bg-card text-foreground/85 ring-border/60"}`}>
+                          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[12px]" style={{ background: "var(--gradient-violet)" }}>{o.emoji}</span>
+                          <span className="min-w-0 flex-1 truncate text-left">{o.label}</span>
+                        </button>
+                      ); })}
+                    </div>
+                  )}
+
+                  {openCat === "fitness" && (
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {FITNESS_GOALS.map((gg) => { const on = chosen.includes(gg.id); return (
+                        <button key={gg.id} onClick={() => togCap("chosenGoals", gg.id, 1)} className={`lf-chip flex items-center gap-1.5 rounded-xl py-1.5 pl-1.5 pr-2 text-[11.5px] font-semibold ring-1 ${on ? "bg-primary/10 ring-primary" : "bg-card text-foreground/85 ring-border/60"}`}>
+                          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[12px]" style={{ background: "var(--gradient-gold)" }}>{gg.emoji}</span>
+                          <span className="min-w-0 flex-1 truncate text-left">{gg.label}</span>
+                        </button>
+                      ); })}
+                    </div>
+                  )}
+
+                  {openCat === "women" && (
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {WOMEN_ITEMS.map((o) => { const on = women.includes(o.id); return (
+                        <button key={o.id} onClick={() => togIn("women", o.id)} className={`lf-chip flex items-center gap-1.5 rounded-xl py-1.5 pl-1.5 pr-2 text-[11.5px] font-semibold ring-1 ${on ? "bg-primary/10 ring-primary" : "bg-card text-foreground/85 ring-border/60"}`}>
+                          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[12px]" style={{ background: "var(--gradient-violet)" }}>{o.emoji}</span>
+                          <span className="min-w-0 flex-1 truncate text-left">{o.label}</span>
+                        </button>
+                      ); })}
+                    </div>
+                  )}
+
+                    <button onClick={() => setOpenCat(null)} className="mt-3 w-full rounded-2xl bg-primary py-2.5 text-[13px] font-bold text-primary-foreground active:scale-[0.99]">Done</button>
+                  </div>
+                </div>,
+                document.body
+              )}
+
+              {/* Info — no goal needed; the Continue button handles going Home via a confirm popup */}
+              <div className="w-full rounded-2xl bg-card p-3 text-left ring-1 ring-border/60">
+                <p className="text-[12.5px] font-bold text-foreground">Don't want to pick a goal as of now?</p>
+                <p className="mt-0.5 text-[10.5px] leading-snug text-muted-foreground">Just tap Continue — we'll take you to Home with access to ready-made plans, and you can create your personalized plan later.</p>
+              </div>
+            </div>
+          );
+        })()}
+
         {/* CONDITIONS grid — profile step: all groups, flat */}
         {key === "conditions" && (
           <div className="space-y-3">
@@ -1006,15 +1181,27 @@ function LifestylePage() {
         )}
       </div>
 
-      <div className="fixed inset-x-0 z-30 mx-auto flex max-w-xl gap-2 px-4" style={{ bottom: "calc(4.5rem + env(safe-area-inset-bottom))" }}>
+      <div className="fixed inset-x-0 z-30 mx-auto flex max-w-xl justify-center gap-2 px-4" style={{ bottom: "calc(4.5rem + env(safe-area-inset-bottom))" }}>
         {key === "gate"
           ? null
           : key !== "goals"
-          ? <button onClick={next} disabled={!canNext} className={`lf-btn w-full rounded-2xl px-4 py-3 text-sm font-bold shadow-lg ${canNext ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}>Continue</button>
+          ? <button onClick={() => { if (key === "pick-all" && conds.length + prevention.length + women.length + everyday.length + chosen.length === 0) { setNoGoalPopup(true); return; } next(); }} disabled={!canNext} className={`lf-btn mx-auto w-full max-w-[18rem] rounded-2xl px-6 py-2.5 text-sm font-bold shadow-lg ${canNext ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}>Continue</button>
           : (activeFocus.length || chosen.length || healthIds.length)
-            ? <button onClick={buildPlan} className="lf-btn w-full rounded-2xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground shadow-lg">Build my plan →</button>
-            : <button onClick={save} className="lf-btn w-full rounded-2xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground shadow-lg">Save profile</button>}
+            ? <button onClick={buildPlan} className="lf-btn mx-auto w-full max-w-[18rem] rounded-2xl bg-primary px-6 py-2.5 text-sm font-bold text-primary-foreground shadow-lg">Build my plan →</button>
+            : <button onClick={save} className="lf-btn mx-auto w-full max-w-[18rem] rounded-2xl bg-primary px-6 py-2.5 text-sm font-bold text-primary-foreground shadow-lg">Save profile</button>}
       </div>
+
+      {noGoalPopup && typeof document !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/55 p-5" onClick={() => setNoGoalPopup(false)}>
+          <div className="w-full max-w-xs rounded-2xl bg-card p-5 text-center shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <p className="text-[15px] font-extrabold text-foreground">You haven't selected any goal</p>
+            <p className="mt-1.5 text-[12px] leading-snug text-muted-foreground">No problem — we'll take you to the Home page, where you can explore ready-made plans and create your personalized plan later.</p>
+            <button onClick={() => { set("planMode", "explore"); persist(); navigate({ to: "/home" }); }} className="mt-4 w-full rounded-2xl bg-primary py-2.5 text-[13px] font-bold text-primary-foreground active:scale-[0.99]">Take me to Home →</button>
+            <button onClick={() => setNoGoalPopup(false)} className="mt-2 w-full rounded-2xl bg-secondary py-2.5 text-[13px] font-bold text-foreground/80 active:scale-[0.99]">Still want to select a goal</button>
+          </div>
+        </div>,
+        document.body
+      )}
       <BottomNav />
     </div>
   );
