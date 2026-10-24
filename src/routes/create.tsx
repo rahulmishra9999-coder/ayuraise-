@@ -608,6 +608,7 @@ function CreatePlan() {
   const [curWt, setCurWt] = useState("");
   const [tgtWt, setTgtWt] = useState("");
   const [tgtDate, setTgtDate] = useState("");
+  const [pace, setPace] = useState(0.5); // kg to lose per week (0.1–0.75)
 
   // when editing an existing plan, load its saved answers once (client-side)
   const hydrated = useRef(false);
@@ -626,7 +627,7 @@ function CreatePlan() {
     S<string[]>(w.prefs, setPrefs); S<string[]>(w.allergies, setAllergies); S<number>(w.meals, setMeals);
     S<string[]>(w.avoidIng, setAvoidIng); S<Record<string, string[]>>(w.ingReplace, setIngReplace); S<string[]>(w.addedIng, setAddedIng); S<string>(w.keepDishes, setKeepDishes); S<string>(w.dietFeedback, setDietFeedback);
     S<string[]>(w.cuisinePath, setCuisinePath); S<string>(w.describeText, setDescribeText);
-    S<Record<string, string>>(w.dq, setDq); S<string>(w.curWt, setCurWt); S<string>(w.tgtWt, setTgtWt); S<string>(w.tgtDate, setTgtDate);
+    S<Record<string, string>>(w.dq, setDq); S<string>(w.curWt, setCurWt); S<string>(w.tgtWt, setTgtWt); S<string>(w.tgtDate, setTgtDate); S<number>(w.pace, setPace);
   }, [editId]);
 
   const hasYoga = ivs.includes("yoga");
@@ -678,6 +679,17 @@ function CreatePlan() {
     const d = Math.ceil((new Date(tgtDate).getTime() - Date.now()) / 86400000);
     return d > 0 ? Math.round(((cur - tgt) * 7700) / d) : null;
   }, [curWt, tgtWt, tgtDate]);
+
+  // Weekly-pace → target date: picking a pace (kg/week) drives the target date live.
+  const paceBand = pace <= 0.25 ? { label: "Easy", cls: "text-emerald-600 dark:text-emerald-400" } : pace <= 0.5 ? { label: "Medium", cls: "text-amber-600 dark:text-amber-400" } : { label: "Advanced", cls: "text-rose-600 dark:text-rose-400" };
+  const weightTarget = useMemo(() => {
+    const cur = parseFloat(curWt), tgt = parseFloat(tgtWt);
+    if (!cur || !tgt || tgt >= cur) return null;
+    const weeks = Math.max(1, Math.ceil((cur - tgt) / pace));
+    const date = new Date(Date.now() + weeks * 7 * 86400000);
+    return { weeks, date, iso: date.toISOString().slice(0, 10), loss: cur - tgt };
+  }, [curWt, tgtWt, pace]);
+  useEffect(() => { if (weightTarget && weightTarget.iso !== tgtDate) setTgtDate(weightTarget.iso); }, [weightTarget, tgtDate]);
 
   const canNext =
     key === "goals" ? goals.length >= 1 :
@@ -796,7 +808,7 @@ function CreatePlan() {
     if (hasDiet) { if (dietIF) dietBits.push(`IF ${ifWindow}`); dietBits.push(mealMode === "detailed" ? `${meals} main${mini ? `+${mini} mini` : ""}` : "Food tips"); if (prefs.length) dietBits.push(prefs.join("/")); }
     const days = WEEKDAYS.slice(0, hasExercise ? exDays : yogaDays).map((w) => w.id);
     const pid = editId ?? newPlanId();
-    const wizard = { goalIds: goals, ivs, yogaLevel, duration, yogaDays, protect, exLevel, exDays, exDur, focus, equip, mealMode, dietIF, ifWindow, fastHrs, prefs, allergies, meals, mini, avoidIng, ingReplace, addedIng, keepDishes, dietFeedback, cuisinePath, describeText, dq, curWt, tgtWt, tgtDate };
+    const wizard = { goalIds: goals, ivs, yogaLevel, duration, yogaDays, protect, exLevel, exDays, exDur, focus, equip, mealMode, dietIF, ifWindow, fastHrs, prefs, allergies, meals, mini, avoidIng, ingReplace, addedIng, keepDishes, dietFeedback, cuisinePath, describeText, dq, curWt, tgtWt, tgtDate, pace };
     // keep cuisine + what-you-eat on the lifestyle profile so the meal plan & coach can use them
     try {
       const lf = JSON.parse(localStorage.getItem("ayuraise.lifestyle") ?? "{}") ?? {};
@@ -920,15 +932,32 @@ function CreatePlan() {
 
         {/* ABOUT */}
         {key === "about" && (
-          <Q title="Your weight target" hint="We'll set a safe, steady pace.">
+          <Q title="Your weight target" hint="Pick a pace — we'll set your date.">
             <div className="space-y-3">
               <div className="rounded-2xl bg-card p-3 ring-1 ring-border/60">
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 gap-2">
                   <label className="block"><span className="text-[10.5px] font-semibold text-muted-foreground">Current (kg)</span><input value={curWt} onChange={(e) => setCurWt(e.target.value)} inputMode="decimal" placeholder="72" className="mt-1 w-full rounded-xl bg-secondary/40 px-2 py-2 text-[13px] ring-1 ring-border/60" /></label>
                   <label className="block"><span className="text-[10.5px] font-semibold text-muted-foreground">Target (kg)</span><input value={tgtWt} onChange={(e) => setTgtWt(e.target.value)} inputMode="decimal" placeholder="66" className="mt-1 w-full rounded-xl bg-secondary/40 px-2 py-2 text-[13px] ring-1 ring-border/60" /></label>
-                  <label className="block"><span className="text-[10.5px] font-semibold text-muted-foreground">By</span><input type="date" value={tgtDate} onChange={(e) => setTgtDate(e.target.value)} className="mt-1 w-full rounded-xl bg-secondary/40 px-2 py-2 text-[12px] ring-1 ring-border/60" /></label>
                 </div>
-                {dailyDeficit && <p className="mt-2 text-[11.5px] font-semibold text-primary">≈ {dailyDeficit} kcal/day to reach your target.</p>}
+              </div>
+
+              <div className="rounded-2xl bg-card p-3 ring-1 ring-border/60">
+                <div className="flex items-baseline justify-between">
+                  <span className="text-[10.5px] font-semibold text-muted-foreground">Weekly pace</span>
+                  <span className="text-[12.5px] font-bold text-foreground">{pace.toFixed(2)} kg/week · <span className={paceBand.cls}>{paceBand.label}</span></span>
+                </div>
+                <input type="range" min={0.1} max={0.75} step={0.05} value={pace} onChange={(e) => setPace(parseFloat(e.target.value))} aria-label="Weekly weight-loss pace" className="mt-2.5 w-full accent-primary" />
+                <div className="mt-0.5 flex justify-between text-[8.5px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  <span>Easy</span><span>Medium</span><span>Advanced</span>
+                </div>
+                {weightTarget ? (
+                  <div className="mt-3 rounded-xl bg-primary/10 px-3 py-2.5 ring-1 ring-primary/20">
+                    <p className="text-[12.5px] font-bold text-foreground">Reach {parseFloat(tgtWt)} kg by <span className="text-primary">{weightTarget.date.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}</span></p>
+                    <p className="mt-0.5 text-[10.5px] text-muted-foreground">Lose {weightTarget.loss.toFixed(1)} kg over ~{weightTarget.weeks} weeks{dailyDeficit ? ` · ≈ ${dailyDeficit} kcal/day` : ""}</p>
+                  </div>
+                ) : (
+                  <p className="mt-3 rounded-xl bg-secondary/50 px-3 py-2.5 text-[10.5px] text-muted-foreground">Enter your current &amp; target weight above to see your date.</p>
+                )}
               </div>
             </div>
           </Q>
@@ -1222,12 +1251,10 @@ function CreatePlan() {
                 </div>
               )}
               <p className="px-1 text-[11px] font-semibold text-muted-foreground">Complete plates — each ≈ your {s.title.toLowerCase().replace(" (snack)", "")} goal of ~{kcal} kcal. Tap any underlined dish for why it helps, its calories &amp; ways to make it.</p>
-              <div className="space-y-1.5">
+              <div className={meal === "dinner" ? "grid grid-cols-2 gap-1.5" : "space-y-1.5"}>
                 {s.plates.map((p, pi) => (
-                  <div key={pi} className="flex items-start gap-2 rounded-2xl bg-card p-2.5 ring-1 ring-border/60">
-                    <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[9px] font-bold text-primary">{pi + 1}</span>
-                    <span className="min-w-0 flex-1"><PlateDishes plate={p} /></span>
-                    <span className="mt-0.5 shrink-0 text-[10px] font-bold text-primary">~{kcal}</span>
+                  <div key={pi} className="rounded-2xl bg-card p-2.5 ring-1 ring-border/60">
+                    <PlateDishes plate={p} />
                   </div>
                 ))}
               </div>
@@ -1289,12 +1316,12 @@ function CreatePlan() {
               <CalRow emoji="😴" tint="slate" label="At rest (BMR)" value={calInfo.bmr} unit="kcal/day" />
 
               {/* activity burn — one simple line (level base + yoga + exercise) */}
-              <div className="rounded-xl bg-sky-50 p-2.5 ring-1 ring-sky-200 dark:bg-sky-900/30 dark:ring-sky-800">
+              <div className="rounded-xl bg-accent/35 p-2.5 ring-1 ring-accent/60 dark:bg-accent/15 dark:ring-accent/30">
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-[11.5px] font-bold text-sky-800 dark:text-sky-200">🚶 + Your activity burn</p>
-                  <span className="font-display text-[15px] font-extrabold tabular-nums text-sky-800 dark:text-sky-200">~{actMid}</span>
+                  <p className="text-[11.5px] font-bold text-accent-foreground dark:text-foreground/85">🚶 + Your activity burn</p>
+                  <span className="font-display text-[15px] font-extrabold tabular-nums text-accent-foreground dark:text-foreground/90">~{actMid}</span>
                 </div>
-                <p className="mt-1 text-[10px] leading-snug text-sky-900/85 dark:text-sky-100/85">{actRows.map((a) => a.label).join(", ")}</p>
+                <p className="mt-1 text-[10px] leading-snug text-foreground/70">{actRows.map((a) => a.label).join(", ")}</p>
               </div>
 
               {(calInfo.deficit > 0 || calInfo.surplus > 0) && <CalRow emoji="🍽️" tint="sky" label="= Maintain your weight" value={effMaintenance} unit="kcal/day" />}
@@ -1636,10 +1663,10 @@ function CreatePlan() {
 
 /** One coloured step in the calorie breakdown — label on the left, big number on the right. */
 const CAL_TINT: Record<string, string> = {
-  slate: "bg-slate-100 text-slate-700 ring-slate-200 dark:bg-slate-800/50 dark:text-slate-200 dark:ring-slate-700",
-  sky: "bg-sky-50 text-sky-700 ring-sky-200 dark:bg-sky-900/30 dark:text-sky-200 dark:ring-sky-800",
-  amber: "bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-900/30 dark:text-amber-200 dark:ring-amber-800",
-  emerald: "bg-emerald-50 text-emerald-800 ring-emerald-300 dark:bg-emerald-900/30 dark:text-emerald-200 dark:ring-emerald-800",
+  slate: "bg-secondary/60 text-secondary-foreground ring-border/70 dark:bg-secondary/25 dark:text-foreground/85 dark:ring-border/50",
+  sky: "bg-muted text-foreground/80 ring-border/55 dark:bg-muted/35 dark:text-foreground/80 dark:ring-border/45",
+  amber: "bg-amber-100/60 text-amber-800 ring-amber-200/70 dark:bg-amber-900/25 dark:text-amber-200 dark:ring-amber-800/50",
+  emerald: "bg-primary/10 text-foreground ring-primary/35 dark:bg-primary/15 dark:text-foreground dark:ring-primary/40",
 };
 function CalRow({ emoji, tint, label, sub, value, unit, highlight }: { emoji: string; tint: keyof typeof CAL_TINT; label: string; sub?: string; value: string | number; unit: string; highlight?: boolean }) {
   return (
