@@ -831,7 +831,7 @@ function LifestylePage() {
           const cats = [
             { id: "condition", emoji: "🩺", title: "Manage a condition", hint: "Pick any number", grad: "var(--gradient-water)", preview: "Diabetes · BP · thyroid · cholesterol · fatty liver · asthma · migraine · gout · auto-immune · hernia · joints · indigestion…", count: conds.length },
             { id: "organ", emoji: "🫀", title: "Strengthen an organ", hint: "Pick up to 2", grad: "var(--gradient-leaf)", preview: "Heart · liver · gut · lungs\n· kidney · pancreas · Brain & Nervous System · eyes · bones", count: prevention.length + autoOrgans.length },
-            { id: "fitness", emoji: "💪", title: "Fitness/Weight Loss", hint: "Pick just 1", grad: "var(--gradient-gold)", preview: "Weight loss · strength\n· muscle · flexibility · mobility", count: chosen.length },
+            { id: "fitness", emoji: "💪", title: "Weight Loss/Fitness", hint: "Pick just 1", grad: "var(--gradient-gold)", preview: "Weight loss · strength\n· muscle · flexibility · mobility", count: chosen.length },
             { id: "hairskin", emoji: "✨", title: "Hair & Skin", hint: "Pick any", grad: "var(--gradient-gold)", preview: "Hair fall · skin / glow", count: EVERYDAY_ITEMS.filter((o) => everyday.includes(o.id)).length },
             { id: "calm", emoji: "🌙", title: "Calm & Rest", hint: "Pick any", grad: "var(--gradient-violet)", preview: "Better sleep · de-stress", count: REST_CALM.filter((o) => everyday.includes(o.id)).length },
             { id: "women", emoji: "🌸", title: "Women's health", hint: "Pick any", grad: "var(--gradient-violet)", preview: "Pregnancy · post-natal · menopause · PCOD", count: women.length },
@@ -843,10 +843,7 @@ function LifestylePage() {
                 {cats.map((c) => (
                   <button key={c.id} onClick={() => setOpenCat(openCat === c.id ? null : c.id)} className={`lf-btn relative flex flex-col rounded-xl p-2 text-left ring-1 transition ${openCat === c.id ? "bg-primary/10 ring-primary" : "bg-card ring-border/60"}`}>
                     {c.count > 0 && (
-                      <div className="absolute right-1.5 top-1.5 flex flex-col items-end gap-1">
-                        <span className="rounded-full bg-primary px-1.5 text-[8px] font-bold leading-[15px] text-primary-foreground">{c.count}</span>
-                        <span role="button" onClick={(e) => { e.stopPropagation(); clearCat(c.id); }} aria-label="Clear selections" title="Clear" className="rounded-full bg-secondary px-1.5 py-0.5 text-[8px] font-bold text-foreground/70 active:scale-90">Clear</span>
-                      </div>
+                      <span className="absolute right-1.5 top-1.5 rounded-full bg-primary px-1.5 text-[8px] font-bold leading-[15px] text-primary-foreground">{c.count}</span>
                     )}
                     <div className="flex items-center gap-1.5">
                       <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[13px] text-primary-foreground shadow-sm" style={{ background: c.grad }}>{c.emoji}</span>
