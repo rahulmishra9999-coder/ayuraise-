@@ -640,7 +640,7 @@ function CreatePlan() {
 
   const stepKeys = useMemo(() => {
     const s: string[] = ["goals", "interventions"];
-    if (wantsWeight) s.push("about"); // conditions are asked earlier (in the profile); here only the weight target
+    if (wantsWeight) s.push("about", "wl-why", "wl-how"); // weight target, then the "how weight loss works" + "how to cut" science pages
     if (hasYoga) s.push("yoga-time");
     if (hasYoga || hasExercise) s.push("protect");
     if (hasExercise) s.push("ex-setup");
@@ -838,6 +838,7 @@ function CreatePlan() {
 
   const STEP_LABEL: Record<string, string> = {
     goals: "What's your goal?", interventions: "What to personalize", about: "A little about you",
+    "wl-why": "How weight loss works", "wl-how": "Smart ways to cut calories",
     "yoga-time": "Set up your yoga", protect: "Areas to protect",
     "ex-setup": "Your exercise",
     "diet-edit": "Edit your diet", "diet-meals": "Let's create your meal plan", "diet-prefs": "Dietary preferences", "diet-allergies": "Allergies",
@@ -961,6 +962,62 @@ function CreatePlan() {
               </div>
             </div>
           </Q>
+        )}
+
+        {/* WEIGHT LOSS — science: why extreme cutting backfires */}
+        {key === "wl-why" && (
+          <div className="space-y-3">
+            <div className="rounded-2xl bg-amber-50 p-3.5 ring-1 ring-amber-200 dark:bg-amber-900/20 dark:ring-amber-800/50">
+              <p className="text-[13px] font-extrabold text-amber-900 dark:text-amber-100">⚠️ Your body fights extreme cuts</p>
+              <p className="mt-1 text-[11.5px] leading-snug text-amber-900/85 dark:text-amber-100/85">Cut calories too hard and your body slows down to protect itself — then hits back with <b>revenge eating</b> (cravings &amp; binges). Crash diets almost always bounce back.</p>
+            </div>
+            <div>
+              <p className="mb-1.5 px-1 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">So we go steady, not extreme</p>
+              <div className="space-y-1.5">
+                {[
+                  { e: "🍽️", t: "Cut calories gently", d: "A small, steady deficit — never drastic." },
+                  { e: "🚶", t: "Move a little, daily", d: "Mild activity, not punishing workouts." },
+                  { e: "😴", t: "Sleep well", d: "Poor sleep spikes hunger & cravings." },
+                  { e: "😊", t: "Stay happy & relaxed", d: "Stress makes the body hold onto fat." },
+                  { e: "🧘", t: "A little meditation", d: "Calms stress-eating." },
+                  { e: "🧠", t: "Don't obsess over food", d: "Keep it easy — no guilt." },
+                ].map((x, i) => (
+                  <div key={i} className="flex items-start gap-2.5 rounded-2xl bg-card p-2.5 ring-1 ring-border/60">
+                    <span className="text-[16px] leading-none">{x.e}</span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[12px] font-bold text-foreground">{x.t}</p>
+                      <p className="text-[10.5px] leading-snug text-muted-foreground">{x.d}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <p className="px-1 text-[11px] leading-snug text-muted-foreground">Next — simple shifts you can pick from to cut calories without feeling hungry.</p>
+          </div>
+        )}
+
+        {/* WEIGHT LOSS — practical shifts to cut calories */}
+        {key === "wl-how" && (
+          <div className="space-y-2.5">
+            <p className="px-1 text-[11.5px] leading-snug text-muted-foreground">Pick just a few of these — small shifts add up. You don't need all of them.</p>
+            {[
+              { icon: "🥗", title: "Easy food swaps", items: ["Choose low-GI foods — they keep you full longer", "High protein at breakfast, lunch & dinner — very filling", "Eat a salad before meals — you'll naturally eat less", "Keep lunch full; make breakfast OR dinner light → saves ~200–250 cal/day", "Add sprouts or steamed sprouts to breakfast / dinner", "Go easy on calorie-dense foods — nuts, dry fruits"] },
+              { icon: "⏱️", title: "Try gentle fasting", items: ["Start with a 12-hour window (e.g. 8pm–8am) — not that tough", "Or a fruit fast once a week, maybe on a weekend", "Move fruits to breakfast — but don't mix fat with fruit"] },
+              { icon: "🍵", title: "Morning detox drinks (before breakfast)", items: ["Methi (fenugreek) water", "Amla juice with water", "Warm turmeric water", "Warm lemon water", "They help you eat lighter at breakfast"] },
+              { icon: "🫖", title: "Rather not cut main meals? Trim snacks", items: ["Black tea, ginger water & other low-cal sips", "Swap fried / packaged snacks for seasonal fruit or a small salad"] },
+              { icon: "🚶", title: "Move more, effortlessly", items: ["Walk · do household chores", "Stand & work · walk & talk"] },
+              { icon: "💧", title: "Hungry? Drink water first", items: ["Often it's thirst, not hunger — have a glass of water and wait a few minutes"] },
+            ].map((s, i) => (
+              <div key={i} className="rounded-2xl bg-card p-3 ring-1 ring-border/60">
+                <p className="flex items-center gap-1.5 text-[12.5px] font-bold text-foreground"><span className="text-[15px]">{s.icon}</span> {s.title}</p>
+                <ul className="mt-1.5 space-y-1">
+                  {s.items.map((it, j) => (
+                    <li key={j} className="flex gap-1.5 text-[11px] leading-snug text-muted-foreground"><span className="mt-[5px] h-1 w-1 shrink-0 rounded-full bg-primary/60" /> {it}</li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
         )}
 
         {/* YOGA — level + time */}
