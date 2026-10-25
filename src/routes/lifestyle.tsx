@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Stethoscope, HeartPulse, Dumbbell, Sparkles, Moon, Flower2 } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
 import { conditionSeverity, conditionMeta, resolveConflicts } from "@/lib/clusters";
 import { savePersonalPlan } from "@/lib/personalPlan";
@@ -829,12 +829,12 @@ function LifestylePage() {
         {/* PICK-ALL — a grid of goal areas; tap one to pick from it, or skip to explore */}
         {key === "pick-all" && (() => {
           const cats = [
-            { id: "condition", emoji: "🩺", title: "Manage a condition", hint: "Pick any number", grad: "var(--gradient-water)", preview: "Diabetes · BP · thyroid · cholesterol · fatty liver · asthma · migraine · gout · auto-immune · hernia · joints · indigestion…", count: conds.length },
-            { id: "organ", emoji: "🫀", title: "Strengthen an organ", hint: "Pick up to 2", grad: "var(--gradient-leaf)", preview: "Heart · liver · gut · lungs\n· kidney · pancreas · Brain & Nervous System · eyes · bones", count: prevention.length + autoOrgans.length },
-            { id: "fitness", emoji: "💪", title: "Weight Loss/Fitness", hint: "Pick just 1", grad: "var(--gradient-gold)", preview: "Weight loss · strength\n· muscle · flexibility · mobility", count: chosen.length },
-            { id: "hairskin", emoji: "✨", title: "Hair & Skin", hint: "Pick any", grad: "var(--gradient-gold)", preview: "Hair fall · skin / glow", count: EVERYDAY_ITEMS.filter((o) => everyday.includes(o.id)).length },
-            { id: "calm", emoji: "🌙", title: "Calm & Rest", hint: "Pick any", grad: "var(--gradient-violet)", preview: "Better sleep · de-stress", count: REST_CALM.filter((o) => everyday.includes(o.id)).length },
-            { id: "women", emoji: "🌸", title: "Women's health", hint: "Pick any", grad: "var(--gradient-violet)", preview: "Pregnancy · post-natal · menopause · PCOD", count: women.length },
+            { id: "condition", emoji: "🩺", Icon: Stethoscope, title: "Manage a condition", hint: "Pick any number", grad: "var(--gradient-water)", preview: "Diabetes · BP · thyroid · cholesterol · fatty liver · asthma · migraine · gout · auto-immune · hernia · joints · indigestion…", count: conds.length },
+            { id: "organ", emoji: "🫀", Icon: HeartPulse, title: "Strengthen an organ", hint: "Pick up to 2", grad: "var(--gradient-leaf)", preview: "Heart · liver · gut · lungs\n· kidney · pancreas · Brain & Nervous System · eyes · bones", count: prevention.length + autoOrgans.length },
+            { id: "fitness", emoji: "💪", Icon: Dumbbell, title: "Weight Loss/Fitness", hint: "Pick just 1", grad: "var(--gradient-gold)", preview: "Weight loss · strength\n· muscle · flexibility · mobility", count: chosen.length },
+            { id: "hairskin", emoji: "✨", Icon: Sparkles, title: "Hair & Skin", hint: "Pick any", grad: "var(--gradient-gold)", preview: "Hair fall · skin / glow", count: EVERYDAY_ITEMS.filter((o) => everyday.includes(o.id)).length },
+            { id: "calm", emoji: "🌙", Icon: Moon, title: "Calm & Rest", hint: "Pick any", grad: "var(--gradient-violet)", preview: "Better sleep · de-stress", count: REST_CALM.filter((o) => everyday.includes(o.id)).length },
+            { id: "women", emoji: "🌸", Icon: Flower2, title: "Women's health", hint: "Pick any", grad: "var(--gradient-violet)", preview: "Pregnancy · post-natal · menopause · PCOD", count: women.length },
           ];
           const active = cats.find((c) => c.id === openCat);
           return (
@@ -846,7 +846,7 @@ function LifestylePage() {
                       <span className="absolute right-1.5 top-1.5 rounded-full bg-primary px-1.5 text-[8px] font-bold leading-[15px] text-primary-foreground">{c.count}</span>
                     )}
                     <div className="flex items-center gap-1.5">
-                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[13px] text-primary-foreground shadow-sm" style={{ background: c.grad }}>{c.emoji}</span>
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-primary-foreground shadow-sm" style={{ background: c.grad }}><c.Icon size={14} strokeWidth={2.2} /></span>
                       <p className="min-w-0 flex-1 text-[11px] font-bold leading-tight text-foreground">{c.title}</p>
                     </div>
                     <p className="mt-0.5 whitespace-pre-line text-[8px] leading-[1.2] text-muted-foreground/80">{c.preview}</p>
