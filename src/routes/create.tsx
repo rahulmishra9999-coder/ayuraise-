@@ -13,6 +13,7 @@ import { cuisineRegion } from "@/lib/cuisines";
 import { calcBMR, ACTIVITY_LABEL, type ActivityLevel, type Sex } from "@/lib/weight-loss";
 import type { Dosha } from "@/lib/diet";
 import { SUPPORT } from "@/lib/support";
+import { STYLE_CHOICES } from "@/lib/exercise";
 
 export const Route = createFileRoute("/create")({
   validateSearch: (s: Record<string, unknown>): { goal?: string; edit?: string; goals?: string; tool?: string } => ({
@@ -568,6 +569,7 @@ function CreatePlan() {
   const [exDur, setExDur] = useState<number>(30);
   const [focus, setFocus] = useState<string>(EX_FOCUS[0]);
   const [equip, setEquip] = useState<string>(EQUIP[0]);
+  const [exStyle, setExStyle] = useState<string>("ai"); // preferred exercise style; "ai" = let AI decide
   // diet
   const [dietIF, setDietIF] = useState<boolean | null>(null);
   const [ifWindow, setIfWindow] = useState<string>("14:10");
@@ -624,7 +626,7 @@ function CreatePlan() {
     S<string[]>(w.goalIds, setGoals); S<IvKey[]>(w.ivs, setIvs);
     S<string>(w.yogaLevel, setYogaLevel); S<number>(w.duration, setDuration); S<number>(w.yogaDays, setYogaDays); S<string[]>(w.protect, setProtect); S<number>(w.mini, setMini);
     S<string>(w.exLevel, setExLevel); S<number>(w.exDays, setExDays); S<number>(w.exDur, setExDur);
-    S<string>(w.focus, setFocus); S<string>(w.equip, setEquip);
+    S<string>(w.focus, setFocus); S<string>(w.equip, setEquip); S<string>(w.exStyle, setExStyle);
     S<"detailed" | "recos">(w.mealMode, setMealMode); S<boolean>(w.dietIF, setDietIF); S<string>(w.ifWindow, setIfWindow); S<number>(w.fastHrs, setFastHrs);
     S<string[]>(w.prefs, setPrefs); S<string[]>(w.allergies, setAllergies); S<number>(w.meals, setMeals);
     S<string[]>(w.avoidIng, setAvoidIng); S<Record<string, string[]>>(w.ingReplace, setIngReplace); S<string[]>(w.addedIng, setAddedIng); S<string>(w.keepDishes, setKeepDishes); S<string>(w.dietFeedback, setDietFeedback);
@@ -810,7 +812,7 @@ function CreatePlan() {
     if (hasDiet) { if (dietIF) dietBits.push(`IF ${ifWindow}`); dietBits.push(mealMode === "detailed" ? `${meals} main${mini ? `+${mini} mini` : ""}` : "Food tips"); if (prefs.length) dietBits.push(prefs.join("/")); }
     const days = WEEKDAYS.slice(0, hasExercise ? exDays : yogaDays).map((w) => w.id);
     const pid = editId ?? newPlanId();
-    const wizard = { goalIds: goals, ivs, yogaLevel, duration, yogaDays, protect, exLevel, exDays, exDur, focus, equip, mealMode, dietIF, ifWindow, fastHrs, prefs, allergies, meals, mini, avoidIng, ingReplace, addedIng, keepDishes, dietFeedback, cuisinePath, describeText, dq, curWt, tgtWt, tgtDate, pace };
+    const wizard = { goalIds: goals, ivs, yogaLevel, duration, yogaDays, protect, exLevel, exDays, exDur, focus, equip, exStyle, mealMode, dietIF, ifWindow, fastHrs, prefs, allergies, meals, mini, avoidIng, ingReplace, addedIng, keepDishes, dietFeedback, cuisinePath, describeText, dq, curWt, tgtWt, tgtDate, pace };
     // keep cuisine + what-you-eat on the lifestyle profile so the meal plan & coach can use them
     try {
       const lf = JSON.parse(localStorage.getItem("ayuraise.lifestyle") ?? "{}") ?? {};
@@ -1078,24 +1080,46 @@ function CreatePlan() {
           </Q>
         )}
 
-        {/* EXERCISE — everything on one screen, duration prominent at the top */}
-        {key === "ex-setup" && (
+        {/* EXERCISE — mirrors yoga: level + length (cal burn, auto-reco), protect (if no yoga), style, equipment */}
+        {key === "ex-setup" && (() => {
+          const er = EX_RATE[exLevel] ?? EX_RATE.Beginner;
+          const burnLo = r5(exDur * er[0] * wScale), burnHi = r5(exDur * er[1] * wScale);
+          return (
           <div className="space-y-3">
-            {/* duration — big & first, for a quick change */}
-            <div className="rounded-2xl bg-primary/10 p-3 ring-1 ring-primary/25">
-              <p className="mb-1.5 px-0.5 text-[11px] font-bold uppercase tracking-wide text-primary">⏱️ Workout length</p>
-              <div className="flex flex-wrap gap-1.5">{DURATIONS.map((d) => <button key={d} onClick={() => setExDur(d)} className={chip(exDur === d)}>{d} min</button>)}</div>
-            </div>
-            {/* the rest, compact, with the current pick shown */}
             <div className="space-y-3 rounded-2xl bg-card p-3 ring-1 ring-border/60">
-              <ExRow label="Level">{LEVELS.map((l) => <button key={l} onClick={() => setExLevel(l)} className={smChip(exLevel === l)}>{l}</button>)}</ExRow>
-              <ExRow label="Days per week">{DAYS_N.map((d) => <button key={d} onClick={() => setExDays(d)} className={smChip(exDays === d)}>{d} days</button>)}</ExRow>
-              <ExRow label="Focus">{EX_FOCUS.map((f) => <button key={f} onClick={() => setFocus(f)} className={smChip(focus === f)}>{f}</button>)}</ExRow>
-              <ExRow label="Equipment">{EQUIP.map((e) => <button key={e} onClick={() => setEquip(e)} className={smChip(equip === e)}>{e}</button>)}</ExRow>
+              <ExRow label="Level">{LEVELS.map((l) => <button key={l} onClick={() => { setExLevel(l); setExDur(RECO_DUR[l] ?? 20); }} className={smChip(exLevel === l)}>{l}</button>)}</ExRow>
+              <ExRow label="Length">{DURATIONS.map((d) => <button key={d} onClick={() => setExDur(d)} className={smChip(exDur === d)}>{d} min</button>)}</ExRow>
             </div>
-            <p className="rounded-2xl bg-primary/10 px-3 py-2.5 text-[11px] leading-snug text-foreground/85 ring-1 ring-primary/20"><b>28 sessions are recommended</b> for real results — at {exDays} days/week that's about <b>{Math.ceil(28 / exDays)} weeks</b>. We'll build the full plan now and keep extending it as you progress.</p>
+            <div className="rounded-2xl bg-primary/10 px-3 py-2 ring-1 ring-primary/20">
+              <p className="text-[11.5px] font-bold text-foreground">🔥 ≈ {burnLo}–{burnHi} cal burned per session</p>
+              <p className="text-[10px] leading-snug text-muted-foreground">A {exDur}-min {exLevel.toLowerCase()} workout, for your body weight. We start easy and build up week on week.</p>
+            </div>
+
+            {!hasYoga && (
+              <div className="rounded-2xl bg-card p-3 ring-1 ring-border/60">
+                <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Any areas to protect?</p>
+                <div className="flex flex-wrap gap-1.5">
+                  <button onClick={() => setProtect([])} className={smChip(protect.length === 0)}>None</button>
+                  {PROTECT.map((p) => <button key={p} onClick={() => tog(protect, setProtect, p)} className={smChip(protect.includes(p))}>{p}</button>)}
+                </div>
+              </div>
+            )}
+
+            <div className="rounded-2xl bg-card p-3 ring-1 ring-border/60">
+              <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Preferred style</p>
+              <div className="flex flex-wrap gap-1.5">
+                <button onClick={() => setExStyle("ai")} className={smChip(exStyle === "ai")}>✨ Let AI decide</button>
+                {STYLE_CHOICES.map((s) => <button key={s.id} onClick={() => setExStyle(s.id)} className={smChip(exStyle === s.id)}>{s.emoji} {s.label}</button>)}
+              </div>
+            </div>
+
+            <div className="rounded-2xl bg-card p-3 ring-1 ring-border/60">
+              <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Equipment</p>
+              <div className="flex flex-wrap gap-1.5">{EQUIP.map((e) => <button key={e} onClick={() => setEquip(e)} className={smChip(equip === e)}>{e}</button>)}</div>
+            </div>
           </div>
-        )}
+          );
+        })()}
 
         {key === "diet-edit" && (
           <div className="space-y-2">
