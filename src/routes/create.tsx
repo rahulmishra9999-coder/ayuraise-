@@ -84,6 +84,7 @@ function rankFor(goalIds: string[]): { key: IvKey; imp: number }[] {
 /* ---------- options ---------- */
 const LEVELS = ["Beginner", "Intermediate", "Advanced"];
 const DURATIONS = [10, 15, 20, 30, 45, 60];
+const RECO_DUR: Record<string, number> = { Beginner: 10, Intermediate: 20, Advanced: 30 }; // recommended starting session length by level
 const PROTECT = ["Knees", "Lower back", "Neck", "Shoulders", "Wrists", "Hips"];
 const EX_FOCUS = ["Full body", "Upper body", "Lower body", "Core / Abs", "Cardio"];
 const EQUIP = ["None (bodyweight)", "Dumbbells", "Resistance bands", "Full gym"];
@@ -642,8 +643,8 @@ function CreatePlan() {
   const stepKeys = useMemo(() => {
     const s: string[] = ["goals", "interventions"];
     if (wantsWeight) s.push("about", "wl-why", "wl-how"); // weight target, then the "how weight loss works" + "how to cut" science pages
-    if (hasYoga) s.push("yoga-time");
-    if (hasYoga || hasExercise) s.push("protect");
+    if (hasYoga) s.push("yoga-time"); // yoga-time now also captures "areas to protect"
+    if (hasExercise && !hasYoga) s.push("protect"); // only when exercise is picked without yoga
     if (hasExercise) s.push("ex-setup");
     if (hasDiet) {
       if (editTool === "diet") s.push("diet-edit"); // pick-what-to-change menu when editing
@@ -1041,17 +1042,30 @@ function CreatePlan() {
         })()}
 
         {/* YOGA — level + time */}
-        {key === "yoga-time" && (
+        {key === "yoga-time" && (() => {
+          const yr = YOGA_RATE[yogaLevel] ?? YOGA_RATE.Beginner;
+          const burnLo = r5(duration * yr[0] * wScale), burnHi = r5(duration * yr[1] * wScale);
+          return (
           <Q title="Set up your yoga">
             <p className="mb-1.5 px-1 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Your level</p>
-            <div className="mb-3 flex flex-wrap gap-1.5">{LEVELS.map((l) => <button key={l} onClick={() => setYogaLevel(l)} className={chip(yogaLevel === l)}>{l}</button>)}</div>
-            <p className="mb-1.5 px-1 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">How long each session?</p>
-            <div className="mb-3 flex flex-wrap gap-1.5">{DURATIONS.map((d) => <button key={d} onClick={() => setDuration(d)} className={chip(duration === d)}>{d} min</button>)}</div>
-            <p className="mb-1.5 px-1 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Days per week</p>
-            <div className="flex flex-wrap gap-1.5">{DAYS_N.map((d) => <button key={d} onClick={() => setYogaDays(d)} className={chip(yogaDays === d)}>{d} days</button>)}</div>
-            <p className="mt-3 rounded-2xl bg-primary/10 px-3 py-2.5 text-[11px] leading-snug text-foreground/85 ring-1 ring-primary/20"><b>28 sessions are recommended</b> for real results — at {yogaDays} days/week that's about <b>{Math.ceil(28 / yogaDays)} weeks</b>. We'll build the full plan now and keep extending it as you progress, based on your feedback.</p>
+            <div className="mb-1 flex flex-wrap gap-1.5">{LEVELS.map((l) => <button key={l} onClick={() => { setYogaLevel(l); setDuration(RECO_DUR[l] ?? 15); }} className={chip(yogaLevel === l)}>{l}</button>)}</div>
+            <p className="mb-3 px-1 text-[10px] leading-snug text-muted-foreground">We start at a pace that suits your level — you can increase it week on week as you progress.</p>
+
+            <p className="mb-1.5 px-1 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">How long each session? {duration === RECO_DUR[yogaLevel] && <span className="font-semibold normal-case text-primary">· recommended for you</span>}</p>
+            <div className="mb-2 flex flex-wrap gap-1.5">{DURATIONS.map((d) => <button key={d} onClick={() => setDuration(d)} className={chip(duration === d)}>{d} min</button>)}</div>
+            <div className="mb-3 rounded-2xl bg-primary/10 px-3 py-2 ring-1 ring-primary/20">
+              <p className="text-[11.5px] font-bold text-foreground">🔥 ≈ {burnLo}–{burnHi} cal burned per session</p>
+              <p className="text-[10px] leading-snug text-muted-foreground">A {duration}-min {yogaLevel.toLowerCase()} session, for your body weight.</p>
+            </div>
+
+            <p className="mb-1.5 px-1 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Any areas to protect?</p>
+            <div className="flex flex-wrap gap-1.5">
+              <button onClick={() => setProtect([])} className={chip(protect.length === 0)}>None</button>
+              {PROTECT.map((p) => <button key={p} onClick={() => tog(protect, setProtect, p)} className={chip(protect.includes(p))}>{p}</button>)}
+            </div>
           </Q>
-        )}
+          );
+        })()}
 
         {/* PROTECT — shared by yoga & exercise */}
         {key === "protect" && (
