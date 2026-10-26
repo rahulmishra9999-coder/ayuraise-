@@ -651,8 +651,10 @@ function CreatePlan() {
     if (hasDiet) {
       if (editTool === "diet") s.push("diet-edit"); // pick-what-to-change menu when editing
       // + "Know your meal": BMR → calorie sense → science → foods → prakriti → numbers → macros → each meal
-      s.push("diet-cuisine", "diet-describe", "diet-prefs", "diet-allergies", "diet-meals",
-        "diet-bmr", "diet-cal-learn", "diet-cal", "diet-science", "diet-foods", "diet-prakriti", "diet-macros",
+      // calories first (quick sense → BMR + your goal, merged), then build the meal plan, then know-your-meal
+      s.push("diet-cal-learn", "diet-cal",
+        "diet-cuisine", "diet-describe", "diet-prefs", "diet-allergies", "diet-meals",
+        "diet-science", "diet-foods", "diet-prakriti", "diet-macros",
         "diet-meal-breakfast", "diet-meal-lunch", "diet-meal-snack", "diet-meal-dinner");
       if (mealMode === "detailed") s.push("diet-ingredients"); // ingredients asked BEFORE the plan is built
       s.push("diet-plan"); // show the diet plan + a feedback button, before the overall review
@@ -1136,7 +1138,7 @@ function CreatePlan() {
         {/* CUISINE — layered picker, now in the diet flow */}
         {key === "diet-cuisine" && (
           <div>
-            <p className="mb-3 px-1 text-[12px] text-muted-foreground">Pick a region, then narrow it down — your meal plan will use food you enjoy.</p>
+            <p className="mb-3 px-1 text-[12px] text-muted-foreground"><b className="text-foreground">Now let's create your meal plan.</b> Pick a region, then narrow it down — we'll use food you enjoy.</p>
             <CuisinePicker
               path={cuisinePath}
               setPath={(p) => {
@@ -1288,30 +1290,6 @@ function CreatePlan() {
         )}
 
         {/* KNOW YOUR MEAL · BMR — first, what your body needs at rest */}
-        {key === "diet-bmr" && (
-          <div className="space-y-3">
-            <div className="relative overflow-hidden rounded-3xl p-4 text-center text-primary-foreground shadow-[var(--shadow-glow)]" style={{ background: "var(--gradient-violet)" }}>
-              <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10 blur-xl" />
-              <div className="absolute -bottom-8 -left-6 h-28 w-28 rounded-full bg-white/10 blur-xl" />
-              <p className="relative text-[10px] font-bold uppercase tracking-[0.18em] opacity-85">🔥 Your BMR =</p>
-              <p className="relative mt-0.5 font-display text-[32px] font-extrabold leading-none">{calInfo.complete ? calInfo.bmr.toLocaleString() : "~1,400"}</p>
-              <p className="relative mt-1 text-[10.5px] font-semibold opacity-90">Kcal your body burns at rest, every single day</p>
-            </div>
-            {calInfo.complete && <p className="px-1 text-center text-[10.5px] text-muted-foreground">Calculated from your age, gender, height &amp; weight.</p>}
-            <p className="px-1 text-[12.5px] leading-relaxed text-foreground/85"><b className="text-foreground">BMR</b> is the amount of energy (calories) your body needs at complete rest to keep you alive.</p>
-            <div className="rounded-2xl bg-indigo-50 p-3 ring-1 ring-indigo-200 dark:bg-indigo-900/20 dark:ring-indigo-900/40">
-              <p className="text-[10px] font-bold uppercase tracking-wide text-indigo-700 dark:text-indigo-300">How weight works</p>
-              <div className="mt-1 space-y-1 text-[11.5px] leading-snug text-indigo-900/90 dark:text-indigo-100/90">
-                <p>Weight change = <b>Kcal in − Kcal out</b>.</p>
-                <p>Eat a little <b>less</b>, or move a little <b>more</b> → you lose weight.</p>
-              </div>
-            </div>
-            {!calInfo.complete && (
-              <button onClick={() => navigate({ to: "/onboarding", search: { step: "profile", returnTo: "/create", profileId: undefined } })} className="px-1 text-[10.5px] font-semibold text-primary underline">Add your age, height &amp; weight for your exact BMR →</button>
-            )}
-          </div>
-        )}
-
         {/* KNOW YOUR MEAL · the science of eating for weight loss */}
         {key === "diet-science" && (
           <div className="space-y-2.5">
@@ -1384,6 +1362,7 @@ function CreatePlan() {
         {/* KNOW YOUR MEAL · calorie sense — what calories mean, before the numbers */}
         {key === "diet-cal-learn" && (
           <div className="space-y-1">
+            <p className="px-1 pb-1 text-[11.5px] leading-snug text-muted-foreground">Now we'll build your diet plan — first, a quick feel for how calories work.</p>
             <div className="rounded-2xl bg-card p-2.5 ring-1 ring-border/60">
               <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">🍽️ Calories IN</p>
               <div className="grid grid-cols-2 gap-x-2 gap-y-0.5">
@@ -1417,9 +1396,18 @@ function CreatePlan() {
 
         {/* KNOW YOUR MEAL · your calorie goal: BMR → activity burn → deficit → target */}
         {key === "diet-cal" && (
-          <div className="space-y-2">
+          <div className="space-y-2.5">
+            <p className="px-1 text-[11.5px] leading-snug text-muted-foreground">Now let's talk calories — what your body burns, and the number to aim for.</p>
+            {/* BMR hero (merged from the old BMR page) */}
+            <div className="relative overflow-hidden rounded-2xl p-3.5 text-center text-primary-foreground shadow-[var(--shadow-glow)]" style={{ background: "var(--gradient-violet)" }}>
+              <div className="absolute -right-5 -top-5 h-20 w-20 rounded-full bg-white/10 blur-xl" />
+              <p className="relative text-[9.5px] font-bold uppercase tracking-[0.18em] opacity-85">🔥 Your BMR</p>
+              <p className="relative mt-0.5 font-display text-[28px] font-extrabold leading-none">{calInfo.complete ? calInfo.bmr.toLocaleString() : "~1,400"}</p>
+              <p className="relative mt-1 text-[10px] font-semibold opacity-90">kcal your body burns at rest, every day{calInfo.complete ? "" : " (estimate)"}</p>
+            </div>
+            <p className="px-1 text-[11px] leading-snug text-muted-foreground"><b className="text-foreground">Weight change = calories in − calories out.</b> Eat a little less or move a little more, and you lose. Here's your personal target:</p>
             {/* result — compact */}
-            <div className="flex items-center justify-between gap-2 rounded-2xl px-3.5 py-1.5 text-primary-foreground shadow-sm" style={{ background: "var(--gradient-violet)" }}>
+            <div className="flex items-center justify-between gap-2 rounded-2xl px-3.5 py-1.5 text-primary-foreground shadow-sm" style={{ background: "var(--gradient-leaf)" }}>
               <p className="min-w-0 flex-1 text-[11px] font-semibold opacity-90">🎯 {reviewMealPlan.goalLabel}</p>
               <p className="shrink-0 font-display text-[20px] font-extrabold leading-none">{effTarget.toLocaleString()}<span className="ml-1 text-[10px] font-semibold opacity-80">kcal</span></p>
             </div>
