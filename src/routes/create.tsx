@@ -609,6 +609,7 @@ function CreatePlan() {
   const [tgtWt, setTgtWt] = useState("");
   const [tgtDate, setTgtDate] = useState("");
   const [pace, setPace] = useState(0.5); // kg to lose per week (0.1–0.75)
+  const [wlTip, setWlTip] = useState<{ icon: string; title: string; sub?: string; detail: string } | null>(null); // weight-loss tip popup
 
   // when editing an existing plan, load its saved answers once (client-side)
   const hydrated = useRef(false);
@@ -964,61 +965,80 @@ function CreatePlan() {
           </Q>
         )}
 
-        {/* WEIGHT LOSS — science: why extreme cutting backfires */}
-        {key === "wl-why" && (
-          <div className="space-y-3">
-            <div className="rounded-2xl bg-amber-50 p-3.5 ring-1 ring-amber-200 dark:bg-amber-900/20 dark:ring-amber-800/50">
-              <p className="text-[13px] font-extrabold text-amber-900 dark:text-amber-100">⚠️ Your body fights extreme cuts</p>
-              <p className="mt-1 text-[11.5px] leading-snug text-amber-900/85 dark:text-amber-100/85">Cut calories too hard and your body slows down to protect itself — then hits back with <b>revenge eating</b> (cravings &amp; binges). Crash diets almost always bounce back.</p>
-            </div>
-            <div>
-              <p className="mb-1.5 px-1 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">So we go steady, not extreme</p>
+        {/* WEIGHT LOSS — food strategies (tap a card for the why) */}
+        {key === "wl-why" && (() => {
+          const WL_FOOD = [
+            { icon: "🍽️", title: "Cut calories gently", sub: "We'll build your diet plan next", detail: "Weight loss needs a calorie gap — but a small, steady one. Going extreme backfires: your body slows down to protect itself and hits back with revenge eating (cravings & binges). Don't starve — just trim a little. That's what actually lasts." },
+            { icon: "🥩", title: "Eat enough protein", sub: "Keeps you full for hours", detail: "Protein is the most filling nutrient and protects your muscle while you lose fat. Lead your meals with dal, paneer, tofu, sprouts, eggs or curd at breakfast, lunch and dinner." },
+            { icon: "🌾", title: "Cut carbs — choose low-GI", sub: "Steady energy, no crashes", detail: "Low-GI foods release glucose slowly, so your energy stays steady and you avoid the sugar-crash that triggers cravings — and it helps with insulin resistance. Pick whole grains, millets, oats and legumes over white rice, maida and sugar." },
+            { icon: "🥗", title: "Salad before your meal", sub: "You'll naturally eat less", detail: "A plate of salad first fills part of your stomach with fibre and water, so you eat less of the heavier food that follows — without feeling deprived." },
+            { icon: "🌱", title: "Sprouts at breakfast", sub: "Raw or lightly steamed", detail: "Sprouts are high in protein and fibre but low in calories — a filling, light way to start the day (also great at dinner)." },
+            { icon: "🍎", title: "Fruit as your snack", sub: "High water, naturally filling", detail: "Whole fruit has high water and fibre content, so it fills you up for very few calories. Reach for seasonal fruit instead of fried or packaged snacks." },
+            { icon: "🥜", title: "Go easy on nuts & dry fruits", sub: "Healthy but calorie-dense", detail: "They're nutritious, but very calorie-dense — a small handful can be 150–200 calories. Keep the portion tiny." },
+            { icon: "👄", title: "Chew well, eat slowly", sub: "About 20–30 chews a bite", detail: "Your stomach takes roughly 20 minutes to tell your brain it's full. Chewing each bite 20–30 times and eating slowly gives that 'I'm full' signal time to arrive — so you stop at enough instead of overeating." },
+            { icon: "⏱️", title: "Try intermittent fasting", sub: "Start with a 12-hour window", detail: "Begin easy — finish dinner by 8pm and eat next around 8am (a 12-hour window). As it gets comfortable you can widen it. Or try a fruit fast one day a week, maybe a weekend. Tip: move fruit to breakfast, but don't mix fat with fruit." },
+            { icon: "🍵", title: "Detox drink before breakfast", sub: "Lightens your first meal", detail: "A warm drink on an empty stomach helps you eat lighter at breakfast: methi (fenugreek) water, amla juice with water, warm turmeric water, or warm lemon water." },
+            { icon: "💧", title: "Sip first on cravings", sub: "Often it's thirst, not hunger", detail: "When you feel like eating between meals, have a near-zero-calorie drink first and wait a few minutes — often it's thirst, not hunger. Try plain water, ginger water, lemon water, or black tea/coffee." },
+          ];
+          return (
+            <div className="space-y-2.5">
+              <p className="px-1 text-[11.5px] leading-snug text-muted-foreground">Weight loss is mostly about food — the steady, no-starving way. <b className="text-foreground">Tap any card</b> to see why it works.</p>
               <div className="space-y-1.5">
-                {[
-                  { e: "🍽️", t: "Cut calories gently", d: "A small, steady deficit — never drastic." },
-                  { e: "🚶", t: "Move a little, daily", d: "Mild activity, not punishing workouts." },
-                  { e: "😴", t: "Sleep well", d: "Poor sleep spikes hunger & cravings." },
-                  { e: "😊", t: "Stay happy & relaxed", d: "Stress makes the body hold onto fat." },
-                  { e: "🧘", t: "A little meditation", d: "Calms stress-eating." },
-                  { e: "🧠", t: "Don't obsess over food", d: "Keep it easy — no guilt." },
-                ].map((x, i) => (
-                  <div key={i} className="flex items-start gap-2.5 rounded-2xl bg-card p-2.5 ring-1 ring-border/60">
-                    <span className="text-[16px] leading-none">{x.e}</span>
+                {WL_FOOD.map((x, i) => (
+                  <button key={i} onClick={() => setWlTip(x)} className="flex w-full items-center gap-2.5 rounded-2xl bg-card p-2.5 text-left ring-1 ring-border/60 active:scale-[0.99]">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-accent/40 text-[16px]">{x.icon}</span>
                     <div className="min-w-0 flex-1">
-                      <p className="text-[12px] font-bold text-foreground">{x.t}</p>
-                      <p className="text-[10.5px] leading-snug text-muted-foreground">{x.d}</p>
+                      <p className="text-[12px] font-bold text-foreground">{x.title}</p>
+                      {x.sub && <p className="text-[10px] leading-snug text-muted-foreground">{x.sub}</p>}
                     </div>
-                  </div>
+                    <Info size={14} className="shrink-0 text-primary/70" />
+                  </button>
                 ))}
               </div>
             </div>
-            <p className="px-1 text-[11px] leading-snug text-muted-foreground">Next — simple shifts you can pick from to cut calories without feeling hungry.</p>
-          </div>
-        )}
+          );
+        })()}
 
-        {/* WEIGHT LOSS — practical shifts to cut calories */}
-        {key === "wl-how" && (
-          <div className="space-y-2.5">
-            <p className="px-1 text-[11.5px] leading-snug text-muted-foreground">Pick just a few of these — small shifts add up. You don't need all of them.</p>
-            {[
-              { icon: "🥗", title: "Easy food swaps", items: ["Choose low-GI foods — they keep you full longer", "High protein at breakfast, lunch & dinner — very filling", "Eat a salad before meals — you'll naturally eat less", "Keep lunch full; make breakfast OR dinner light → saves ~200–250 cal/day", "Add sprouts or steamed sprouts to breakfast / dinner", "Go easy on calorie-dense foods — nuts, dry fruits"] },
-              { icon: "⏱️", title: "Try gentle fasting", items: ["Start with a 12-hour window (e.g. 8pm–8am) — not that tough", "Or a fruit fast once a week, maybe on a weekend", "Move fruits to breakfast — but don't mix fat with fruit"] },
-              { icon: "🍵", title: "Morning detox drinks (before breakfast)", items: ["Methi (fenugreek) water", "Amla juice with water", "Warm turmeric water", "Warm lemon water", "They help you eat lighter at breakfast"] },
-              { icon: "🫖", title: "Rather not cut main meals? Trim snacks", items: ["Black tea, ginger water & other low-cal sips", "Swap fried / packaged snacks for seasonal fruit or a small salad"] },
-              { icon: "🚶", title: "Move more, effortlessly", items: ["Walk · do household chores", "Stand & work · walk & talk"] },
-              { icon: "💧", title: "Hungry? Drink water first", items: ["Often it's thirst, not hunger — have a glass of water and wait a few minutes"] },
-            ].map((s, i) => (
-              <div key={i} className="rounded-2xl bg-card p-3 ring-1 ring-border/60">
-                <p className="flex items-center gap-1.5 text-[12.5px] font-bold text-foreground"><span className="text-[15px]">{s.icon}</span> {s.title}</p>
-                <ul className="mt-1.5 space-y-1">
-                  {s.items.map((it, j) => (
-                    <li key={j} className="flex gap-1.5 text-[11px] leading-snug text-muted-foreground"><span className="mt-[5px] h-1 w-1 shrink-0 rounded-full bg-primary/60" /> {it}</li>
-                  ))}
-                </ul>
+        {/* WEIGHT LOSS — move more & live well + the math */}
+        {key === "wl-how" && (() => {
+          const WL_LIFE = [
+            { icon: "🚶", title: "Walk every day", detail: "The easiest calorie burn there is. Aim for a daily walk — even 20–30 minutes adds up, and a short walk after meals helps steady your blood sugar." },
+            { icon: "🧘", title: "Gentle yoga — start with Surya Namaskar", sub: "We'll build your plan next", detail: "A few rounds of Surya Namaskar is a full-body warm-up that gently builds the habit. We'll create your full yoga plan next." },
+            { icon: "🏋️", title: "Gentle exercise", sub: "We'll build your plan next", detail: "Light strength or cardio a few times a week keeps your metabolism up and protects muscle as you lose fat. We'll build your exercise plan next." },
+            { icon: "🧍", title: "Stand & work", detail: "Standing burns more than sitting — use a higher surface or a standing desk when you can." },
+            { icon: "📞", title: "Walk while on calls", detail: "Pace around during phone calls — effortless extra steps through the day." },
+            { icon: "🪜", title: "Take the stairs", detail: "Skip the lift when you can — small bursts of effort add up." },
+            { icon: "😴", title: "Sleep well", detail: "Too little sleep spikes hunger hormones and cravings the next day. Aim for 7–8 solid hours." },
+            { icon: "😊", title: "Stay happy & relaxed", detail: "Stress raises cortisol, which makes the body hold onto fat and drives emotional eating. Protect your calm." },
+            { icon: "🧘‍♀️", title: "A little meditation", detail: "Even 5–10 minutes a day calms stress-eating and helps you sleep better." },
+            { icon: "🌙", title: "Don't eat after 8–8:30 pm", detail: "An early last meal gives your body a natural overnight fast, and means better digestion and sleep." },
+            { icon: "🛏️", title: "Sleep by 10–10:30 pm", detail: "Early, regular sleep supports the hormones that control hunger and fat loss." },
+          ];
+          const total = Math.max(300, Math.round((pace * 7700) / 7 / 10) * 10);
+          const foodCut = Math.round((total * 0.6) / 10) * 10;
+          const burnMore = total - foodCut;
+          return (
+            <div className="space-y-2.5">
+              <p className="px-1 text-[11.5px] leading-snug text-muted-foreground">Now the other half — move a little more and live well. <b className="text-foreground">Tap any card</b> for how.</p>
+              <div className="space-y-1.5">
+                {WL_LIFE.map((x, i) => (
+                  <button key={i} onClick={() => setWlTip(x)} className="flex w-full items-center gap-2.5 rounded-2xl bg-card p-2.5 text-left ring-1 ring-border/60 active:scale-[0.99]">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-accent/40 text-[16px]">{x.icon}</span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[12px] font-bold text-foreground">{x.title}</p>
+                      {x.sub && <p className="text-[10px] leading-snug text-muted-foreground">{x.sub}</p>}
+                    </div>
+                    <Info size={14} className="shrink-0 text-primary/70" />
+                  </button>
+                ))}
               </div>
-            ))}
-          </div>
-        )}
+              <div className="rounded-2xl bg-primary/10 p-3 ring-1 ring-primary/25">
+                <p className="text-[12px] font-extrabold text-foreground">🎯 The simple math</p>
+                <p className="mt-1 text-[11.5px] leading-snug text-foreground/85">Cut about <b>{foodCut} cal</b> from food and burn about <b>{burnMore} cal</b> more each day = <b className="text-primary">~{total} cal/day</b> → roughly <b className="text-primary">{pace} kg/week</b>. Small, steady, and sustainable.</p>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* YOGA — level + time */}
         {key === "yoga-time" && (
@@ -1701,6 +1721,22 @@ function CreatePlan() {
             </div>
 
             <button onClick={() => setFeedbackOpen(false)} className="mt-4 w-full rounded-2xl bg-primary py-2.5 text-[13px] font-bold text-primary-foreground active:scale-[0.99]">Update my plan →</button>
+          </div>
+        </div>
+      )}
+
+      {wlTip && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/55 p-5" onClick={() => setWlTip(null)}>
+          <div className="w-full max-w-sm rounded-2xl bg-card p-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-start gap-2.5">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-accent/40 text-[22px]">{wlTip.icon}</span>
+              <div className="min-w-0 flex-1">
+                <p className="text-[14px] font-extrabold leading-tight text-foreground">{wlTip.title}</p>
+                {wlTip.sub && <p className="mt-0.5 text-[11px] font-semibold text-primary">{wlTip.sub}</p>}
+              </div>
+            </div>
+            <p className="mt-3 text-[12px] leading-relaxed text-foreground/85">{wlTip.detail}</p>
+            <button onClick={() => setWlTip(null)} className="mt-4 w-full rounded-xl bg-primary py-2 text-[12.5px] font-bold text-primary-foreground active:scale-[0.99]">Got it</button>
           </div>
         </div>
       )}
