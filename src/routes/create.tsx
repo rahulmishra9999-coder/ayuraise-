@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, Info, Mic, MicOff, X, Repeat } from "lucide-react";
+import { ArrowLeft, Info, Mic, MicOff, X, Repeat, Check } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
 import { ALL_GOALS, getGoal } from "@/lib/goals";
 import { loadYogaPlans, newPlanId, upsertYogaPlan, WEEKDAYS, type YogaPlan } from "@/lib/yoga-plan";
@@ -869,6 +869,37 @@ function CreatePlan() {
       </div>
 
       <div className="mx-auto max-w-xl px-4 pt-3">
+        {/* 4b — conversational meal setup: answered questions collapse and stack above, current one stays in focus */}
+        {(() => {
+          const SETUP: { k: string; label: string; val: string }[] = [
+            { k: "diet-cuisine", label: "Cuisine", val: cuisinePath.length ? cuisinePath[cuisinePath.length - 1] : "Any" },
+            { k: "diet-describe", label: "Your meals", val: describeText.trim() ? "Described in your words" : "Skipped" },
+            { k: "diet-prefs", label: "Dietary preferences", val: prefs.length ? prefs.join(", ") : "No restrictions" },
+            { k: "diet-allergies", label: "Allergies / avoid", val: allergies.length ? allergies.join(", ") : "None" },
+            { k: "diet-meals", label: "Meals & fasting", val: `${mealMode === "detailed" ? `${meals} main${mini ? ` + ${mini} mini` : ""}` : "Food tips"}${dietIF === true ? ` · IF ${ifWindow}` : ""}` },
+          ];
+          const at = SETUP.findIndex((q) => q.k === key);
+          if (at < 0) return null;
+          return (
+            <div className="mb-3 space-y-1.5">
+              {SETUP.slice(0, at).map((q) => (
+                <button key={q.k} onClick={() => goTo(q.k)} className="flex w-full items-center gap-2 rounded-xl bg-card/70 px-3 py-2 text-left ring-1 ring-border/50 active:scale-[0.99]">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"><Check size={12} strokeWidth={3} /></span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[9.5px] font-bold uppercase tracking-wide text-muted-foreground">{q.label}</span>
+                    <span className="block truncate text-[12px] font-semibold text-foreground">{q.val}</span>
+                  </span>
+                  <span className="shrink-0 text-[10.5px] font-bold text-primary">Edit</span>
+                </button>
+              ))}
+              <div className="flex items-center gap-1.5 px-1 pt-0.5 text-[10px] font-bold uppercase tracking-wide text-primary">
+                <span className="flex h-4 w-4 items-center justify-center rounded-full bg-primary/15 text-[9px]">{at + 1}</span>
+                Step {at + 1} of {SETUP.length}
+              </div>
+            </div>
+          );
+        })()}
+
         {/* GOALS */}
         {key === "goals" && (
           <div className="space-y-4">
