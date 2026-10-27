@@ -21,9 +21,21 @@ export const Route = createFileRoute("/onboarding")({
       { title: "Welcome · AyuRaise" },
       { name: "description", content: "Tell us about you so we can personalize your wellness plan." },
     ],
+    links: [
+      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&display=swap" },
+    ],
   }),
   component: OnboardingPage,
 });
+
+// ---- Bronze/serif "luxury" skin for the first 5 profile steps (welcome → calories) ----
+const SKIN_STEPS = ["welcome", "profile", "cuisine", "activity", "calories"];
+const SERIF = { fontFamily: '"Cormorant Garamond", Georgia, serif' } as const;
+const SH_CARD = "0 4px 20px -2px rgba(30,27,24,0.05), 0 2px 6px -1px rgba(30,27,24,0.03)";
+const SH_SEL = "0 8px 24px -4px rgba(158,125,83,0.12), 0 2px 6px -1px rgba(158,125,83,0.06)";
+// CTA (obsidian pill) + eyebrow + title helpers reused across the skinned steps
+const CTA = "mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-[#24201D] px-6 py-4 text-base font-semibold tracking-wide text-[#F8F5EE] shadow-md transition-all duration-200 active:scale-[0.99] active:bg-[#1E1B18] disabled:opacity-40";
+const EYEBROW = "text-[11px] font-semibold uppercase tracking-[0.22em] text-[#9E7D53]";
 
 type Step = "welcome" | "profile" | "cuisine" | "activity" | "calories" | "prakriti-intro" | "prakriti-quiz" | "prakriti-result" | "prakriti-handoff" | "plan-intro";
 
@@ -118,9 +130,10 @@ function OnboardingPage() {
     } catch {}
   };
 
+  const skin = SKIN_STEPS.includes(step);
   return (
-    <div className="min-h-svh px-5 pb-10 pt-[max(1.5rem,env(safe-area-inset-top))]" style={{ background: "var(--gradient-hero)" }}>
-      <div className="mx-auto max-w-xl">
+    <div className="min-h-svh px-5 pb-10 pt-[max(1.5rem,env(safe-area-inset-top))]" style={skin ? { background: "#FAF7F2", fontFamily: '"Plus Jakarta Sans", sans-serif' } : { background: "var(--gradient-hero)" }}>
+      <div className="mx-auto max-w-md">
         <div className="mb-6 flex items-center justify-between">
           <button
             onClick={() => {
@@ -136,12 +149,12 @@ function OnboardingPage() {
               } else if (step === "prakriti-result") setStep("prakriti-quiz");
               else if (step === "plan-intro") setStep(prakritiResult ? "prakriti-result" : "prakriti-intro");
             }}
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-card/70 ring-1 ring-border"
+            className={skin ? "flex h-10 w-10 items-center justify-center rounded-full border border-[#9E7D53]/20 bg-[#F4EFE6] text-[#1E1B18] shadow-sm active:bg-[#EDE6DB]" : "flex h-9 w-9 items-center justify-center rounded-full bg-card/70 ring-1 ring-border"}
             aria-label="Back"
           >
             <ArrowLeft size={16} />
           </button>
-          <StepDots step={step} />
+          <StepDots step={step} skin={skin} />
           <div className="w-9" />
         </div>
 
@@ -224,17 +237,19 @@ function OnboardingPage() {
   );
 }
 
-function StepDots({ step }: { step: Step }) {
+function StepDots({ step, skin }: { step: Step; skin?: boolean }) {
   const map: Record<Step, number> = {
     "welcome": 0, "profile": 1, "cuisine": 2, "activity": 3, "calories": 3,
     "prakriti-intro": 4, "prakriti-quiz": 4, "prakriti-result": 4,
     "prakriti-handoff": 5, "plan-intro": 5,
   };
   const i = map[step];
+  const onCls = skin ? "w-6 bg-[#9E7D53]" : "w-6 bg-primary";
+  const offCls = skin ? "w-1.5 bg-[#EAE2D5]" : "w-1.5 bg-foreground/20";
   return (
     <div className="flex gap-1.5">
       {[0, 1, 2, 3, 4, 5].map((idx) => (
-        <span key={idx} className={`h-1.5 rounded-full transition-all ${idx <= i ? "w-6 bg-primary" : "w-1.5 bg-foreground/20"}`} />
+        <span key={idx} className={`h-1.5 rounded-full transition-all ${idx <= i ? onCls : offCls}`} />
       ))}
     </div>
   );
@@ -244,19 +259,16 @@ function StepDots({ step }: { step: Step }) {
 function CuisineStep({ path, setPath, onNext }: { path: string[]; setPath: (p: string[]) => void; onNext: () => void }) {
   return (
     <div className="animate-float-up">
-      <h1 className="font-display text-2xl font-semibold text-foreground">Your cuisine preference</h1>
-      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+      <p className={EYEBROW}>Your kitchen</p>
+      <h1 className="mt-1 text-[28px] font-semibold leading-none tracking-tight text-[#1E1B18]" style={SERIF}>Your cuisine preference</h1>
+      <p className="mt-2 text-[13px] leading-relaxed text-[#7B756F]">
         So your meal plan uses food you actually enjoy. Pick a region, then narrow it down.
       </p>
       <div className="mt-5"><CuisinePicker path={path} setPath={setPath} /></div>
-      <button
-        onClick={onNext}
-        disabled={path.length === 0}
-        className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-primary py-3.5 text-sm font-bold text-primary-foreground disabled:opacity-50"
-      >
+      <button onClick={onNext} disabled={path.length === 0} className={CTA}>
         Continue <ArrowRight size={16} />
       </button>
-      <button onClick={onNext} className="mt-2 w-full text-center text-[12px] font-semibold text-muted-foreground">Skip for now</button>
+      <button onClick={onNext} className="mt-3 w-full text-center text-[12px] font-semibold text-[#9E7D53]">Skip for now</button>
     </div>
   );
 }
@@ -265,13 +277,14 @@ function CuisineStep({ path, setPath, onNext }: { path: string[]; setPath: (p: s
 function ProfileStep(p: any) {
   return (
     <div className="animate-float-up">
-      <h1 className="font-display text-2xl font-semibold text-foreground">Tell us about you</h1>
-      <p className="mt-1 flex items-start gap-1.5 text-xs leading-relaxed text-muted-foreground">
-        <Info size={12} className="mt-0.5 shrink-0" />
+      <p className={EYEBROW}>About you</p>
+      <h1 className="mt-1 text-[28px] font-semibold leading-none tracking-tight text-[#1E1B18]" style={SERIF}>Tell us about you</h1>
+      <p className="mt-2 flex items-start gap-1.5 text-[12px] leading-relaxed text-[#7B756F]">
+        <Info size={12} className="mt-0.5 shrink-0 text-[#9E7D53]" />
         We need these to recommend the right calories, diet and meals as per weather conditions (ritucharya).
       </p>
 
-      <div className="mt-6 space-y-4 rounded-3xl bg-card p-5 shadow-[var(--shadow-soft)] ring-1 ring-border/60">
+      <div className="mt-6 space-y-4 rounded-3xl bg-white p-5 ring-1 ring-[#E5DCD0]" style={{ boxShadow: SH_CARD }}>
         <Field label="Name">
           <input value={p.name} onChange={(e) => p.setName(e.target.value)} placeholder="Your name" className={inputCls} />
         </Field>
@@ -298,23 +311,19 @@ function ProfileStep(p: any) {
             <input value={p.weightKg} onChange={(e) => p.setWeightKg(e.target.value)} type="number" placeholder="65" className={inputCls} />
           </Field>
         </div>
-        <p className="-mt-2 text-[11px] text-muted-foreground">Used to recommend right calories &amp; diet for you.</p>
+        <p className="-mt-2 text-[11px] text-[#7B756F]">Used to recommend right calories &amp; diet for you.</p>
 
         <Field label="Location">
           <div className="relative">
-            <MapPin size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <MapPin size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9E7D53]" />
             <input value={p.location} onChange={(e) => p.setLocation(e.target.value)} placeholder="City, Country" className={inputCls + " pl-8"} />
           </div>
         </Field>
-        <p className="-mt-2 text-[11px] text-muted-foreground">So we can adjust food &amp; meals to your weather (ritucharya).</p>
+        <p className="-mt-2 text-[11px] text-[#7B756F]">So we can adjust food &amp; meals to your weather (ritucharya).</p>
 
       </div>
 
-      <button
-        disabled={!p.valid}
-        onClick={p.onNext}
-        className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-5 py-3.5 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-glow)] transition-transform active:scale-[0.98] disabled:opacity-50"
-      >
+      <button disabled={!p.valid} onClick={p.onNext} className={CTA}>
         Continue <ArrowRight size={16} />
       </button>
     </div>
@@ -322,12 +331,12 @@ function ProfileStep(p: any) {
 }
 
 const inputCls =
-  "w-full rounded-xl bg-background px-3 py-2.5 text-sm text-foreground ring-1 ring-border focus:outline-none focus:ring-2 focus:ring-primary";
+  "w-full rounded-xl bg-[#FAF7F2] px-3 py-2.5 text-sm text-[#1E1B18] ring-1 ring-[#E5DCD0] focus:outline-none focus:ring-2 focus:ring-[#9E7D53] placeholder:text-[#7B756F]/60";
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</span>
+      <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-[#9E7D53]">{label}</span>
       {children}
     </label>
   );
@@ -338,37 +347,42 @@ function ActivityStep({ activity, setActivity, onNext }: { activity: ActivityLev
   const opts: ActivityLevel[] = ["sedentary", "light", "moderate", "active", "very_active"];
   return (
     <div className="animate-float-up">
-      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary/80">Step 3</p>
-      <h1 className="mt-1 font-display text-2xl font-semibold">How active are you?</h1>
-      <p className="mt-1 text-xs text-muted-foreground">This tunes your daily calorie needs.</p>
+      <p className={EYEBROW}>Daily movement</p>
+      <h1 className="mt-1 text-[28px] font-semibold leading-none tracking-tight text-[#1E1B18]" style={SERIF}>How active are you?</h1>
+      <p className="mt-2 text-[13px] text-[#7B756F]">This tunes your daily calorie needs.</p>
 
-      <div className="mt-5 space-y-2">
+      <div role="radiogroup" className="mt-5 space-y-3.5">
         {opts.map((a) => {
           const meta = ACTIVITY_LABEL[a];
           const on = activity === a;
           return (
             <button
               key={a}
+              role="radio"
+              aria-checked={on}
               onClick={() => setActivity(a)}
-              className={`flex w-full items-center justify-between gap-3 rounded-2xl border p-3.5 text-left transition ${
-                on ? "border-primary bg-primary/10" : "border-border/60 bg-card"
+              style={{ boxShadow: on ? SH_SEL : SH_CARD }}
+              className={`flex w-full items-start gap-3.5 rounded-2xl p-4 text-left transition-all duration-200 active:scale-[0.985] ${
+                on ? "border-2 border-[#9E7D53] bg-white" : "border border-[#E5DCD0] bg-white/70"
               }`}
             >
-              <div>
-                <p className="text-sm font-semibold">{meta.label}</p>
-                <p className="text-[11px] text-muted-foreground">{meta.desc}</p>
+              {on ? (
+                <span className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-[#9E7D53] shadow-sm">
+                  <Check className="h-3.5 w-3.5 text-white" strokeWidth={2.5} />
+                </span>
+              ) : (
+                <span className="mt-0.5 h-5 w-5 flex-shrink-0 rounded-full border border-[#9E7D53]/30 bg-[#FAF7F2]" />
+              )}
+              <div className="flex-1">
+                <p className="text-base font-semibold tracking-tight text-[#1E1B18]">{meta.label}</p>
+                <p className="mt-0.5 text-[13px] leading-relaxed text-[#4A4643]/80">{meta.desc}</p>
               </div>
-              <Activity size={16} className="text-primary" />
             </button>
           );
         })}
       </div>
 
-      <button
-        disabled={!activity}
-        onClick={onNext}
-        className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-5 py-3.5 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-glow)] disabled:opacity-50"
-      >
+      <button disabled={!activity} onClick={onNext} className={CTA}>
         Continue <ArrowRight size={16} />
       </button>
     </div>
@@ -379,38 +393,35 @@ function ActivityStep({ activity, setActivity, onNext }: { activity: ActivityLev
 function CaloriesStep({ bmr, tdee, name, activity, onNext }: { bmr: number; tdee: number; name: string; activity: ActivityLevel; onNext: () => void }) {
   return (
     <div className="animate-float-up">
-      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary/80">Your daily calories</p>
-      <h1 className="mt-1 font-display text-2xl font-semibold">
+      <p className={EYEBROW}>Your daily calories</p>
+      <h1 className="mt-1 text-[28px] font-semibold leading-tight tracking-tight text-[#1E1B18]" style={SERIF}>
         {name ? `${name}, you need` : "You need"} ~{tdee} kcal/day
       </h1>
-      <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground">
-        This is the energy your body burns to maintain your current weight at <b>{ACTIVITY_LABEL[activity].label.toLowerCase()}</b> activity.
+      <p className="mt-2 text-[13px] leading-relaxed text-[#7B756F]">
+        This is the energy your body burns to maintain your current weight at <b className="text-[#1E1B18]">{ACTIVITY_LABEL[activity].label.toLowerCase()}</b> activity.
         Eat less to lose, more to gain — and we'll guide you through it in your wellness plan.
       </p>
 
       <div className="mt-5 grid grid-cols-2 gap-3">
-        <div className="rounded-2xl bg-card p-4 ring-1 ring-border/60">
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">BMR (at rest)</p>
-          <p className="mt-1 font-display text-2xl font-semibold">{bmr}</p>
-          <p className="text-[10px] text-muted-foreground">kcal/day</p>
+        <div className="rounded-2xl border border-[#E5DCD0] bg-white/70 p-4" style={{ boxShadow: SH_CARD }}>
+          <p className="text-[10px] uppercase tracking-wider text-[#7B756F]">BMR (at rest)</p>
+          <p className="mt-1 text-[26px] font-semibold text-[#1E1B18]" style={SERIF}>{bmr}</p>
+          <p className="text-[10px] text-[#7B756F]">kcal/day</p>
         </div>
-        <div className="rounded-2xl bg-primary/10 p-4 ring-1 ring-primary/40">
-          <p className="text-[10px] uppercase tracking-wider text-primary">Maintenance (TDEE)</p>
-          <p className="mt-1 font-display text-2xl font-semibold text-primary">{tdee}</p>
-          <p className="text-[10px] text-muted-foreground">kcal/day</p>
+        <div className="rounded-2xl border-2 border-[#9E7D53] bg-white p-4" style={{ boxShadow: SH_SEL }}>
+          <p className="text-[10px] uppercase tracking-wider text-[#9E7D53]">Maintenance (TDEE)</p>
+          <p className="mt-1 text-[26px] font-semibold text-[#9E7D53]" style={SERIF}>{tdee}</p>
+          <p className="text-[10px] text-[#7B756F]">kcal/day</p>
         </div>
       </div>
 
-      <p className="mt-4 rounded-2xl bg-accent/30 p-3 text-[12px] leading-relaxed">
-        <Flame size={12} className="-mt-0.5 mr-1 inline text-primary" />
+      <p className="mt-4 rounded-2xl border border-[#E8DFC8] bg-[#F4EFE6] p-3.5 text-[12px] leading-relaxed text-[#4A4643]">
+        <Flame size={12} className="-mt-0.5 mr-1 inline text-[#9E7D53]" />
         In Ayurveda, this number is just the start — <em>agni</em> (your digestive fire), prakriti and season all shape how
         food works in your body. We'll layer those next.
       </p>
 
-      <button
-        onClick={onNext}
-        className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-5 py-3.5 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-glow)]"
-      >
+      <button onClick={onNext} className={CTA}>
         Continue <ArrowRight size={16} />
       </button>
     </div>
@@ -643,39 +654,36 @@ function WelcomeStep({ onNext }: { onNext: () => void }) {
   ];
   return (
     <div className="animate-float-up">
-      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary/80">Welcome to AyuRaise</p>
-      <h1 className="mt-1 font-display text-2xl font-semibold text-foreground">Ancient wisdom, made personal</h1>
-      <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground">
+      <p className={EYEBROW}>Welcome to AyuRaise</p>
+      <h1 className="mt-1 text-[30px] font-semibold leading-tight tracking-tight text-[#1E1B18]" style={SERIF}>Ancient wisdom, made personal</h1>
+      <p className="mt-2 text-[13px] leading-relaxed text-[#7B756F]">
         Here's what you can do on AyuRaise — all woven into one daily rhythm tuned to you.
       </p>
 
-      <div className="mt-5 overflow-hidden rounded-3xl p-5 text-primary-foreground shadow-[var(--shadow-soft)] ring-1 ring-border/60" style={{ background: "var(--gradient-night)" }}>
-        <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] opacity-80">
+      <div className="mt-5 overflow-hidden rounded-3xl border border-[#E5DCD0] bg-white p-5" style={{ boxShadow: SH_CARD }}>
+        <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-[#9E7D53]">
           <Leaf size={12} /> What we offer
         </div>
-        <ul className="mt-4 space-y-3">
-          {offers.map(({ icon: Icon, title, desc, grad }) => (
-            <li key={title} className="flex items-start gap-3">
-              <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br ${grad} ring-1 ring-white/25`}>
-                <Icon size={18} className="text-white" />
+        <ul className="mt-4 space-y-3.5">
+          {offers.map(({ icon: Icon, title, desc }) => (
+            <li key={title} className="flex items-start gap-3.5">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#9E7D53] shadow-sm">
+                <Icon size={18} className="text-white" strokeWidth={1.75} />
               </div>
               <div className="flex-1">
-                <p className="text-sm font-semibold">{title}</p>
-                <p className="text-[12px] leading-relaxed opacity-85">{desc}</p>
+                <p className="text-[15px] font-semibold tracking-tight text-[#1E1B18]">{title}</p>
+                <p className="mt-0.5 text-[12px] leading-relaxed text-[#4A4643]/80">{desc}</p>
               </div>
             </li>
           ))}
         </ul>
       </div>
 
-      <p className="mt-4 text-[12px] leading-relaxed text-muted-foreground">
+      <p className="mt-4 text-[12px] leading-relaxed text-[#7B756F]">
         Next, we'll learn a little about you so every recommendation is shaped around your body, season and goals.
       </p>
 
-      <button
-        onClick={onNext}
-        className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-5 py-3.5 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-glow)] transition-transform active:scale-[0.98]"
-      >
+      <button onClick={onNext} className={CTA}>
         Get started <ArrowRight size={16} />
       </button>
     </div>
