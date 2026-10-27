@@ -22,7 +22,7 @@ export const Route = createFileRoute("/onboarding")({
       { name: "description", content: "Tell us about you so we can personalize your wellness plan." },
     ],
     links: [
-      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&display=swap" },
+      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&display=swap" },
     ],
   }),
   component: OnboardingPage,
@@ -30,12 +30,12 @@ export const Route = createFileRoute("/onboarding")({
 
 // ---- Bronze/serif "luxury" skin for the first 5 profile steps (welcome → calories) ----
 const SKIN_STEPS = ["welcome", "profile", "cuisine", "activity", "calories"];
-const SERIF = { fontFamily: '"Cormorant Garamond", Georgia, serif' } as const;
-const SH_CARD = "0 4px 20px -2px rgba(30,27,24,0.05), 0 2px 6px -1px rgba(30,27,24,0.03)";
-const SH_SEL = "0 8px 24px -4px rgba(158,125,83,0.12), 0 2px 6px -1px rgba(158,125,83,0.06)";
-// CTA (obsidian pill) + eyebrow + title helpers reused across the skinned steps
-const CTA = "mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-[#24201D] px-6 py-4 text-base font-semibold tracking-wide text-[#F8F5EE] shadow-md transition-all duration-200 active:scale-[0.99] active:bg-[#1E1B18] disabled:opacity-40";
-const EYEBROW = "text-[11px] font-semibold uppercase tracking-[0.22em] text-[#9E7D53]";
+const SERIF = { fontFamily: '"Playfair Display", Georgia, serif' } as const;
+const SH_CARD = "0 1px 2px rgba(17,19,24,0.04), 0 10px 26px -14px rgba(17,19,24,0.14)";
+const SH_SEL = "0 2px 6px rgba(28,43,74,0.10), 0 14px 30px -12px rgba(28,43,74,0.26)";
+// CTA (sharp ink button) + eyebrow + title helpers reused across the skinned steps
+const CTA = "mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-[#121417] px-6 py-4 text-[15px] font-semibold tracking-wide text-[#F5F5F3] shadow-md transition-all duration-200 active:scale-[0.99] active:bg-black disabled:opacity-40";
+const EYEBROW = "text-[11px] font-semibold uppercase tracking-[0.24em] text-[#1C2B4A]";
 
 type Step = "welcome" | "profile" | "cuisine" | "activity" | "calories" | "prakriti-intro" | "prakriti-quiz" | "prakriti-result" | "prakriti-handoff" | "plan-intro";
 
@@ -132,7 +132,7 @@ function OnboardingPage() {
 
   const skin = SKIN_STEPS.includes(step);
   return (
-    <div className="min-h-svh px-5 pb-10 pt-[max(1.5rem,env(safe-area-inset-top))]" style={skin ? { background: "#FAF7F2", fontFamily: '"Plus Jakarta Sans", sans-serif' } : { background: "var(--gradient-hero)" }}>
+    <div className="min-h-svh px-5 pb-10 pt-[max(1.5rem,env(safe-area-inset-top))]" style={skin ? { background: "#F4F4F2", fontFamily: '"Plus Jakarta Sans", sans-serif' } : { background: "var(--gradient-hero)" }}>
       <div className="mx-auto max-w-md">
         <div className="mb-6 flex items-center justify-between">
           <button
@@ -149,7 +149,7 @@ function OnboardingPage() {
               } else if (step === "prakriti-result") setStep("prakriti-quiz");
               else if (step === "plan-intro") setStep(prakritiResult ? "prakriti-result" : "prakriti-intro");
             }}
-            className={skin ? "flex h-10 w-10 items-center justify-center rounded-full border border-[#9E7D53]/20 bg-[#F4EFE6] text-[#1E1B18] shadow-sm active:bg-[#EDE6DB]" : "flex h-9 w-9 items-center justify-center rounded-full bg-card/70 ring-1 ring-border"}
+            className={skin ? "flex h-10 w-10 items-center justify-center rounded-full border border-[#1C2B4A]/20 bg-[#ECECEA] text-[#121417] shadow-sm active:bg-[#E2E2DE]" : "flex h-9 w-9 items-center justify-center rounded-full bg-card/70 ring-1 ring-border"}
             aria-label="Back"
           >
             <ArrowLeft size={16} />
@@ -244,8 +244,8 @@ function StepDots({ step, skin }: { step: Step; skin?: boolean }) {
     "prakriti-handoff": 5, "plan-intro": 5,
   };
   const i = map[step];
-  const onCls = skin ? "w-6 bg-[#9E7D53]" : "w-6 bg-primary";
-  const offCls = skin ? "w-1.5 bg-[#EAE2D5]" : "w-1.5 bg-foreground/20";
+  const onCls = skin ? "w-6 bg-[#1C2B4A]" : "w-6 bg-primary";
+  const offCls = skin ? "w-1.5 bg-[#E0E0DC]" : "w-1.5 bg-foreground/20";
   return (
     <div className="flex gap-1.5">
       {[0, 1, 2, 3, 4, 5].map((idx) => (
@@ -260,15 +260,15 @@ function CuisineStep({ path, setPath, onNext }: { path: string[]; setPath: (p: s
   return (
     <div className="animate-float-up">
       <p className={EYEBROW}>Your kitchen</p>
-      <h1 className="mt-1 text-[28px] font-semibold leading-none tracking-tight text-[#1E1B18]" style={SERIF}>Your cuisine preference</h1>
-      <p className="mt-2 text-[13px] leading-relaxed text-[#7B756F]">
+      <h1 className="mt-1 text-[28px] font-semibold leading-none tracking-tight text-[#121417]" style={SERIF}>Your cuisine preference</h1>
+      <p className="mt-2 text-[13px] leading-relaxed text-[#6E727A]">
         So your meal plan uses food you actually enjoy. Pick a region, then narrow it down.
       </p>
       <div className="mt-5"><CuisinePicker path={path} setPath={setPath} /></div>
       <button onClick={onNext} disabled={path.length === 0} className={CTA}>
         Continue <ArrowRight size={16} />
       </button>
-      <button onClick={onNext} className="mt-3 w-full text-center text-[12px] font-semibold text-[#9E7D53]">Skip for now</button>
+      <button onClick={onNext} className="mt-3 w-full text-center text-[12px] font-semibold text-[#1C2B4A]">Skip for now</button>
     </div>
   );
 }
@@ -278,13 +278,13 @@ function ProfileStep(p: any) {
   return (
     <div className="animate-float-up">
       <p className={EYEBROW}>About you</p>
-      <h1 className="mt-1 text-[28px] font-semibold leading-none tracking-tight text-[#1E1B18]" style={SERIF}>Tell us about you</h1>
-      <p className="mt-2 flex items-start gap-1.5 text-[12px] leading-relaxed text-[#7B756F]">
-        <Info size={12} className="mt-0.5 shrink-0 text-[#9E7D53]" />
+      <h1 className="mt-1 text-[28px] font-semibold leading-none tracking-tight text-[#121417]" style={SERIF}>Tell us about you</h1>
+      <p className="mt-2 flex items-start gap-1.5 text-[12px] leading-relaxed text-[#6E727A]">
+        <Info size={12} className="mt-0.5 shrink-0 text-[#1C2B4A]" />
         We need these to recommend the right calories, diet and meals as per weather conditions (ritucharya).
       </p>
 
-      <div className="mt-6 space-y-4 rounded-3xl bg-white p-5 ring-1 ring-[#E5DCD0]" style={{ boxShadow: SH_CARD }}>
+      <div className="mt-6 space-y-4 rounded-3xl bg-white p-5 ring-1 ring-[#E6E6E2]" style={{ boxShadow: SH_CARD }}>
         <Field label="Name">
           <input value={p.name} onChange={(e) => p.setName(e.target.value)} placeholder="Your name" className={inputCls} />
         </Field>
@@ -311,15 +311,15 @@ function ProfileStep(p: any) {
             <input value={p.weightKg} onChange={(e) => p.setWeightKg(e.target.value)} type="number" placeholder="65" className={inputCls} />
           </Field>
         </div>
-        <p className="-mt-2 text-[11px] text-[#7B756F]">Used to recommend right calories &amp; diet for you.</p>
+        <p className="-mt-2 text-[11px] text-[#6E727A]">Used to recommend right calories &amp; diet for you.</p>
 
         <Field label="Location">
           <div className="relative">
-            <MapPin size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9E7D53]" />
+            <MapPin size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#1C2B4A]" />
             <input value={p.location} onChange={(e) => p.setLocation(e.target.value)} placeholder="City, Country" className={inputCls + " pl-8"} />
           </div>
         </Field>
-        <p className="-mt-2 text-[11px] text-[#7B756F]">So we can adjust food &amp; meals to your weather (ritucharya).</p>
+        <p className="-mt-2 text-[11px] text-[#6E727A]">So we can adjust food &amp; meals to your weather (ritucharya).</p>
 
       </div>
 
@@ -331,12 +331,12 @@ function ProfileStep(p: any) {
 }
 
 const inputCls =
-  "w-full rounded-xl bg-[#FAF7F2] px-3 py-2.5 text-sm text-[#1E1B18] ring-1 ring-[#E5DCD0] focus:outline-none focus:ring-2 focus:ring-[#9E7D53] placeholder:text-[#7B756F]/60";
+  "w-full rounded-xl bg-[#F4F4F2] px-3 py-2.5 text-sm text-[#121417] ring-1 ring-[#E6E6E2] focus:outline-none focus:ring-2 focus:ring-[#1C2B4A] placeholder:text-[#6E727A]/60";
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-[#9E7D53]">{label}</span>
+      <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-[#1C2B4A]">{label}</span>
       {children}
     </label>
   );
@@ -348,8 +348,8 @@ function ActivityStep({ activity, setActivity, onNext }: { activity: ActivityLev
   return (
     <div className="animate-float-up">
       <p className={EYEBROW}>Daily movement</p>
-      <h1 className="mt-1 text-[28px] font-semibold leading-none tracking-tight text-[#1E1B18]" style={SERIF}>How active are you?</h1>
-      <p className="mt-2 text-[13px] text-[#7B756F]">This tunes your daily calorie needs.</p>
+      <h1 className="mt-1 text-[28px] font-semibold leading-none tracking-tight text-[#121417]" style={SERIF}>How active are you?</h1>
+      <p className="mt-2 text-[13px] text-[#6E727A]">This tunes your daily calorie needs.</p>
 
       <div role="radiogroup" className="mt-5 space-y-3.5">
         {opts.map((a) => {
@@ -363,19 +363,19 @@ function ActivityStep({ activity, setActivity, onNext }: { activity: ActivityLev
               onClick={() => setActivity(a)}
               style={{ boxShadow: on ? SH_SEL : SH_CARD }}
               className={`flex w-full items-start gap-3.5 rounded-2xl p-4 text-left transition-all duration-200 active:scale-[0.985] ${
-                on ? "border-2 border-[#9E7D53] bg-white" : "border border-[#E5DCD0] bg-white/70"
+                on ? "border-2 border-[#1C2B4A] bg-white" : "border border-[#E6E6E2] bg-white/70"
               }`}
             >
               {on ? (
-                <span className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-[#9E7D53] shadow-sm">
+                <span className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-[#1C2B4A] shadow-sm">
                   <Check className="h-3.5 w-3.5 text-white" strokeWidth={2.5} />
                 </span>
               ) : (
-                <span className="mt-0.5 h-5 w-5 flex-shrink-0 rounded-full border border-[#9E7D53]/30 bg-[#FAF7F2]" />
+                <span className="mt-0.5 h-5 w-5 flex-shrink-0 rounded-full border border-[#1C2B4A]/30 bg-[#F4F4F2]" />
               )}
               <div className="flex-1">
-                <p className="text-base font-semibold tracking-tight text-[#1E1B18]">{meta.label}</p>
-                <p className="mt-0.5 text-[13px] leading-relaxed text-[#4A4643]/80">{meta.desc}</p>
+                <p className="text-base font-semibold tracking-tight text-[#121417]">{meta.label}</p>
+                <p className="mt-0.5 text-[13px] leading-relaxed text-[#4A4E55]/80">{meta.desc}</p>
               </div>
             </button>
           );
@@ -394,29 +394,29 @@ function CaloriesStep({ bmr, tdee, name, activity, onNext }: { bmr: number; tdee
   return (
     <div className="animate-float-up">
       <p className={EYEBROW}>Your daily calories</p>
-      <h1 className="mt-1 text-[28px] font-semibold leading-tight tracking-tight text-[#1E1B18]" style={SERIF}>
+      <h1 className="mt-1 text-[28px] font-semibold leading-tight tracking-tight text-[#121417]" style={SERIF}>
         {name ? `${name}, you need` : "You need"} ~{tdee} kcal/day
       </h1>
-      <p className="mt-2 text-[13px] leading-relaxed text-[#7B756F]">
-        This is the energy your body burns to maintain your current weight at <b className="text-[#1E1B18]">{ACTIVITY_LABEL[activity].label.toLowerCase()}</b> activity.
+      <p className="mt-2 text-[13px] leading-relaxed text-[#6E727A]">
+        This is the energy your body burns to maintain your current weight at <b className="text-[#121417]">{ACTIVITY_LABEL[activity].label.toLowerCase()}</b> activity.
         Eat less to lose, more to gain — and we'll guide you through it in your wellness plan.
       </p>
 
       <div className="mt-5 grid grid-cols-2 gap-3">
-        <div className="rounded-2xl border border-[#E5DCD0] bg-white/70 p-4" style={{ boxShadow: SH_CARD }}>
-          <p className="text-[10px] uppercase tracking-wider text-[#7B756F]">BMR (at rest)</p>
-          <p className="mt-1 text-[26px] font-semibold text-[#1E1B18]" style={SERIF}>{bmr}</p>
-          <p className="text-[10px] text-[#7B756F]">kcal/day</p>
+        <div className="rounded-2xl border border-[#E6E6E2] bg-white/70 p-4" style={{ boxShadow: SH_CARD }}>
+          <p className="text-[10px] uppercase tracking-wider text-[#6E727A]">BMR (at rest)</p>
+          <p className="mt-1 text-[26px] font-semibold text-[#121417]" style={SERIF}>{bmr}</p>
+          <p className="text-[10px] text-[#6E727A]">kcal/day</p>
         </div>
-        <div className="rounded-2xl border-2 border-[#9E7D53] bg-white p-4" style={{ boxShadow: SH_SEL }}>
-          <p className="text-[10px] uppercase tracking-wider text-[#9E7D53]">Maintenance (TDEE)</p>
-          <p className="mt-1 text-[26px] font-semibold text-[#9E7D53]" style={SERIF}>{tdee}</p>
-          <p className="text-[10px] text-[#7B756F]">kcal/day</p>
+        <div className="rounded-2xl border-2 border-[#1C2B4A] bg-white p-4" style={{ boxShadow: SH_SEL }}>
+          <p className="text-[10px] uppercase tracking-wider text-[#1C2B4A]">Maintenance (TDEE)</p>
+          <p className="mt-1 text-[26px] font-semibold text-[#1C2B4A]" style={SERIF}>{tdee}</p>
+          <p className="text-[10px] text-[#6E727A]">kcal/day</p>
         </div>
       </div>
 
-      <p className="mt-4 rounded-2xl border border-[#E8DFC8] bg-[#F4EFE6] p-3.5 text-[12px] leading-relaxed text-[#4A4643]">
-        <Flame size={12} className="-mt-0.5 mr-1 inline text-[#9E7D53]" />
+      <p className="mt-4 rounded-2xl border border-[#DDE2EC] bg-[#ECECEA] p-3.5 text-[12px] leading-relaxed text-[#4A4E55]">
+        <Flame size={12} className="-mt-0.5 mr-1 inline text-[#1C2B4A]" />
         In Ayurveda, this number is just the start — <em>agni</em> (your digestive fire), prakriti and season all shape how
         food works in your body. We'll layer those next.
       </p>
@@ -655,31 +655,31 @@ function WelcomeStep({ onNext }: { onNext: () => void }) {
   return (
     <div className="animate-float-up">
       <p className={EYEBROW}>Welcome to AyuRaise</p>
-      <h1 className="mt-1 text-[30px] font-semibold leading-tight tracking-tight text-[#1E1B18]" style={SERIF}>Ancient wisdom, made personal</h1>
-      <p className="mt-2 text-[13px] leading-relaxed text-[#7B756F]">
+      <h1 className="mt-1 text-[30px] font-semibold leading-tight tracking-tight text-[#121417]" style={SERIF}>Ancient wisdom, made personal</h1>
+      <p className="mt-2 text-[13px] leading-relaxed text-[#6E727A]">
         Here's what you can do on AyuRaise — all woven into one daily rhythm tuned to you.
       </p>
 
-      <div className="mt-5 overflow-hidden rounded-3xl border border-[#E5DCD0] bg-white p-5" style={{ boxShadow: SH_CARD }}>
-        <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-[#9E7D53]">
+      <div className="mt-5 overflow-hidden rounded-3xl border border-[#E6E6E2] bg-white p-5" style={{ boxShadow: SH_CARD }}>
+        <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-[#1C2B4A]">
           <Leaf size={12} /> What we offer
         </div>
         <ul className="mt-4 space-y-3.5">
           {offers.map(({ icon: Icon, title, desc }) => (
             <li key={title} className="flex items-start gap-3.5">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#9E7D53] shadow-sm">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#1C2B4A] shadow-sm">
                 <Icon size={18} className="text-white" strokeWidth={1.75} />
               </div>
               <div className="flex-1">
-                <p className="text-[15px] font-semibold tracking-tight text-[#1E1B18]">{title}</p>
-                <p className="mt-0.5 text-[12px] leading-relaxed text-[#4A4643]/80">{desc}</p>
+                <p className="text-[15px] font-semibold tracking-tight text-[#121417]">{title}</p>
+                <p className="mt-0.5 text-[12px] leading-relaxed text-[#4A4E55]/80">{desc}</p>
               </div>
             </li>
           ))}
         </ul>
       </div>
 
-      <p className="mt-4 text-[12px] leading-relaxed text-[#7B756F]">
+      <p className="mt-4 text-[12px] leading-relaxed text-[#6E727A]">
         Next, we'll learn a little about you so every recommendation is shaped around your body, season and goals.
       </p>
 
