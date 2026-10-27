@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState, Fragment } from "react";
 import {
   ArrowLeft, ArrowRight, Sparkles, Flower2, MapPin, Info, ClipboardList,
   Leaf, HeartPulse, Soup, Wind, Moon, Flame, Activity, ChevronRight, Check,
+  Armchair, Footprints, PersonStanding, Bike, Zap, type LucideIcon,
 } from "lucide-react";
 import { PRAKRITI_QUESTIONS, scorePrakriti, type Dosha, type PrakritiAnswer } from "@/lib/diet";
 import { calcBMR, calcTDEE, ACTIVITY_LABEL, type ActivityLevel } from "@/lib/weight-loss";
@@ -343,18 +344,37 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 // ---------------- Activity ----------------
+const ACT_BURN: Record<string, string> = {
+  sedentary: "~50–150 cal/day",
+  light: "~150–300 cal/day",
+  moderate: "~300–500 cal/day",
+  active: "~500–700 cal/day",
+  very_active: "~700–1000 cal/day",
+};
+const ACT_ICON: Record<string, LucideIcon> = {
+  sedentary: Armchair, light: Footprints, moderate: PersonStanding, active: Bike, very_active: Zap,
+};
+
 function ActivityStep({ activity, setActivity, onNext }: { activity: ActivityLevel | ""; setActivity: (a: ActivityLevel) => void; onNext: () => void }) {
   const opts: ActivityLevel[] = ["sedentary", "light", "moderate", "active", "very_active"];
   return (
     <div className="animate-float-up">
-      <p className={EYEBROW}>Daily movement</p>
-      <h1 className="mt-1 text-[28px] font-semibold leading-none tracking-tight text-[#121417]" style={SERIF}>How active are you?</h1>
-      <p className="mt-2 text-[13px] text-[#6E727A]">This tunes your daily calorie needs.</p>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <Leaf size={18} className="text-[#1C2B4A]" strokeWidth={1.75} />
+          <h1 className="text-[26px] font-semibold leading-none tracking-tight text-[#121417]" style={SERIF}>Activity level</h1>
+        </div>
+        <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#EEF1F6] px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-[#1C2B4A] ring-1 ring-[#1C2B4A]/10">
+          <Flame size={11} /> Daily burn
+        </span>
+      </div>
+      <p className="mt-2 text-[13px] leading-relaxed text-[#6E727A]">Select the state that best mirrors your typical energy expenditure.</p>
 
-      <div role="radiogroup" className="mt-5 space-y-3.5">
+      <div role="radiogroup" className="mt-5 space-y-3">
         {opts.map((a) => {
           const meta = ACTIVITY_LABEL[a];
           const on = activity === a;
+          const Icon = ACT_ICON[a] ?? Activity;
           return (
             <button
               key={a}
@@ -362,21 +382,25 @@ function ActivityStep({ activity, setActivity, onNext }: { activity: ActivityLev
               aria-checked={on}
               onClick={() => setActivity(a)}
               style={{ boxShadow: on ? SH_SEL : SH_CARD }}
-              className={`flex w-full items-start gap-3.5 rounded-2xl p-4 text-left transition-all duration-200 active:scale-[0.985] ${
-                on ? "border-2 border-[#1C2B4A] bg-white" : "border border-[#E6E6E2] bg-white/70"
+              className={`flex w-full items-start gap-3 rounded-2xl p-4 text-left transition-all duration-200 active:scale-[0.985] ${
+                on ? "border-2 border-[#1C2B4A] bg-[#F3F5F9]" : "border border-[#E6E6E2] bg-white"
               }`}
             >
               {on ? (
-                <span className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-[#1C2B4A] shadow-sm">
-                  <Check className="h-3.5 w-3.5 text-white" strokeWidth={2.5} />
+                <span className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-[#121417]">
+                  <Check className="h-3 w-3 text-white" strokeWidth={3} />
                 </span>
               ) : (
-                <span className="mt-0.5 h-5 w-5 flex-shrink-0 rounded-full border border-[#1C2B4A]/30 bg-[#F4F4F2]" />
+                <span className="mt-0.5 h-5 w-5 flex-shrink-0 rounded-full border-2 border-[#D7D8D4] bg-white" />
               )}
-              <div className="flex-1">
-                <p className="text-base font-semibold tracking-tight text-[#121417]">{meta.label}</p>
-                <p className="mt-0.5 text-[13px] leading-relaxed text-[#4A4E55]/80">{meta.desc}</p>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-baseline gap-x-2 leading-snug">
+                  <span className="text-[15px] font-semibold tracking-tight text-[#121417]">{meta.label}</span>
+                  <span className="text-[11.5px] font-semibold text-[#1C2B4A]">{ACT_BURN[a]} burned</span>
+                </div>
+                <p className="mt-1 text-[12.5px] leading-relaxed text-[#6E727A]">{meta.desc}</p>
               </div>
+              <Icon size={18} strokeWidth={1.75} className={`mt-0.5 shrink-0 ${on ? "text-[#1C2B4A]" : "text-[#A6A8A4]"}`} />
             </button>
           );
         })}
