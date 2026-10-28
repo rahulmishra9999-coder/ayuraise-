@@ -234,7 +234,7 @@ export function MealPlanView({ plan, mode = "detailed", avoid: avoidProp, onAvoi
           <span className="text-rose-500">Fat {plan.macros.fat}g</span>
         </div>
         {!plan.complete && (
-          <Link to="/onboarding" search={{ step: "profile", returnTo: "/myplan/me", profileId: undefined }} className="mt-2 block text-[10.5px] font-semibold text-primary underline">
+          <Link to="/onboarding" search={{ step: "about", returnTo: "/myplan/me", profileId: undefined }} className="mt-2 block text-[10.5px] font-semibold text-primary underline">
             Add your age, height & weight for exact numbers →
           </Link>
         )}

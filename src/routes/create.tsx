@@ -1478,7 +1478,7 @@ function CreatePlan() {
               <CalRow emoji="🎯" tint="emerald" label="Your target — eat around" sub={calInfo.complete && calInfo.deficit > 0 ? `${effMaintenance.toLocaleString()} − ${calInfo.deficit} — burn more than you eat` : undefined} value={effTarget} unit="kcal/day" highlight />
             </div>
             {!calInfo.complete && (
-              <button onClick={() => navigate({ to: "/onboarding", search: { step: "profile", returnTo: "/create", profileId: undefined } })} className="px-1 text-[10.5px] font-semibold text-primary underline">Add your age, height &amp; weight for exact numbers →</button>
+              <button onClick={() => navigate({ to: "/onboarding", search: { step: "about", returnTo: "/create", profileId: undefined } })} className="px-1 text-[10.5px] font-semibold text-primary underline">Add your age, height &amp; weight for exact numbers →</button>
             )}
           </div>
         )}
