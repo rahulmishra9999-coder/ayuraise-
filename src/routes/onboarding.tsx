@@ -3,7 +3,6 @@ import { useEffect, useMemo, useState, Fragment } from "react";
 import {
   ArrowLeft, ArrowRight, Sparkles, Flower2, MapPin, Info, ClipboardList,
   Leaf, HeartPulse, Soup, Wind, Moon, Flame, Activity, ChevronRight, Check,
-  Armchair, Footprints, PersonStanding, Bike, Zap, type LucideIcon,
 } from "lucide-react";
 import { PRAKRITI_QUESTIONS, scorePrakriti, type Dosha, type PrakritiAnswer } from "@/lib/diet";
 import { calcBMR, calcTDEE, ACTIVITY_LABEL, type ActivityLevel } from "@/lib/weight-loss";
@@ -23,7 +22,8 @@ export const Route = createFileRoute("/onboarding")({
       { name: "description", content: "Tell us about you so we can personalize your wellness plan." },
     ],
     links: [
-      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&display=swap" },
+      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&family=Source+Serif+4:wght@500;600;700&family=Manrope:wght@400;500;600;700&display=swap" },
+      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" },
     ],
   }),
   component: OnboardingPage,
@@ -135,13 +135,13 @@ function OnboardingPage() {
   return (
     <div className="min-h-svh px-5 pb-10 pt-[max(1.5rem,env(safe-area-inset-top))]" style={skin ? { background: "#F4F4F2", fontFamily: '"Plus Jakarta Sans", sans-serif' } : { background: "var(--gradient-hero)" }}>
       <div className="mx-auto max-w-md">
+        {step !== "activity" && (
         <div className="mb-6 flex items-center justify-between">
           <button
             onClick={() => {
               if (step === "welcome") navigate({ to: "/login" });
               else if (step === "profile") setStep("welcome");
               else if (step === "cuisine") setStep("profile");
-              else if (step === "activity") setStep("cuisine");
               else if (step === "calories") setStep("activity");
               else if (step === "prakriti-intro") setStep("calories");
               else if (step === "prakriti-quiz") {
@@ -158,6 +158,7 @@ function OnboardingPage() {
           <StepDots step={step} skin={skin} />
           <div className="w-9" />
         </div>
+        )}
 
         {step === "welcome" && (
           <WelcomeStep onNext={() => setStep("profile")} />
@@ -176,7 +177,7 @@ function OnboardingPage() {
         )}
 
         {step === "activity" && (
-          <ActivityStep activity={activity} setActivity={setActivity} onNext={() => activity && setStep("calories")} />
+          <ActivityStep activity={activity} setActivity={setActivity} onNext={() => activity && setStep("calories")} onBack={() => setStep("cuisine")} />
         )}
 
         {step === "calories" && calc && (
@@ -351,64 +352,100 @@ const ACT_BURN: Record<string, string> = {
   active: "~500–700 cal/day",
   very_active: "~700–1000 cal/day",
 };
-const ACT_ICON: Record<string, LucideIcon> = {
-  sedentary: Armchair, light: Footprints, moderate: PersonStanding, active: Bike, very_active: Zap,
+const ACT_MICON: Record<string, string> = {
+  sedentary: "chair", light: "directions_walk", moderate: "directions_run", active: "fitness_center", very_active: "offline_bolt",
 };
+const SERIF4 = { fontFamily: '"Source Serif 4", Georgia, serif' } as const;
+const MANROPE = { fontFamily: '"Manrope", system-ui, sans-serif' } as const;
 
-function ActivityStep({ activity, setActivity, onNext }: { activity: ActivityLevel | ""; setActivity: (a: ActivityLevel) => void; onNext: () => void }) {
+/** Material Symbols Outlined glyph — matches the Stitch export's icon set exactly. */
+function MS({ name, size = 20, fill = false, className = "" }: { name: string; size?: number; fill?: boolean; className?: string }) {
+  return <span className={`material-symbols-outlined ${className}`} style={{ fontSize: size, lineHeight: 1, fontVariationSettings: fill ? "'FILL' 1" : "'FILL' 0" }}>{name}</span>;
+}
+
+function ActivityStep({ activity, setActivity, onNext, onBack }: { activity: ActivityLevel | ""; setActivity: (a: ActivityLevel) => void; onNext: () => void; onBack: () => void }) {
   const opts: ActivityLevel[] = ["sedentary", "light", "moderate", "active", "very_active"];
   return (
-    <div className="animate-float-up">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <Leaf size={18} className="text-[#1C2B4A]" strokeWidth={1.75} />
-          <h1 className="text-[26px] font-semibold leading-none tracking-tight text-[#121417]" style={SERIF}>Activity level</h1>
+    <div className="animate-float-up" style={MANROPE}>
+      {/* Stitch top app bar: back · section label + segmented progress · avatar */}
+      <div className="-mx-5 -mt-6 mb-5 flex h-14 items-center gap-3 border-b border-[#E4E7EC] bg-[#F8F9FA]/90 px-5 backdrop-blur-xl">
+        <button onClick={onBack} aria-label="Go back" className="-ml-2 flex h-10 w-10 items-center justify-center rounded-full text-[#1C221E] active:bg-[#EFEFEF]">
+          <MS name="arrow_back_ios_new" size={20} />
+        </button>
+        <div className="flex flex-1 flex-col items-center">
+          <span className="mb-1.5 text-[11px] font-semibold uppercase tracking-widest text-[#1C221E]">Complete profile</span>
+          <div className="flex w-full max-w-[210px] items-center gap-1.5">
+            {[0, 1, 2, 3, 4].map((i) => <div key={i} className={`h-1 flex-1 rounded-full ${i <= 3 ? "bg-[#111317]" : "bg-[#E4E7EC]"}`} />)}
+          </div>
         </div>
-        <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#EEF1F6] px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-[#1C2B4A] ring-1 ring-[#1C2B4A]/10">
-          <Flame size={11} /> Daily burn
-        </span>
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#111317] shadow-sm">
+          <MS name="person" size={17} className="text-[#F8F9FA]" />
+        </div>
       </div>
-      <p className="mt-2 text-[13px] leading-relaxed text-[#6E727A]">Select the state that best mirrors your typical energy expenditure.</p>
+
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-[#E4E7EC] bg-[#F5F5F7] px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-[#111317]">
+        <MS name="bolt" size={15} fill className="text-[#111317]" /> Daily burn
+      </span>
+      <h1 className="mt-4 text-[30px] font-semibold leading-tight tracking-tight text-[#1C221E]" style={SERIF4}>Activity level</h1>
+      <p className="mt-1.5 text-[14px] leading-relaxed text-[#5D5C57]">Select what best describes your daily routine.</p>
 
       <div role="radiogroup" className="mt-5 space-y-3">
         {opts.map((a) => {
           const meta = ACTIVITY_LABEL[a];
           const on = activity === a;
-          const Icon = ACT_ICON[a] ?? Activity;
           return (
             <button
               key={a}
               role="radio"
               aria-checked={on}
               onClick={() => setActivity(a)}
-              style={{ boxShadow: on ? SH_SEL : SH_CARD }}
-              className={`flex w-full items-start gap-3 rounded-2xl p-4 text-left transition-all duration-200 active:scale-[0.985] ${
-                on ? "border-2 border-[#1C2B4A] bg-[#F3F5F9]" : "border border-[#E6E6E2] bg-white"
+              style={{ boxShadow: on ? "0 4px 14px rgba(17,19,23,0.06)" : "0 1px 2px rgba(17,19,23,0.04)" }}
+              className={`flex w-full items-center justify-between gap-3 rounded-xl p-4 text-left transition-all duration-200 active:scale-[0.99] ${
+                on ? "border-[1.5px] border-[#111317] bg-white" : "border border-[#E4E7EC] bg-white hover:border-[#D0D5DD]"
               }`}
             >
-              {on ? (
-                <span className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-[#121417]">
-                  <Check className="h-3 w-3 text-white" strokeWidth={3} />
-                </span>
-              ) : (
-                <span className="mt-0.5 h-5 w-5 flex-shrink-0 rounded-full border-2 border-[#D7D8D4] bg-white" />
-              )}
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-baseline gap-x-2 leading-snug">
-                  <span className="text-[15px] font-semibold tracking-tight text-[#121417]">{meta.label}</span>
-                  <span className="text-[11.5px] font-semibold text-[#1C2B4A]">{ACT_BURN[a]} burned</span>
+              <div className="flex min-w-0 flex-1 items-center gap-3.5 pr-2">
+                {on ? (
+                  <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-[#111317] shadow-sm">
+                    <MS name="check" size={14} className="text-white" />
+                  </span>
+                ) : (
+                  <span className="h-6 w-6 flex-shrink-0 rounded-full border-2 border-[#D0D5DD]" />
+                )}
+                <div className="min-w-0 flex-1">
+                  <div className="mb-0.5 flex flex-wrap items-center gap-2">
+                    <span className="text-[15px] font-semibold tracking-tight text-[#111317]">{meta.label}</span>
+                    <span className={`rounded-full border border-[#E4E7EC] bg-[#F5F5F7] px-2 py-0.5 text-[11px] text-[#414651] ${on ? "font-semibold" : "font-medium"}`}>{ACT_BURN[a]} burned</span>
+                  </div>
+                  <p className="text-[13px] leading-snug text-[#535862]">{meta.desc}</p>
                 </div>
-                <p className="mt-1 text-[12.5px] leading-relaxed text-[#6E727A]">{meta.desc}</p>
               </div>
-              <Icon size={18} strokeWidth={1.75} className={`mt-0.5 shrink-0 ${on ? "text-[#1C2B4A]" : "text-[#A6A8A4]"}`} />
+              <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#E4E7EC] bg-[#F8F9FA] ${on ? "text-[#111317]" : "text-[#535862]"}`}>
+                <MS name={ACT_MICON[a] ?? "fitness_center"} size={20} />
+              </span>
             </button>
           );
         })}
       </div>
 
-      <button disabled={!activity} onClick={onNext} className={CTA}>
-        Continue <ArrowRight size={16} />
-      </button>
+      {/* helper note */}
+      <div className="mt-3 flex items-center gap-3 rounded-xl border border-[#E4E7EC] bg-white px-4 py-3 shadow-sm">
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[#E4E7EC] bg-[#F5F5F7] text-[#111317]">
+          <MS name="tune" size={16} />
+        </span>
+        <p className="flex-1 text-[12px] leading-snug text-[#535862]">Target burns adjust automatically based on your daily activity and progress.</p>
+      </div>
+
+      <div className="mt-6 flex flex-col items-center gap-2">
+        <button
+          disabled={!activity}
+          onClick={onNext}
+          className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[#111317] text-[15px] font-semibold text-white shadow-md transition-all hover:bg-[#252A31] active:scale-[0.99] disabled:opacity-40"
+        >
+          Continue <MS name="arrow_forward" size={19} />
+        </button>
+        <span className="text-[12px] tracking-tight text-[#717680]">You can change this anytime in settings.</span>
+      </div>
     </div>
   );
 }
