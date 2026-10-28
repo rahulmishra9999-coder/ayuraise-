@@ -8,6 +8,60 @@ import { savePersonalPlan } from "@/lib/personalPlan";
 import { CuisinePicker } from "@/components/CuisinePicker";
 import { cuisineRegion } from "@/lib/cuisines";
 
+/* ===== sage Material-3 "Stitch" kit — used by the create-profile screens (about/movement/sleep/eating) ===== */
+const SERIF4 = { fontFamily: '"Source Serif 4", Georgia, serif' } as const;
+const SANS = { fontFamily: '"Manrope", system-ui, sans-serif' } as const;
+function MS({ name, size = 20, fill = false, className = "" }: { name: string; size?: number; fill?: boolean; className?: string }) {
+  return <span className={`material-symbols-outlined ${className}`} style={{ fontSize: size, lineHeight: 1, fontVariationSettings: fill ? "'FILL' 1" : "'FILL' 0" }}>{name}</span>;
+}
+function TopBar({ onBack, progress }: { onBack: () => void; progress?: number }) {
+  return (
+    <header className="fixed inset-x-0 top-0 z-50 border-b border-black/[0.04] bg-[#f7fafb]/80 pt-[env(safe-area-inset-top)] backdrop-blur-xl">
+      <div className="flex h-16 items-center justify-between px-6">
+        <button onClick={onBack} aria-label="Back" className="-ml-2 flex h-11 w-11 items-center justify-center rounded-full text-[#181c1d]"><MS name="arrow_back_ios_new" size={22} /></button>
+        <div className="flex flex-1 flex-col items-center px-2">{progress !== undefined && <div className="h-1 w-24 overflow-hidden rounded-full bg-[#ebeeef]"><div className="h-full rounded-full bg-[#4b6159] transition-all duration-300" style={{ width: `${progress * 100}%` }} /></div>}</div>
+        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#4b6159] shadow-sm"><MS name="person" size={18} className="text-white" /></div>
+      </div>
+    </header>
+  );
+}
+function ProgressHead({ step, pct, title, subtitle }: { step: number; pct: number; title: string; subtitle?: string }) {
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider"><span className="text-[#4b6159]">Step {step} of 4</span><span className="font-medium text-[#424845]">{pct}% Complete</span></div>
+      <div className="h-1.5 w-full overflow-hidden rounded-full bg-[#ebeeef]"><div className="h-full rounded-full bg-[#4b6159] transition-all duration-500" style={{ width: `${pct}%` }} /></div>
+      <div className="pt-1"><h1 className="text-[26px] font-semibold leading-tight tracking-tight text-[#181c1d]" style={SERIF4}>{title}</h1>{subtitle && <p className="mt-0.5 text-[13px] leading-snug text-[#4d635b]">{subtitle}</p>}</div>
+    </div>
+  );
+}
+function BottomBar({ onClick, disabled, label = "Continue", arrow = true, uppercase = false }: { onClick: () => void; disabled?: boolean; label?: string; arrow?: boolean; uppercase?: boolean }) {
+  return (
+    <footer className="fixed inset-x-0 bottom-0 z-50 border-t border-black/[0.03] bg-[#f7fafb]/85 px-6 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur-xl">
+      <button onClick={onClick} disabled={disabled} className={`flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[#4b6159] text-[15px] font-semibold text-white shadow-md transition-all active:scale-[0.99] disabled:opacity-40 ${uppercase ? "uppercase tracking-wider" : ""}`}><span>{label}</span>{arrow && <MS name="arrow_forward" size={19} />}</button>
+    </footer>
+  );
+}
+function SgCard({ children, className = "" }: { children: ReactNode; className?: string }) {
+  return <div className={`rounded-xl bg-white p-3.5 ${className}`} style={{ boxShadow: "0 2px 12px rgba(24,28,29,0.03)" }}>{children}</div>;
+}
+function SgLabel({ icon, children }: { icon?: string; children: ReactNode }) {
+  return <div className="flex items-center gap-1.5 text-[#4d635b]">{icon && <MS name={icon} size={16} />}<span className="text-[11px] font-semibold uppercase tracking-wider text-[#4d635b]">{children}</span></div>;
+}
+function SgPillGrid({ opts, value, onChange, cols = 4 }: { opts: string[]; value: string; onChange: (v: string) => void; cols?: number }) {
+  return (
+    <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0,1fr))` }}>
+      {opts.map((o) => { const on = value === o; return <button key={o} onClick={() => onChange(o)} className={`rounded-full px-2 py-1.5 text-center text-[12px] font-semibold transition-all ${on ? "bg-[#4b6159] text-white shadow-sm" : "bg-[#f1f4f5] text-[#181c1d] hover:bg-[#ebeeef]"}`}>{o}</button>; })}
+    </div>
+  );
+}
+function SgPillTrack({ opts, value, onChange }: { opts: string[]; value: string; onChange: (v: string) => void }) {
+  return (
+    <div className="grid gap-1.5 rounded-full bg-[#f1f4f5] p-1" style={{ gridTemplateColumns: `repeat(${opts.length}, minmax(0,1fr))` }}>
+      {opts.map((o) => { const on = value === o; return <button key={o} onClick={() => onChange(o)} className={`h-8 rounded-full text-[13px] font-medium transition-all ${on ? "bg-[#4b6159] text-white shadow-sm" : "text-[#424845] hover:text-[#181c1d]"}`}>{o}</button>; })}
+    </div>
+  );
+}
+
 /** Ease-out count-up for the calorie number — a small premium touch, no deps. */
 function CountUp({ to, className }: { to: number; className?: string }) {
   const [n, setN] = useState(0);
@@ -613,6 +667,134 @@ function LifestylePage() {
 
   const capHint = key === "fitness" ? "Pick any 1" : null;
 
+  // ===== The 4 create-profile screens, redesigned in the sage "Stitch" system =====
+  if (["about", "movement", "sleep", "eating"].includes(key)) {
+    const actIcon = (id: string) => id === "sedentary" ? "chair" : id === "light" ? "directions_walk" : id === "active" ? "fitness_center" : "bolt";
+    return (
+      <div className="min-h-svh bg-[#f7fafb] text-[#181c1d]" style={SANS}>
+        <TopBar onBack={back} progress={key === "about" ? undefined : key === "movement" ? 0.5 : key === "sleep" ? 0.75 : 1} />
+
+        {key === "about" && (
+          <main className="px-6 pb-12 pt-[4.75rem]">
+            <div className="mb-6 flex flex-col gap-2.5">
+              <div className="flex items-center justify-between text-[12px]"><span className="font-medium tracking-wide text-[#4b6159]">Step 1 of 4</span><span className="text-[#424845]">25% Complete</span></div>
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-[#ebeeef]"><div className="h-full rounded-full bg-[#4b6159]" style={{ width: "25%" }} /></div>
+            </div>
+            <h1 className="mb-8 text-[28px] font-semibold tracking-tight text-[#181c1d]" style={SERIF4}>About You</h1>
+            <div className="flex flex-col gap-4">
+              <div className="rounded-xl bg-white p-5 shadow-sm">
+                <label className="mb-1.5 block text-[12px] font-medium tracking-wider text-[#424845]">Name</label>
+                <div className="flex items-center gap-3"><div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#f1f4f5] text-[#4b6159]"><MS name="badge" size={18} /></div><input value={a.name ?? ""} onChange={(e) => set("name", e.target.value)} placeholder="Enter your name" className="w-full bg-transparent text-[18px] text-[#181c1d] placeholder:text-[#727875] focus:outline-none" /></div>
+              </div>
+              <div className="rounded-xl bg-white p-5 shadow-sm">
+                <label className="mb-3 block text-[12px] font-medium tracking-wider text-[#424845]">Gender</label>
+                <div className="grid grid-cols-3 gap-2">{SEX.map((s) => { const on = a.sex === s; return <button key={s} onClick={() => set("sex", s)} className={`flex items-center justify-center gap-1.5 rounded-full px-3 py-2.5 text-[14px] font-semibold transition-all ${on ? "bg-[#4b6159] text-white shadow-sm" : "bg-[#f1f4f5] text-[#424845]"}`}>{on && <MS name="check" size={16} />}<span>{s}</span></button>; })}</div>
+              </div>
+              <div className="rounded-xl bg-white p-5 shadow-sm">
+                <label className="mb-1.5 block text-[12px] font-medium tracking-wider text-[#424845]">Age</label>
+                <div className="flex items-baseline gap-2"><input type="number" value={a.age ?? ""} onChange={(e) => set("age", e.target.value)} placeholder="28" className="w-20 bg-transparent text-[24px] font-medium text-[#181c1d] focus:outline-none" style={SERIF4} /><span className="text-[16px] text-[#424845]">years</span></div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-xl bg-white p-4 shadow-sm">
+                  <div className="mb-3 flex items-center justify-between gap-1"><span className="truncate text-[12px] font-medium tracking-wider text-[#424845]">Height</span><div className="flex shrink-0 rounded-full bg-[#f1f4f5] p-0.5">{["cm", "ft"].map((u) => <button key={u} onClick={() => set("heightUnit", u)} className={`rounded-full px-2 py-0.5 text-[12px] transition-all ${a.heightUnit === u ? "bg-white font-semibold text-[#4b6159] shadow-sm" : "text-[#424845]"}`}>{u}</button>)}</div></div>
+                  {a.heightUnit === "ft"
+                    ? <div className="flex items-baseline gap-1"><input value={a.heightFt ?? ""} onChange={(e) => set("heightFt", e.target.value)} placeholder="5" className="w-8 bg-transparent text-[22px] font-medium focus:outline-none" style={SERIF4} /><span className="text-[13px] text-[#424845]">ft</span><input value={a.heightIn ?? ""} onChange={(e) => set("heightIn", e.target.value)} placeholder="7" className="w-8 bg-transparent text-[22px] font-medium focus:outline-none" style={SERIF4} /><span className="text-[13px] text-[#424845]">in</span></div>
+                    : <div className="flex items-baseline gap-1.5"><input value={a.heightCm ?? ""} onChange={(e) => set("heightCm", e.target.value)} placeholder="175" className="w-16 bg-transparent text-[24px] font-medium focus:outline-none" style={SERIF4} /><span className="text-[14px] text-[#424845]">cm</span></div>}
+                  <div className="mt-2 flex items-center gap-1 text-[12px] text-[#727875]"><MS name="height" size={13} className="text-[#4b6159]" />{cm ? Math.round(cm) + " cm" : "—"}</div>
+                </div>
+                <div className="rounded-xl bg-white p-4 shadow-sm">
+                  <div className="mb-3 flex items-center justify-between gap-1"><span className="truncate text-[12px] font-medium tracking-wider text-[#424845]">Weight</span><div className="flex shrink-0 rounded-full bg-[#f1f4f5] p-0.5">{["kg", "lb"].map((u) => <button key={u} onClick={() => set("weightUnit", u)} className={`rounded-full px-2 py-0.5 text-[12px] transition-all ${a.weightUnit === u ? "bg-white font-semibold text-[#4b6159] shadow-sm" : "text-[#424845]"}`}>{u}</button>)}</div></div>
+                  {a.weightUnit === "lb"
+                    ? <div className="flex items-baseline gap-1.5"><input value={a.weightLb ?? ""} onChange={(e) => set("weightLb", e.target.value)} placeholder="150" className="w-16 bg-transparent text-[24px] font-medium focus:outline-none" style={SERIF4} /><span className="text-[14px] text-[#424845]">lb</span></div>
+                    : <div className="flex items-baseline gap-1.5"><input value={a.weightKg ?? ""} onChange={(e) => set("weightKg", e.target.value)} placeholder="68" className="w-16 bg-transparent text-[24px] font-medium focus:outline-none" style={SERIF4} /><span className="text-[14px] text-[#424845]">kg</span></div>}
+                  <div className="mt-2 flex items-center gap-1 text-[12px] text-[#727875]"><MS name="monitor_weight" size={13} className="text-[#4b6159]" />{kg ? Math.round(kg) + " kg" : "—"}</div>
+                </div>
+              </div>
+              <div className="mt-2 flex flex-col items-center gap-3 pt-2">
+                <button onClick={next} disabled={!canNext} className="flex w-full items-center justify-center gap-2 rounded-full bg-[#2d3132] px-6 py-4 text-[14px] font-semibold text-[#eef1f2] shadow-md transition-all active:scale-[0.99] disabled:opacity-40"><span>Continue</span><MS name="arrow_forward" size={18} /></button>
+                <div className="flex items-center gap-1.5 text-[12px] text-[#727875]"><MS name="lock" size={14} /><span>Your data is private and encrypted.</span></div>
+              </div>
+            </div>
+          </main>
+        )}
+
+        {key === "movement" && (<>
+          <main className="px-6 pb-28 pt-[4.75rem]">
+            <ProgressHead step={2} pct={50} title="Activity Level" subtitle="Choose the option that best matches your typical daily routine." />
+            <div role="radiogroup" className="mt-5 flex flex-col gap-3.5">
+              {ACTIVITY.map((x) => { const on = a.activity === x.id; return (
+                <div key={x.id}>
+                  <button role="radio" aria-checked={on} onClick={() => set("activity", x.id)} className="flex w-full flex-col rounded-xl bg-white p-4 text-left transition-all active:scale-[0.99]" style={{ boxShadow: on ? "0 4px 24px rgba(75,97,89,0.10)" : "0 2px 12px rgba(24,28,29,0.03)" }}>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex min-w-0 items-center gap-3"><div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${on ? "bg-[#d0e8de] text-[#4b6159]" : "bg-[#f1f4f5] text-[#5d5c57]"}`}><MS name={actIcon(x.id)} size={22} /></div><div className="flex min-w-0 flex-col"><span className="text-[15px] font-semibold leading-tight text-[#181c1d]">{x.label}</span><span className={`mt-0.5 text-[11px] font-medium tracking-wide ${on ? "text-[#4b6159]" : "text-[#424845]"}`}>{x.note}</span></div></div>
+                      <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${on ? "bg-[#4b6159] text-white shadow-sm" : "bg-[#ebeeef] text-transparent"}`}><MS name="check" size={16} fill={on} /></div>
+                    </div>
+                    <p className="mt-2 pl-[56px] text-[12px] leading-[16px] text-[#424845]">{x.desc}</p>
+                  </button>
+                  {on && x.id !== "sedentary" && (
+                    <div className="mt-2 rounded-xl bg-white p-3.5" style={{ boxShadow: "0 2px 12px rgba(24,28,29,0.03)" }}>
+                      <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-[#4d635b]">What do you do? — select all</p>
+                      <div className="flex flex-wrap gap-1.5">{WORKOUTS.map((w) => { const wo = ((a.workouts as string[]) ?? []).includes(w); return <button key={w} onClick={() => togIn("workouts", w)} className={`rounded-full px-3 py-1.5 text-[12px] font-semibold transition-all ${wo ? "bg-[#4b6159] text-white shadow-sm" : "bg-[#f1f4f5] text-[#424845]"}`}>{w}</button>; })}</div>
+                    </div>
+                  )}
+                </div>
+              ); })}
+            </div>
+          </main>
+          <BottomBar onClick={next} label="Continue" uppercase />
+        </>)}
+
+        {key === "sleep" && (<>
+          <main className="px-6 pb-28 pt-[4.75rem]">
+            <ProgressHead step={3} pct={75} title="Sleep" subtitle="Help us calibrate your circadian baseline and nightly recovery." />
+            <div className="mt-5 flex flex-col gap-3">
+              <SgCard className="flex flex-col gap-2">
+                <div className="flex items-center justify-between"><SgLabel icon="bedtime">Bedtime</SgLabel><span className="text-[11px] text-[#4d635b]">Usual window</span></div>
+                <div className="relative"><select value={a.bedtime ?? ""} onChange={(e) => set("bedtime", e.target.value)} className="h-10 w-full cursor-pointer appearance-none rounded-lg bg-[#f1f4f5] px-3 pr-8 text-[14px] font-medium text-[#181c1d] focus:outline-none"><option value="">Select…</option>{BEDTIME.map((o) => <option key={o.v} value={o.v}>{o.l}</option>)}</select><div className="pointer-events-none absolute inset-y-0 right-2.5 flex items-center text-[#4d635b]"><MS name="unfold_more" size={18} /></div></div>
+              </SgCard>
+              <SgCard className="flex flex-col gap-2.5">
+                <div className="flex items-center justify-between"><SgLabel icon="schedule">Sleep Duration</SgLabel><div className="rounded-full bg-[#d0e8de] px-2.5 py-0.5 text-[13px] font-semibold text-[#0a1f19]">{a.sleep ?? 7} hrs</div></div>
+                <div className="flex flex-col gap-1.5 pt-0.5"><input type="range" min={4} max={10} step={0.5} value={a.sleep ?? 7} onChange={(e) => set("sleep", Number(e.target.value))} className="h-1.5 w-full cursor-pointer rounded-full" style={{ accentColor: "#4b6159" }} /><div className="flex justify-between px-1 text-[11px] text-[#4d635b]"><span>4h</span><span>6h</span><span>8h</span><span>10h</span></div></div>
+              </SgCard>
+              <SgCard className="flex flex-col gap-2"><SgLabel icon="timelapse">Time to Fall Asleep</SgLabel><SgPillGrid cols={2} opts={LATENCY} value={a.latency ?? ""} onChange={(v) => set("latency", v)} /></SgCard>
+              <SgCard className="flex flex-col gap-2"><SgLabel icon="wb_twilight">Daytime Nap</SgLabel><SgPillTrack opts={["No", "Sometimes", "Daily"]} value={a.nap ?? ""} onChange={(v) => set("nap", v)} /></SgCard>
+              <SgCard className="flex flex-col gap-2">
+                <div className="flex items-center justify-between"><SgLabel icon="wb_sunny">Waking Feeling</SgLabel><span className="text-[12px] font-medium text-[#4b6159]">{WAKING[(a.waking ?? 3) - 1]}</span></div>
+                <input type="range" min={1} max={5} value={a.waking ?? 3} onChange={(e) => set("waking", Number(e.target.value))} className="h-1.5 w-full cursor-pointer rounded-full" style={{ accentColor: "#4b6159" }} /><div className="flex justify-between px-1 text-[11px] text-[#4d635b]"><span>Fresh</span><span>Exhausted</span></div>
+              </SgCard>
+            </div>
+          </main>
+          <BottomBar onClick={next} label="Continue" />
+        </>)}
+
+        {key === "eating" && (<>
+          <main className="px-6 pb-28 pt-[4.75rem]">
+            <div className="flex flex-col gap-2.5">
+              <div className="pb-1"><div className="mb-1.5 flex items-center justify-between text-[11px] uppercase tracking-wider"><span className="font-semibold text-[#727875]">Step 4 of 4</span><span className="font-semibold text-[#4b6159]">100% Complete</span></div><div className="h-1 w-full overflow-hidden rounded-full bg-[#ebeeef]"><div className="h-full w-full rounded-full bg-[#4b6159]" /></div></div>
+              <h1 className="text-[24px] font-semibold tracking-tight text-[#181c1d]" style={SERIF4}>Food &amp; Meals</h1>
+              <SgCard className="flex flex-col gap-2"><SgLabel>Food style</SgLabel><SgPillGrid opts={FOOD_STYLE} value={a.foodstyle ?? ""} onChange={(v) => set("foodstyle", v)} /></SgCard>
+              <SgCard className="flex flex-col gap-2"><SgLabel>Main meals / day</SgLabel><SgPillGrid opts={MAIN_MEALS} value={a.main ?? ""} onChange={(v) => set("main", v)} /></SgCard>
+              <SgCard className="flex flex-col gap-2"><SgLabel>Snacks / day</SgLabel><SgPillGrid cols={5} opts={MINI_MEALS} value={a.mini ?? ""} onChange={(v) => set("mini", v)} /></SgCard>
+              <SgCard className="flex flex-col gap-2">
+                <SgLabel>Meal timing</SgLabel>
+                {omad ? (
+                  <SlotPicker value={a.mealTime} onChange={(v) => set("mealTime", v)} options={MEAL_SLOTS} ph="Select a slot…" up />
+                ) : (
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <div><span className="text-[12px] text-[#424845]">Breakfast</span><div className="mt-1"><SlotPicker value={a.firstMeal} onChange={(v) => set("firstMeal", v)} options={FIRST_MEAL_SLOTS} ph="Select…" /></div></div>
+                    <div><span className="text-[12px] text-[#424845]">Dinner</span><div className="mt-1"><SlotPicker value={a.lastMeal} onChange={(v) => set("lastMeal", v)} options={LAST_MEAL_SLOTS} ph="Select…" /></div></div>
+                  </div>
+                )}
+              </SgCard>
+              <SgCard className="flex flex-col gap-2"><SgLabel>Water / day (L)</SgLabel><SgPillGrid cols={3} opts={WATER} value={a.water ?? ""} onChange={(v) => set("water", v)} /></SgCard>
+            </div>
+          </main>
+          <BottomBar onClick={next} label="Continue" arrow={false} uppercase />
+        </>)}
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-svh pb-28" style={{ background: "var(--gradient-hero)" }}>
       <style>{PREMIUM_CSS}</style>
@@ -1210,6 +1392,12 @@ export const Route = createFileRoute("/lifestyle")({
     mode: typeof s.mode === "string" ? s.mode : undefined,
     preselect: typeof s.preselect === "string" ? s.preselect : undefined,
     only: typeof s.only === "string" ? s.only : undefined,
+  }),
+  head: () => ({
+    links: [
+      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600&family=Manrope:wght@400;500;600;700&display=swap" },
+      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" },
+    ],
   }),
   component: LifestylePage,
 });
