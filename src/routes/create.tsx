@@ -502,6 +502,10 @@ function chip(on: boolean) {
 function smChip(on: boolean) {
   return `rounded-lg px-2.5 py-1 text-[11px] font-bold transition ${on ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground/75"}`;
 }
+/** Subtle per-question "move on" link for the conversational meal flow (not a global Continue). */
+function NextLink({ onClick, label }: { onClick: () => void; label: string }) {
+  return <button onClick={onClick} className="mt-5 inline-flex items-center gap-1 rounded-full bg-primary/10 px-4 py-2 text-[13px] font-bold text-primary active:scale-95">{label} <span aria-hidden>→</span></button>;
+}
 /** A goal chip with a colored gradient emoji dot (keeps the picker from being a flat grey wall). */
 function goalChipEl(id: string, selected: string[], toggle: (id: string) => void) {
   const g = ALL_GOALS[id];
@@ -586,7 +590,8 @@ function CreatePlan() {
   const [listening, setListening] = useState(false);
   const recognitionRef = useRef<any>(null);
   const [dietModal, setDietModal] = useState<"detailed" | "recos" | null>(null); // full diet-plan sample popup (ⓘ icons)
-  const [setupQ, setSetupQ] = useState(0); // 4b — which meal-setup question is in focus (animated single-screen flow)
+  const [setupQ, setSetupQ] = useState(0); // meal-setup: furthest question reached (conversational scroll flow)
+  const dietQRefs = useRef<(HTMLElement | null)[]>([]); // per-question anchors for auto-scroll
   const [avoidIng, setAvoidIng] = useState<string[]>([]);   // ingredients removed / swapped out — asked BEFORE the plan is made
   const [ingReplace, setIngReplace] = useState<Record<string, string[]>>({}); // ingredient → chosen replacements
   const [addedIng, setAddedIng] = useState<string[]>([]);   // ingredients the user added
@@ -1156,32 +1161,37 @@ function CreatePlan() {
 
         {/* 4b — animated single-screen meal setup: answer a question, it slides up into a summary card, the next one drops into focus */}
         {key === "diet-setup" && (() => {
-          const QS: { id: string; label: string; summary: string; title: string; hint: string; node: React.ReactNode }[] = [
+          const QS: { id: string; label: string; title: string; hint: string; node: (i: number) => React.ReactNode }[] = [
             {
-              id: "cuisine", label: "Cuisine", summary: cuisinePath.length ? cuisinePath[cuisinePath.length - 1] : "Any cuisine",
-              title: "Which cuisine do you enjoy?", hint: "Pick a region, then narrow it down — we'll build from food you like.",
-              node: (
-                <CuisinePicker
-                  path={cuisinePath}
-                  setPath={(p) => {
-                    setCuisinePath(p);
-                    try { const lf = JSON.parse(localStorage.getItem("ayuraise.lifestyle") ?? "{}") ?? {}; lf.cuisinePath = p; lf.cuisine = p[p.length - 1] ?? ""; lf.cuisineRegion = cuisineRegion(p); localStorage.setItem("ayuraise.lifestyle", JSON.stringify(lf)); } catch { /* ignore */ }
-                  }}
-                />
+              id: "cuisine", label: "Cuisine", title: "Which cuisine do you enjoy?", hint: "Pick a region, then narrow it down — tap Next when you're happy, or skip.",
+              node: (i) => (
+                <div>
+                  <CuisinePicker
+                    path={cuisinePath}
+                    setPath={(p) => {
+                      setCuisinePath(p);
+                      try { const lf = JSON.parse(localStorage.getItem("ayuraise.lifestyle") ?? "{}") ?? {}; lf.cuisinePath = p; lf.cuisine = p[p.length - 1] ?? ""; lf.cuisineRegion = cuisineRegion(p); localStorage.setItem("ayuraise.lifestyle", JSON.stringify(lf)); } catch { /* ignore */ }
+                    }}
+                  />
+                  <NextLink onClick={() => advance(i)} label={cuisinePath.length ? "Next" : "Any cuisine — skip"} />
+                </div>
               ),
             },
             {
-              id: "prefs", label: "Dietary preferences", summary: prefs.length ? prefs.join(", ") : "No restrictions",
-              title: "Any dietary preferences?", hint: "Pick all that apply — or skip.",
-              node: <div className="flex flex-wrap gap-1.5">{DIET_PREFS.map((p) => <button key={p} onClick={() => tog(prefs, setPrefs, p)} className={chip(prefs.includes(p))}>{p}</button>)}</div>,
+              id: "prefs", label: "Dietary preferences", title: "Any dietary preferences?", hint: "Tap all that apply, then Next — or just skip.",
+              node: (i) => (
+                <div>
+                  <div className="flex flex-wrap gap-1.5">{DIET_PREFS.map((p) => <button key={p} onClick={() => tog(prefs, setPrefs, p)} className={chip(prefs.includes(p))}>{p}</button>)}</div>
+                  <NextLink onClick={() => advance(i)} label={prefs.length ? "Next" : "No restrictions — skip"} />
+                </div>
+              ),
             },
             {
-              id: "allergies", label: "Allergies / avoid", summary: allergies.length ? allergies.join(", ") : "None",
-              title: "Allergies or foods to avoid?", hint: "We'll keep these out of your plan.",
-              node: (
+              id: "allergies", label: "Allergies / avoid", title: "Allergies or foods to avoid?", hint: "We'll keep these out of your plan. Tap None to skip.",
+              node: (i) => (
                 <div>
                   <div className="flex flex-wrap gap-1.5">
-                    <button onClick={() => setAllergies([])} className={chip(allergies.length === 0)}>None</button>
+                    <button onClick={() => { setAllergies([]); advance(i); }} className={chip(allergies.length === 0)}>None</button>
                     {ALLERGENS.map((a) => <button key={a} onClick={() => tog(allergies, setAllergies, a)} className={chip(allergies.includes(a))}>{a}</button>)}
                     {allergies.filter((a) => !ALLERGENS.includes(a)).map((a) => <button key={a} onClick={() => tog(allergies, setAllergies, a)} className={chip(true)}>{a} ✕</button>)}
                   </div>
@@ -1189,18 +1199,18 @@ function CreatePlan() {
                     <input value={otherAllergy} onChange={(e) => setOtherAllergy(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { const v = otherAllergy.trim(); if (v && !allergies.includes(v)) setAllergies([...allergies, v]); setOtherAllergy(""); } }} placeholder="Other — type an allergy or food to avoid" className="min-w-0 flex-1 rounded-xl bg-card px-3 py-2 text-[12px] font-semibold ring-1 ring-border/60 placeholder:text-muted-foreground/50" />
                     <button onClick={() => { const v = otherAllergy.trim(); if (v && !allergies.includes(v)) setAllergies([...allergies, v]); setOtherAllergy(""); }} className="shrink-0 rounded-xl bg-primary px-3.5 py-2 text-[12px] font-bold text-primary-foreground">Add</button>
                   </div>
+                  {allergies.length > 0 && <NextLink onClick={() => advance(i)} label="Next" />}
                 </div>
               ),
             },
             {
-              id: "meals", label: "Meal format", summary: mealMode === "detailed" ? `${meals} main${mini ? ` + ${mini} mini` : ""}` : "Just food tips",
-              title: "How should we plan your meals?", hint: "We recommend 2–3 main meals, plus 1 mini-meal (snack) only if you need it.",
-              node: (
+              id: "meals", label: "Meal format", title: "How should we plan your meals?", hint: "We recommend 2–3 main meals, plus 1 mini-meal (snack) only if you need it.",
+              node: (i) => (
                 <div>
                   <div className="flex gap-2">
                     {([["detailed", "Detailed meal plan"], ["recos", "Just food tips"]] as const).map(([m, label]) => (
                       <div key={m} className="flex flex-1 items-stretch gap-1">
-                        <button onClick={() => setMealMode(m)} className={`lf-btn min-w-0 flex-1 rounded-2xl py-2.5 text-[11.5px] font-bold ring-1 ${mealMode === m ? "bg-primary/10 text-primary ring-primary" : "bg-card ring-border/60"}`}>{label}</button>
+                        <button onClick={() => { setMealMode(m); if (m === "recos") advance(i); }} className={`lf-btn min-w-0 flex-1 rounded-2xl py-2.5 text-[11.5px] font-bold ring-1 ${mealMode === m ? "bg-primary/10 text-primary ring-primary" : "bg-card ring-border/60"}`}>{label}</button>
                         <button onClick={() => setDietModal(m)} aria-label={`See a full ${label} sample`} title="See a full sample" className="flex w-8 shrink-0 items-center justify-center rounded-2xl bg-card text-muted-foreground ring-1 ring-border/60 active:scale-95"><Info size={14} /></button>
                       </div>
                     ))}
@@ -1222,31 +1232,31 @@ function CreatePlan() {
                       </div>
                     )}
                   </div>
-                  {mealMode === "detailed" ? (
-                    <div className="mt-3 flex gap-6">
-                      <div>
-                        <p className="mb-1.5 px-1 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Main meals</p>
-                        <div className="flex gap-1">{MAIN_MEALS.map((m) => <button key={m} onClick={() => setMeals(m)} className={smChip(meals === m)}>{m}</button>)}</div>
+                  {mealMode === "detailed" && (
+                    <>
+                      <div className="mt-3 flex gap-6">
+                        <div>
+                          <p className="mb-1.5 px-1 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Main meals</p>
+                          <div className="flex gap-1">{MAIN_MEALS.map((m) => <button key={m} onClick={() => setMeals(m)} className={smChip(meals === m)}>{m}</button>)}</div>
+                        </div>
+                        <div>
+                          <p className="mb-1.5 px-1 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Mini-meals</p>
+                          <div className="flex gap-1">{MINI_MEALS_D.map((m) => <button key={m} onClick={() => setMini(m)} className={smChip(mini === m)}>{m}</button>)}</div>
+                        </div>
                       </div>
-                      <div>
-                        <p className="mb-1.5 px-1 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Mini-meals</p>
-                        <div className="flex gap-1">{MINI_MEALS_D.map((m) => <button key={m} onClick={() => setMini(m)} className={smChip(mini === m)}>{m}</button>)}</div>
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="mt-3 rounded-2xl bg-card/70 p-3 text-[11.5px] leading-snug text-muted-foreground ring-1 ring-border/50">No fixed meal plan — we'll give you flexible <b className="text-foreground">food recommendations</b> (what to eat more / less of) you can follow your own way.</p>
+                      <NextLink onClick={() => advance(i)} label="Next" />
+                    </>
                   )}
                 </div>
               ),
             },
             {
-              id: "fasting", label: "Intermittent fasting", summary: dietIF === true ? `IF ${ifWindow}` : dietIF === false ? "No fasting" : "Not set yet",
-              title: "Add intermittent fasting?", hint: "Optional — set an eating window that suits you.",
-              node: (
+              id: "fasting", label: "Intermittent fasting", title: "Add intermittent fasting?", hint: "Optional — set an eating window that suits you.",
+              node: (i) => (
                 <div>
                   <div className="flex gap-1.5">
                     <button onClick={() => { setDietIF(true); if (mealMode === "detailed") { const h = maxFastForMeals(meals, mini); setFastHrs(h); setIfWindow(`${h}:${24 - h}`); } }} className={chip(dietIF === true)}>Yes, include IF</button>
-                    <button onClick={() => setDietIF(false)} className={chip(dietIF === false)}>No, thanks</button>
+                    <button onClick={() => { setDietIF(false); advance(i); }} className={chip(dietIF === false)}>No, thanks</button>
                   </div>
                   {dietIF === true && (() => {
                     const tier = fastTier(fastHrs);
@@ -1268,6 +1278,7 @@ function CreatePlan() {
                           className="if-range mt-1" />
                         <p className="mt-2 px-0.5 text-[11.5px] font-semibold text-foreground"><span className="mr-1 inline-block h-2 w-2 rounded-full align-middle" style={{ background: lvl.color }} />{fastHrs}h fast · {24 - fastHrs}h eating window · {lvl.name}</p>
                         {mealMode === "detailed" && <p className="px-0.5 text-[10px] text-muted-foreground">Your {meals} main{mini ? ` + ${mini} mini` : ""} → comfortable up to ~{maxH}h.</p>}
+                        <NextLink onClick={() => advance(i)} label="Done — build my meal plan" />
                       </div>
                     );
                   })()}
@@ -1275,42 +1286,32 @@ function CreatePlan() {
               ),
             },
           ];
-          const last = QS.length - 1;
-          const cur = Math.min(setupQ, last);
+          const lastI = QS.length - 1;
+          const advance = (i: number) => {
+            if (i < lastI) { setSetupQ((r) => Math.max(r, i + 1)); setTimeout(() => dietQRefs.current[i + 1]?.scrollIntoView({ behavior: "smooth", block: "start" }), 70); }
+            else next(); // last question → leave the meal-setup step
+          };
+          const reached = Math.min(setupQ, lastI);
           return (
             <div>
-              <style>{`@keyframes qIn{0%{opacity:0;transform:translateY(24px)}100%{opacity:1;transform:translateY(0)}}@keyframes rowUp{0%{opacity:0;transform:translateY(18px) scale(.97)}100%{opacity:1;transform:translateY(0) scale(1)}}`}</style>
+              <style>{`@keyframes qIn{0%{opacity:0;transform:translateY(20px)}100%{opacity:1;transform:translateY(0)}}`}</style>
 
-              {/* progress */}
-              <div className="mb-3 flex items-center gap-1.5 px-1">
-                {QS.map((q, i) => <span key={q.id} className={`h-1.5 rounded-full transition-all duration-300 ${i === cur ? "w-6 bg-primary" : i < cur ? "w-1.5 bg-primary/50" : "w-1.5 bg-border"}`} />)}
-                <span className="ml-auto text-[10px] font-bold uppercase tracking-wide text-muted-foreground">{cur + 1} / {QS.length}</span>
+              {/* sticky mini progress — the only persistent chrome */}
+              <div className="sticky top-0 z-10 -mx-4 flex items-center gap-2 border-b border-border/40 bg-background/85 px-4 py-2 backdrop-blur">
+                <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Your meal plan · {reached + 1} of {QS.length}</span>
+                <div className="ml-auto h-1.5 w-16 overflow-hidden rounded-full bg-border"><div className="h-full rounded-full bg-primary transition-all duration-300" style={{ width: `${((reached + 1) / QS.length) * 100}%` }} /></div>
               </div>
 
-              {/* answered questions — collapsed, having moved up */}
-              <div className="space-y-1.5">
-                {QS.slice(0, cur).map((q, i) => (
-                  <button key={q.id} onClick={() => setSetupQ(i)} style={i === cur - 1 ? { animation: "rowUp .34s cubic-bezier(.22,1,.36,1)" } : undefined} className="flex w-full items-center gap-2 rounded-xl bg-card/70 px-3 py-2 text-left ring-1 ring-border/50 active:scale-[0.99]">
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"><Check size={12} strokeWidth={3} /></span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-[9.5px] font-bold uppercase tracking-wide text-muted-foreground">{q.label}</span>
-                      <span className="block truncate text-[12px] font-semibold text-foreground">{q.summary}</span>
-                    </span>
-                    <span className="shrink-0 text-[10.5px] font-bold text-primary">Edit</span>
-                  </button>
-                ))}
-              </div>
-
-              {/* current question — in focus, slides into view */}
-              <div key={cur} style={{ animation: "qIn .36s cubic-bezier(.22,1,.36,1)" }} className="mt-2 rounded-2xl bg-card p-3.5 shadow-sm ring-1 ring-border/60">
-                <h2 className="px-0.5 font-display text-[15px] font-bold text-foreground">{QS[cur].title}</h2>
-                <p className="mb-3 mt-0.5 px-0.5 text-[11.5px] leading-snug text-muted-foreground">{QS[cur].hint}</p>
-                {QS[cur].node}
-                <button onClick={() => (cur < last ? setSetupQ(cur + 1) : next())} className="mt-4 w-full rounded-2xl bg-primary py-2.5 text-[13px] font-bold text-primary-foreground active:scale-[0.99]">{cur < last ? "Continue →" : "Done — build my meal plan →"}</button>
-              </div>
-
-              {/* up next peek */}
-              {cur < last && <p className="mt-2 px-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/60">Up next · {QS[cur + 1].label}</p>}
+              {/* one question per screen; answered ones stay above (scroll up to revisit) */}
+              {QS.slice(0, reached + 1).map((q, i) => (
+                <section key={q.id} ref={(el) => { dietQRefs.current[i] = el; }} className="flex min-h-[58vh] scroll-mt-14 flex-col justify-start pb-6 pt-5" style={i === reached ? { animation: "qIn .36s cubic-bezier(.22,1,.36,1)" } : undefined}>
+                  <p className="text-[10px] font-bold uppercase tracking-wide text-primary/70">Question {i + 1} of {QS.length}</p>
+                  <h2 className="mt-0.5 font-display text-[18px] font-bold leading-snug text-foreground">{q.title}</h2>
+                  <p className="mb-4 mt-1 text-[12px] leading-snug text-muted-foreground">{q.hint}</p>
+                  {q.node(i)}
+                  {i < reached && <p className="mt-5 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-emerald-600/70"><Check size={11} strokeWidth={3} /> Answered — scroll down for the rest</p>}
+                </section>
+              ))}
 
               {/* meals-vs-fasting clash → offer to reduce meals */}
               {ifConflict && (
