@@ -9,7 +9,7 @@ import { MealPlanView, MAIN_INGREDIENTS } from "@/components/MealPlanView";
 import { ING_META, ingredientWhy } from "@/lib/ingredients";
 import { TermList } from "@/components/TermTip";
 import { CuisinePicker } from "@/components/CuisinePicker";
-import { cuisineRegion } from "@/lib/cuisines";
+import { cuisineRegion, CUISINES } from "@/lib/cuisines";
 import { calcBMR, ACTIVITY_LABEL, type ActivityLevel, type Sex } from "@/lib/weight-loss";
 import type { Dosha } from "@/lib/diet";
 import { SUPPORT } from "@/lib/support";
@@ -502,9 +502,9 @@ function chip(on: boolean) {
 function smChip(on: boolean) {
   return `rounded-lg px-2.5 py-1 text-[11px] font-bold transition ${on ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground/75"}`;
 }
-/** Subtle per-question "move on" link for the conversational meal flow (not a global Continue). */
-function NextLink({ onClick, label }: { onClick: () => void; label: string }) {
-  return <button onClick={onClick} className="mt-5 inline-flex items-center gap-1 rounded-full bg-primary/10 px-4 py-2 text-[13px] font-bold text-primary active:scale-95">{label} <span aria-hidden>→</span></button>;
+/** Full-width tappable answer row for the conversational meal flow (tap = pick + advance). */
+function optBtn(on: boolean) {
+  return `flex w-full items-center justify-between gap-2 rounded-2xl px-4 py-3.5 text-left text-[13.5px] font-bold ring-1 transition active:scale-[0.99] ${on ? "bg-primary/10 text-primary ring-primary" : "bg-card text-foreground ring-border/60"}`;
 }
 /** A goal chip with a colored gradient emoji dot (keeps the picker from being a flat grey wall). */
 function goalChipEl(id: string, selected: string[], toggle: (id: string) => void) {
@@ -591,6 +591,7 @@ function CreatePlan() {
   const recognitionRef = useRef<any>(null);
   const [dietModal, setDietModal] = useState<"detailed" | "recos" | null>(null); // full diet-plan sample popup (ⓘ icons)
   const [setupQ, setSetupQ] = useState(0); // meal-setup: furthest question reached (conversational scroll flow)
+  const [setupTouched, setSetupTouched] = useState(false); // has the user tapped the current (frontier) question yet
   const dietQRefs = useRef<(HTMLElement | null)[]>([]); // per-question anchors for auto-scroll
   const [avoidIng, setAvoidIng] = useState<string[]>([]);   // ingredients removed / swapped out — asked BEFORE the plan is made
   const [ingReplace, setIngReplace] = useState<Record<string, string[]>>({}); // ingredient → chosen replacements
@@ -1163,135 +1164,68 @@ function CreatePlan() {
         {key === "diet-setup" && (() => {
           const QS: { id: string; label: string; title: string; hint: string; node: (i: number) => React.ReactNode }[] = [
             {
-              id: "cuisine", label: "Cuisine", title: "Which cuisine do you enjoy?", hint: "Pick a region, then narrow it down — tap Next when you're happy, or skip.",
+              id: "cuisine", label: "Cuisine", title: "Which cuisine do you enjoy?", hint: "Tap one — we'll build your plan from food you like.",
               node: (i) => (
-                <div>
-                  <CuisinePicker
-                    path={cuisinePath}
-                    setPath={(p) => {
-                      setCuisinePath(p);
-                      try { const lf = JSON.parse(localStorage.getItem("ayuraise.lifestyle") ?? "{}") ?? {}; lf.cuisinePath = p; lf.cuisine = p[p.length - 1] ?? ""; lf.cuisineRegion = cuisineRegion(p); localStorage.setItem("ayuraise.lifestyle", JSON.stringify(lf)); } catch { /* ignore */ }
-                    }}
-                  />
-                  <NextLink onClick={() => advance(i)} label={cuisinePath.length ? "Next" : "Any cuisine — skip"} />
+                <div className="flex flex-col gap-2">
+                  {CUISINES.map((c) => (
+                    <button key={c.name} onClick={() => {
+                      setCuisinePath([c.name]);
+                      try { const lf = JSON.parse(localStorage.getItem("ayuraise.lifestyle") ?? "{}") ?? {}; lf.cuisinePath = [c.name]; lf.cuisine = c.name; lf.cuisineRegion = cuisineRegion([c.name]); localStorage.setItem("ayuraise.lifestyle", JSON.stringify(lf)); } catch { /* ignore */ }
+                      advance(i);
+                    }} className={optBtn(show(i, cuisinePath[0] === c.name))}>{c.name}</button>
+                  ))}
+                  <button onClick={() => { setCuisinePath([]); advance(i); }} className={optBtn(show(i, i < reached && cuisinePath.length === 0))}>Any / no preference</button>
                 </div>
               ),
             },
             {
-              id: "prefs", label: "Dietary preferences", title: "Any dietary preferences?", hint: "Tap all that apply, then Next — or just skip.",
+              id: "prefs", label: "Dietary preference", title: "Any dietary preference?", hint: "Tap the one that fits you best.",
               node: (i) => (
-                <div>
-                  <div className="flex flex-wrap gap-1.5">{DIET_PREFS.map((p) => <button key={p} onClick={() => tog(prefs, setPrefs, p)} className={chip(prefs.includes(p))}>{p}</button>)}</div>
-                  <NextLink onClick={() => advance(i)} label={prefs.length ? "Next" : "No restrictions — skip"} />
+                <div className="flex flex-col gap-2">
+                  <button onClick={() => { setPrefs([]); advance(i); }} className={optBtn(show(i, i < reached && prefs.length === 0))}>No preference</button>
+                  {DIET_PREFS.map((p) => <button key={p} onClick={() => { setPrefs([p]); advance(i); }} className={optBtn(show(i, prefs[0] === p))}>{p}</button>)}
                 </div>
               ),
             },
             {
-              id: "allergies", label: "Allergies / avoid", title: "Allergies or foods to avoid?", hint: "We'll keep these out of your plan. Tap None to skip.",
+              id: "allergies", label: "Allergies / avoid", title: "Any allergy or food to avoid?", hint: "Tap one — or None. We'll keep it out of your plan.",
               node: (i) => (
-                <div>
-                  <div className="flex flex-wrap gap-1.5">
-                    <button onClick={() => { setAllergies([]); advance(i); }} className={chip(allergies.length === 0)}>None</button>
-                    {ALLERGENS.map((a) => <button key={a} onClick={() => tog(allergies, setAllergies, a)} className={chip(allergies.includes(a))}>{a}</button>)}
-                    {allergies.filter((a) => !ALLERGENS.includes(a)).map((a) => <button key={a} onClick={() => tog(allergies, setAllergies, a)} className={chip(true)}>{a} ✕</button>)}
-                  </div>
-                  <div className="mt-2.5 flex gap-2">
-                    <input value={otherAllergy} onChange={(e) => setOtherAllergy(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { const v = otherAllergy.trim(); if (v && !allergies.includes(v)) setAllergies([...allergies, v]); setOtherAllergy(""); } }} placeholder="Other — type an allergy or food to avoid" className="min-w-0 flex-1 rounded-xl bg-card px-3 py-2 text-[12px] font-semibold ring-1 ring-border/60 placeholder:text-muted-foreground/50" />
-                    <button onClick={() => { const v = otherAllergy.trim(); if (v && !allergies.includes(v)) setAllergies([...allergies, v]); setOtherAllergy(""); }} className="shrink-0 rounded-xl bg-primary px-3.5 py-2 text-[12px] font-bold text-primary-foreground">Add</button>
-                  </div>
-                  {allergies.length > 0 && <NextLink onClick={() => advance(i)} label="Next" />}
+                <div className="flex flex-col gap-2">
+                  <button onClick={() => { setAllergies([]); advance(i); }} className={optBtn(show(i, i < reached && allergies.length === 0))}>None</button>
+                  {ALLERGENS.map((a) => <button key={a} onClick={() => { setAllergies([a]); advance(i); }} className={optBtn(show(i, allergies[0] === a))}>{a}</button>)}
                 </div>
               ),
             },
             {
-              id: "meals", label: "Meal format", title: "How should we plan your meals?", hint: "We recommend 2–3 main meals, plus 1 mini-meal (snack) only if you need it.",
+              id: "meals", label: "Meal format", title: "How should we plan your meals?", hint: "Tap one — you can fine-tune the details later.",
               node: (i) => (
-                <div>
-                  <div className="flex gap-2">
-                    {([["detailed", "Detailed meal plan"], ["recos", "Just food tips"]] as const).map(([m, label]) => (
-                      <div key={m} className="flex flex-1 items-stretch gap-1">
-                        <button onClick={() => { setMealMode(m); if (m === "recos") advance(i); }} className={`lf-btn min-w-0 flex-1 rounded-2xl py-2.5 text-[11.5px] font-bold ring-1 ${mealMode === m ? "bg-primary/10 text-primary ring-primary" : "bg-card ring-border/60"}`}>{label}</button>
-                        <button onClick={() => setDietModal(m)} aria-label={`See a full ${label} sample`} title="See a full sample" className="flex w-8 shrink-0 items-center justify-center rounded-2xl bg-card text-muted-foreground ring-1 ring-border/60 active:scale-95"><Info size={14} /></button>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="mt-2.5 rounded-2xl bg-sky-50 p-3 ring-1 ring-sky-200 dark:bg-sky-900/30 dark:ring-sky-800">
-                    <p className="mb-1.5 flex items-center justify-between text-[9.5px] font-bold uppercase tracking-wide text-sky-800 dark:text-sky-200"><span>👀 Sample · {mealMode === "detailed" ? "detailed plan" : "food tips"}</span> <button onClick={() => setDietModal(mealMode)} className="rounded-full bg-sky-600 px-2 py-0.5 text-[9px] font-bold normal-case text-white">see full →</button></p>
-                    {mealMode === "detailed" ? (
-                      <div className="space-y-0.5 text-[11px] text-sky-900/85 dark:text-sky-100/85">
-                        <p><b className="text-sky-800 dark:text-sky-200">Breakfast · 8–10am</b> — Vegetable poha + peanuts</p>
-                        <p className="text-[10px] text-sky-700/80 dark:text-sky-300/80">poha 60g · peanuts 15g · 1 bowl veg · ~460 kcal</p>
-                        <p><b className="text-sky-800 dark:text-sky-200">Lunch · 1–3pm</b> — Dal + 2 roti + sabzi + salad</p>
-                        <p className="text-[10px] text-sky-700/80 dark:text-sky-300/80">1 bowl dal · 2 phulka · 1 cup sabzi</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-0.5 text-[11px] text-sky-900/85 dark:text-sky-100/85">
-                        <p><b className="text-emerald-600">Favour:</b> dal, millets, lots of veg, curd; biggest meal at lunch</p>
-                        <p><b className="text-rose-500">Limit:</b> sugar, maida, fried, late-night snacking</p>
-                        <p className="text-[10px] text-sky-700/80 dark:text-sky-300/80">Flexible — no fixed menu, follow it your own way.</p>
-                      </div>
-                    )}
-                  </div>
-                  {mealMode === "detailed" && (
-                    <>
-                      <div className="mt-3 flex gap-6">
-                        <div>
-                          <p className="mb-1.5 px-1 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Main meals</p>
-                          <div className="flex gap-1">{MAIN_MEALS.map((m) => <button key={m} onClick={() => setMeals(m)} className={smChip(meals === m)}>{m}</button>)}</div>
-                        </div>
-                        <div>
-                          <p className="mb-1.5 px-1 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Mini-meals</p>
-                          <div className="flex gap-1">{MINI_MEALS_D.map((m) => <button key={m} onClick={() => setMini(m)} className={smChip(mini === m)}>{m}</button>)}</div>
-                        </div>
-                      </div>
-                      <NextLink onClick={() => advance(i)} label="Next" />
-                    </>
-                  )}
+                <div className="flex flex-col gap-2">
+                  <button onClick={() => { setMealMode("detailed"); advance(i); }} className={optBtn(show(i, mealMode === "detailed"))}><span>Detailed meal plan</span><span className="text-[11px] font-medium text-muted-foreground">day-wise meals</span></button>
+                  <button onClick={() => { setMealMode("recos"); advance(i); }} className={optBtn(show(i, mealMode === "recos"))}><span>Just food tips</span><span className="text-[11px] font-medium text-muted-foreground">flexible, no fixed menu</span></button>
+                  <button onClick={() => setDietModal(mealMode)} className="mt-1 self-start text-[11.5px] font-bold text-primary active:opacity-70">👀 See a sample</button>
                 </div>
               ),
             },
             {
-              id: "fasting", label: "Intermittent fasting", title: "Add intermittent fasting?", hint: "Optional — set an eating window that suits you.",
+              id: "fasting", label: "Intermittent fasting", title: "Add intermittent fasting?", hint: "Tap a window, or No fasting.",
               node: (i) => (
-                <div>
-                  <div className="flex gap-1.5">
-                    <button onClick={() => { setDietIF(true); if (mealMode === "detailed") { const h = maxFastForMeals(meals, mini); setFastHrs(h); setIfWindow(`${h}:${24 - h}`); } }} className={chip(dietIF === true)}>Yes, include IF</button>
-                    <button onClick={() => { setDietIF(false); advance(i); }} className={chip(dietIF === false)}>No, thanks</button>
-                  </div>
-                  {dietIF === true && (() => {
-                    const tier = fastTier(fastHrs);
-                    const lvl = fastLevel(fastHrs);
-                    const maxH = maxFastForMeals(meals, mini);
-                    return (
-                      <div className="mt-3">
-                        <style>{`.if-range{-webkit-appearance:none;appearance:none;width:100%;height:10px;border-radius:9999px;outline:none;background:linear-gradient(to right,#22c55e 0 33.33%,#eab308 33.33% 66.66%,#ef4444 66.66% 100%);}.if-range::-webkit-slider-runnable-track{height:10px;border-radius:9999px;background:transparent;}.if-range::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;margin-top:-4px;width:18px;height:18px;border-radius:9999px;background:#fff;border:2px solid rgba(0,0,0,.28);box-shadow:0 1px 3px rgba(0,0,0,.35);cursor:pointer;}.if-range::-moz-range-track{height:10px;border-radius:9999px;background:transparent;}.if-range::-moz-range-thumb{width:18px;height:18px;border-radius:9999px;background:#fff;border:2px solid rgba(0,0,0,.28);cursor:pointer;}`}</style>
-                        <div className="rounded-xl bg-card/70 p-2.5 ring-1 ring-border/50">
-                          <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">What kicks in as you fast</p>
-                          <div className="mt-1 flex flex-wrap gap-x-2.5 gap-y-0.5 text-[10px]">
-                            {FAST_STAGES.map((s) => <span key={s.h} className={fastHrs >= s.h ? "font-semibold text-foreground" : "text-muted-foreground/50"}>~{s.h}h {s.t}{fastHrs >= s.h ? " ✓" : ""}</span>)}
-                          </div>
-                        </div>
-                        <p className="mt-1.5 px-0.5 text-[10px] text-muted-foreground">Keep a ~5-hour gap between main meals inside your window.</p>
-                        <p className="mt-3 px-0.5 text-[10px] text-muted-foreground">At <b className="text-foreground">{fastHrs}h fast</b> you can fit: <b className="text-foreground">{tier.meals}</b></p>
-                        <input type="range" min={12} max={24} value={fastHrs}
-                          onChange={(e) => { const h = Number(e.target.value); setFastHrs(h); setIfWindow(`${h}:${24 - h}`); if (mealMode === "detailed") { const t = fastTier(h); if (t.maxMain < meals || t.maxMini < mini) setIfConflict({ hrs: h, tier: t }); } }}
-                          className="if-range mt-1" />
-                        <p className="mt-2 px-0.5 text-[11.5px] font-semibold text-foreground"><span className="mr-1 inline-block h-2 w-2 rounded-full align-middle" style={{ background: lvl.color }} />{fastHrs}h fast · {24 - fastHrs}h eating window · {lvl.name}</p>
-                        {mealMode === "detailed" && <p className="px-0.5 text-[10px] text-muted-foreground">Your {meals} main{mini ? ` + ${mini} mini` : ""} → comfortable up to ~{maxH}h.</p>}
-                        <NextLink onClick={() => advance(i)} label="Done — build my meal plan" />
-                      </div>
-                    );
-                  })()}
+                <div className="flex flex-col gap-2">
+                  <button onClick={() => { setDietIF(false); advance(i); }} className={optBtn(show(i, i < reached && dietIF === false))}>No fasting</button>
+                  {([["12:12", 12], ["14:10", 14], ["16:8", 16], ["18:6", 18]] as [string, number][]).map(([w, h]) => (
+                    <button key={w} onClick={() => { setDietIF(true); setFastHrs(h); setIfWindow(w); advance(i); }} className={optBtn(show(i, dietIF === true && ifWindow === w))}><span>{w}</span><span className="text-[11px] font-medium text-muted-foreground">{h}h fast · {24 - h}h eating</span></button>
+                  ))}
                 </div>
               ),
             },
           ];
           const lastI = QS.length - 1;
+          const reached = Math.min(setupQ, lastI);
           const advance = (i: number) => {
+            setSetupTouched(false); // next question starts with nothing pre-selected
             if (i < lastI) { setSetupQ((r) => Math.max(r, i + 1)); setTimeout(() => dietQRefs.current[i + 1]?.scrollIntoView({ behavior: "smooth", block: "start" }), 70); }
             else next(); // last question → leave the meal-setup step
           };
-          const reached = Math.min(setupQ, lastI);
+          const show = (i: number, cond: boolean) => (i < reached || setupTouched) && cond;
           return (
             <div>
               <style>{`@keyframes qIn{0%{opacity:0;transform:translateY(20px)}100%{opacity:1;transform:translateY(0)}}`}</style>
