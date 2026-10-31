@@ -339,6 +339,103 @@ function FoodScreen() {
   );
 }
 
+/* ================= CALORIE SENSE (green → premium navy; terracotta kept) ================= */
+const PLATES_IN = [["1 roti / phulka", "~100"], ["1 bowl rice", "~200"], ["1 bowl dal", "~120"], ["1 cup sabzi", "~150"], ["1 glass milk", "~120"], ["1 tsp ghee / oil", "~45"], ["1 tsp sugar", "~20"], ["1 fruit bowl", "~90"]];
+const MOVE_OUT = [["5,000 steps", "~200"], ["20 min yoga", "~90"], ["20 min workout", "~180"], ["20 min cycling", "~160"], ["20 min swim", "~200"], ["30 min housework", "~80"]];
+function CalorieScreen() {
+  return (
+    <div style={SANS}>
+      {/* header */}
+      <header className="fixed inset-x-0 top-0 z-50 border-b border-black/[0.04] bg-[#f7fafb]/80 pt-[env(safe-area-inset-top)] backdrop-blur-xl">
+        <div className="flex h-16 items-center justify-between px-6">
+          <button aria-label="Back" className="flex h-11 w-11 items-center justify-center rounded-full text-[#424845]"><MS name="arrow_back_ios_new" size={22} /></button>
+          <h1 className="truncate px-2 text-center text-[24px] font-medium tracking-tight text-[#181c1d]" style={SERIF}>Calorie Sense</h1>
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#33496E]"><MS name="person" size={18} className="text-white" /></div>
+        </div>
+      </header>
+
+      <main className="flex flex-col gap-6 px-6 pb-32 pt-[4.75rem]">
+        {/* stepper */}
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center justify-between text-[12px] uppercase tracking-wider text-[#424845]"><span>Step 3 of 5</span><span className="font-semibold text-[#33496E]">Metabolic Balance</span></div>
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-[#ebeeef]"><div className="h-full rounded-full bg-[#33496E]" style={{ width: "60%" }} /></div>
+        </div>
+
+        {/* intro */}
+        <div className="flex flex-col gap-1.5">
+          <p className="text-[28px] font-semibold tracking-tight text-[#181c1d]" style={SERIF}>Your Calorie Blueprint</p>
+          <p className="text-[16px] leading-relaxed text-[#424845]">Now let's talk calories — what your body burns at stillness, and the mindful number to aim for.</p>
+        </div>
+
+        {/* hero BMR card */}
+        <div className="relative flex flex-col items-center overflow-hidden rounded-xl bg-[#f1f4f5] p-6 text-center shadow-sm">
+          <div className="pointer-events-none absolute -right-12 -top-12 h-36 w-36 rounded-full bg-[#ffdbcc]/40 blur-2xl" />
+          <div className="pointer-events-none absolute -bottom-10 -left-10 h-32 w-32 rounded-full bg-[#DCE6F2]/70 blur-2xl" />
+          <div className="relative mb-3 inline-flex items-center gap-1.5 rounded-full bg-[#e0e3e4] px-3 py-1 text-[12px] font-semibold uppercase tracking-wider text-[#8d4e2d]"><MS name="local_fire_department" size={16} fill className="text-[#8d4e2d]" /> Your Basal Metabolic Rate</div>
+          <div className="relative my-1 flex items-baseline gap-1"><span className="text-[32px] font-semibold tracking-tight text-[#181c1d]" style={SERIF}>1,628</span><span className="text-[14px] font-medium text-[#424845]">kcal</span></div>
+          <p className="relative max-w-[220px] text-[12px] leading-relaxed text-[#424845]">The pure vital energy your body burns every single day just staying alive.</p>
+        </div>
+
+        {/* target banner */}
+        <div className="flex items-center justify-between gap-3 rounded-xl bg-[#33496E] p-4 text-white shadow-md">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/10"><MS name="spa" size={22} fill className="text-[#DCE6F2]" /></div>
+            <div className="flex min-w-0 flex-col"><span className="text-[14px] font-semibold leading-snug">Gentle sustained loss</span><span className="truncate text-[12px] text-[#DCE6F2]">~0.4 kg/week target</span></div>
+          </div>
+          <div className="shrink-0 text-right"><span className="text-[24px] font-medium tracking-tight" style={SERIF}>1,425</span><span className="-mt-1 block text-[12px] font-medium text-[#DCE6F2]">kcal/day</span></div>
+        </div>
+
+        {/* breakdown */}
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center justify-between"><span className="text-[14px] font-semibold uppercase tracking-wider text-[#181c1d]">How We Got Here</span><span className="text-[12px] text-[#424845]">Daily Breakdown</span></div>
+          <div className="flex flex-col gap-2">
+            {[
+              { icon: "bedtime", tint: "bg-[#e6e9ea] text-[#424845]", t: "At rest (BMR)", s: "Baseline organs & breath", v: "1,628", vc: "text-[#181c1d]" },
+              { icon: "self_improvement", tint: "bg-[#e6e9ea] text-[#33496E]", t: "+ Daily movement", s: "Sedentary desk + 20m yoga", v: "+250", vc: "text-[#33496E]" },
+              { icon: "restaurant", tint: "bg-[#e0e3e4] text-[#181c1d]", t: "= Maintain weight", s: "Current equilibrium", v: "1,878", vc: "text-[#181c1d] font-semibold", low: true },
+            ].map((r) => (
+              <div key={r.t} className={`flex items-center justify-between rounded-lg p-3.5 shadow-sm ${r.low ? "bg-[#f1f4f5]" : "bg-white"}`}>
+                <div className="flex items-center gap-3"><div className={`flex h-9 w-9 items-center justify-center rounded-full ${r.tint}`}><MS name={r.icon} size={18} /></div><div className="flex flex-col"><span className="text-[14px] text-[#181c1d]">{r.t}</span><span className="text-[12px] text-[#424845]">{r.s}</span></div></div>
+                <div className="text-right"><span className={`text-[14px] ${r.vc}`}>{r.v}</span><span className="-mt-1 block text-[12px] text-[#424845]">kcal</span></div>
+              </div>
+            ))}
+            {/* deficit (terracotta) */}
+            <div className="flex items-center justify-between rounded-lg bg-[#ffdbcc]/30 p-3.5">
+              <div className="flex items-center gap-3"><div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#fdaa83]/40 text-[#8d4e2d]"><MS name="trending_down" size={18} /></div><div className="flex flex-col"><span className="text-[14px] text-[#8d4e2d]">− Mindful deficit</span><span className="text-[12px] leading-tight text-[#703718]">Safe deficit, no metabolic crash</span></div></div>
+              <div className="text-right"><span className="text-[14px] font-semibold text-[#8d4e2d]">−453</span><span className="-mt-1 block text-[12px] text-[#703718]">kcal</span></div>
+            </div>
+          </div>
+        </div>
+
+        {/* quick calorie sense */}
+        <div className="flex flex-col gap-3 pt-2">
+          <div className="flex flex-col gap-1"><span className="text-[14px] font-semibold uppercase tracking-wider text-[#181c1d]">A Quick Calorie Sense</span><p className="text-[12px] text-[#424845]">Simple benchmarks so portion tracking feels natural and peaceful.</p></div>
+          <div className="flex flex-col gap-4 rounded-xl bg-white p-4 shadow-sm">
+            <div className="flex flex-col gap-2.5">
+              <div className="flex items-center gap-2 pb-1"><MS name="dinner_dining" size={18} className="text-[#8d4e2d]" /><span className="text-[11px] font-semibold uppercase tracking-wider text-[#181c1d]">Daily Plates (In)</span></div>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2">{PLATES_IN.map(([k, v]) => <div key={k} className="flex items-center justify-between py-0.5 text-[12px]"><span className="truncate text-[#424845]">{k}</span><span className="shrink-0 pl-1 font-semibold text-[#33496E]">{v}</span></div>)}</div>
+            </div>
+            <div className="h-px w-full bg-[#ebeeef]" />
+            <div className="flex flex-col gap-2.5">
+              <div className="flex items-center gap-2 pb-1"><MS name="directions_run" size={18} className="text-[#33496E]" /><span className="text-[11px] font-semibold uppercase tracking-wider text-[#181c1d]">Movement Spent (Out)</span></div>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2">{MOVE_OUT.map(([k, v]) => <div key={k} className="flex items-center justify-between py-0.5 text-[12px]"><span className="truncate text-[#424845]">{k}</span><span className="shrink-0 pl-1 font-semibold text-[#8d4e2d]">{v}</span></div>)}</div>
+            </div>
+          </div>
+          <div className="flex flex-col gap-2 rounded-xl bg-[#DCE6F2]/40 p-3.5">
+            <div className="flex items-center gap-2"><MS name="check_circle" size={18} fill className="text-[#33496E]" /><span className="text-[14px] font-semibold text-[#33496E]">Almost zero calories (&lt; 5 kcal)</span></div>
+            <p className="pl-6 text-[12px] leading-relaxed text-[#424845]">Fresh water • Green / black tea • Black coffee (no sugar) • Ginger water • Lemon slice infusion</p>
+          </div>
+        </div>
+      </main>
+
+      {/* sticky CTA */}
+      <div className="fixed inset-x-0 bottom-0 z-40 bg-gradient-to-t from-[#f7fafb] via-[#f7fafb]/95 to-transparent px-6 pb-6 pt-3">
+        <button className="flex h-14 w-full items-center justify-center gap-2 rounded-full bg-[#33496E] text-[14px] font-semibold text-white shadow-lg transition-all active:scale-[0.98]"><span>Continue to Meal Architecture</span><MS name="arrow_forward" size={20} /></button>
+      </div>
+    </div>
+  );
+}
+
 function Preview() {
   const { screen } = Route.useParams();
   const body =
@@ -346,6 +443,7 @@ function Preview() {
     screen === "activity" ? <ActivityScreen /> :
     screen === "sleep" ? <SleepScreen /> :
     screen === "food" ? <FoodScreen /> :
-    <div className="p-8 text-center text-sm" style={SANS}>Unknown screen. Try /stitch-preview/about · /activity · /sleep · /food</div>;
+    screen === "calorie" ? <CalorieScreen /> :
+    <div className="p-8 text-center text-sm" style={SANS}>Unknown screen. Try /stitch-preview/about · /activity · /sleep · /food · /calorie</div>;
   return <div className="min-h-svh bg-[#f7fafb] text-[#181c1d]" style={SANS}>{body}</div>;
 }
