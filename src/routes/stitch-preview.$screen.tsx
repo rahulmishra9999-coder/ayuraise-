@@ -436,6 +436,178 @@ function CalorieScreen() {
   );
 }
 
+/* ===== premium graphite/platinum/stone kit (Sattva-inspired, no green) ===== */
+const INK = "#181c1d", MUT = "#424845", CARBON = "#3A3E45", PLAT = "#E6E9ED", STONE = "#7E7268", STONE_L = "#ECE7E1";
+const GRAD = "linear-gradient(135deg,#4A4F57 0%,#2C2F35 100%)";
+function Ring({ pct, size = 184, stroke = 12, track = PLAT, fill = CARBON, children }: { pct: number; size?: number; stroke?: number; track?: string; fill?: string; children?: React.ReactNode }) {
+  const r = (size - stroke) / 2, c = 2 * Math.PI * r;
+  return (
+    <div className="relative" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="-rotate-90">
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={track} strokeWidth={stroke} />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={fill} strokeWidth={stroke} strokeDasharray={c} strokeDashoffset={c * (1 - pct)} strokeLinecap="round" />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center text-center">{children}</div>
+    </div>
+  );
+}
+function PremHeader({ title }: { title: string }) {
+  return (
+    <header className="fixed inset-x-0 top-0 z-50 border-b border-black/[0.04] bg-[#f7fafb]/80 pt-[env(safe-area-inset-top)] backdrop-blur-xl">
+      <div className="flex h-16 items-center justify-between px-6">
+        <button aria-label="Back" className="flex h-11 w-11 items-center justify-center rounded-full text-[#424845]"><MS name="arrow_back_ios_new" size={22} /></button>
+        <h1 className="truncate px-2 text-center text-[20px] font-medium tracking-tight text-[#181c1d]" style={SERIF}>{title}</h1>
+        <div className="flex h-8 w-8 items-center justify-center rounded-full" style={{ background: GRAD }}><MS name="person" size={18} className="text-white" /></div>
+      </div>
+    </header>
+  );
+}
+function Stepper({ step, total, label, pct }: { step: number; total: number; label: string; pct: number }) {
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center justify-between text-[11px] uppercase tracking-wider text-[#424845]"><span>Step {step} of {total}</span><span className="font-semibold" style={{ color: STONE }}>{label}</span></div>
+      <div className="h-1.5 w-full overflow-hidden rounded-full bg-[#ebeeef]"><div className="h-full rounded-full" style={{ width: `${pct}%`, background: CARBON }} /></div>
+    </div>
+  );
+}
+function PremCTA({ label }: { label: string }) {
+  return (
+    <div className="fixed inset-x-0 bottom-0 z-40 bg-gradient-to-t from-[#f7fafb] via-[#f7fafb]/95 to-transparent px-6 pb-6 pt-4">
+      <button className="flex h-14 w-full items-center justify-center gap-2 rounded-full text-[14px] font-semibold text-white shadow-[0_12px_30px_-10px_rgba(44,47,53,0.5)] transition-all active:scale-[0.98]" style={{ background: GRAD }}><span>{label}</span><MS name="arrow_forward" size={20} /></button>
+    </div>
+  );
+}
+
+/* ---- BMR ---- */
+function BmrScreen() {
+  return (
+    <div style={SANS}>
+      <PremHeader title="Metabolism" />
+      <main className="flex flex-col gap-7 px-6 pb-32 pt-[4.75rem]">
+        <Stepper step={2} total={5} label="Metabolic Baseline" pct={40} />
+        <div className="flex flex-col gap-1.5">
+          <p className="text-[28px] font-semibold leading-tight tracking-tight text-[#181c1d]" style={SERIF}>Your Resting Burn</p>
+          <p className="text-[16px] leading-relaxed text-[#424845]">The quiet energy your body spends each day just to keep you alive — before a single step.</p>
+        </div>
+        {/* hero ring on gradient */}
+        <div className="relative overflow-hidden rounded-[28px] p-8" style={{ background: GRAD }}>
+          <div className="pointer-events-none absolute -right-16 -top-16 h-44 w-44 rounded-full" style={{ background: "rgba(255,255,255,0.06)", filter: "blur(30px)" }} />
+          <div className="relative flex flex-col items-center">
+            <Ring pct={1} track="rgba(255,255,255,0.14)" fill="#E6E9ED">
+              <span className="text-[11px] uppercase tracking-widest text-white/70">BMR</span>
+              <span className="text-[40px] font-semibold tracking-tight text-white" style={SERIF}>1,628</span>
+              <span className="text-[12px] font-medium text-white/70">kcal / day</span>
+            </Ring>
+            <div className="mt-5 inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-white"><MS name="local_fire_department" size={15} fill /> At complete rest</div>
+          </div>
+        </div>
+        {/* where it goes */}
+        <div className="flex flex-col gap-3">
+          <span className="text-[14px] font-semibold uppercase tracking-wider text-[#181c1d]">Where it goes</span>
+          <div className="flex flex-col gap-2.5">
+            {[["psychology", "Brain & nerves", "~20%", CARBON], ["cardiology", "Heart & circulation", "~15%", STONE], ["respiratory_rate", "Breathing & lungs", "~10%", CARBON], ["body_system", "Organs, cells & repair", "~55%", STONE]].map(([ic, t, p, col]) => (
+              <div key={t} className="flex items-center justify-between rounded-2xl bg-white p-3.5 shadow-sm">
+                <div className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-full" style={{ background: PLAT, color: col }}><MS name={ic} size={20} /></div><span className="text-[14px] text-[#181c1d]">{t}</span></div>
+                <span className="text-[14px] font-semibold" style={{ color: col }}>{p}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        <p className="rounded-2xl border border-[#E6E9ED] bg-[#f1f4f5] p-4 text-[13px] leading-relaxed text-[#424845]"><span className="font-semibold text-[#181c1d]">Good to know —</span> a higher muscle mass gently raises this number. Movement and strength compound it over time.</p>
+      </main>
+      <PremCTA label="See my calorie goal" />
+    </div>
+  );
+}
+
+/* ---- CALORIE GOAL ---- */
+function CalGoalScreen() {
+  return (
+    <div style={SANS}>
+      <PremHeader title="Calorie Goal" />
+      <main className="flex flex-col gap-6 px-6 pb-32 pt-[4.75rem]">
+        <Stepper step={3} total={5} label="Your Target" pct={60} />
+        {/* hero gradient banner */}
+        <div className="relative overflow-hidden rounded-[28px] p-7 text-white" style={{ background: GRAD }}>
+          <div className="pointer-events-none absolute -left-10 -bottom-10 h-40 w-40 rounded-full" style={{ background: "rgba(255,255,255,0.05)", filter: "blur(28px)" }} />
+          <div className="relative flex items-center justify-between gap-4">
+            <div className="flex flex-col">
+              <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider"><MS name="spa" size={14} fill className="text-white/90" /> Gentle sustained loss</span>
+              <span className="mt-3 text-[13px] text-white/70">Daily target</span>
+              <div className="flex items-baseline gap-1"><span className="text-[44px] font-semibold leading-none tracking-tight" style={SERIF}>1,425</span><span className="text-[14px] font-medium text-white/70">kcal</span></div>
+              <span className="mt-1 text-[12px] text-white/70">≈ 0.4 kg / week</span>
+            </div>
+            <Ring pct={0.76} size={96} stroke={9} track="rgba(255,255,255,0.14)" fill="#E6E9ED"><span className="text-[18px] font-semibold text-white" style={SERIF}>−453</span><span className="text-[9px] uppercase tracking-wider text-white/70">deficit</span></Ring>
+          </div>
+        </div>
+        {/* breakdown */}
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center justify-between"><span className="text-[14px] font-semibold uppercase tracking-wider text-[#181c1d]">How we got here</span><span className="text-[12px] text-[#424845]">Daily</span></div>
+          <div className="flex flex-col gap-2">
+            {[["bedtime", "At rest (BMR)", "1,628", INK, "bg-[#e6e9ea]"], ["directions_walk", "+ Daily movement", "+250", CARBON, "bg-[#e6e9ea]"], ["restaurant", "= Maintain weight", "1,878", INK, "bg-[#e0e3e4]"]].map(([ic, t, v, col, bg]) => (
+              <div key={t} className={`flex items-center justify-between rounded-2xl p-3.5 shadow-sm ${t.startsWith("=") ? "bg-[#f1f4f5]" : "bg-white"}`}>
+                <div className="flex items-center gap-3"><div className={`flex h-9 w-9 items-center justify-center rounded-full ${bg}`} style={{ color: col }}><MS name={ic} size={18} /></div><span className="text-[14px] text-[#181c1d]">{t}</span></div>
+                <div className="text-right"><span className="text-[14px] font-semibold" style={{ color: col }}>{v}</span><span className="-mt-1 block text-[11px] text-[#424845]">kcal</span></div>
+              </div>
+            ))}
+            <div className="flex items-center justify-between rounded-2xl p-3.5" style={{ background: STONE_L }}>
+              <div className="flex items-center gap-3"><div className="flex h-9 w-9 items-center justify-center rounded-full" style={{ background: "#D8CFC6", color: STONE }}><MS name="trending_down" size={18} /></div><div className="flex flex-col"><span className="text-[14px]" style={{ color: STONE }}>− Mindful deficit</span><span className="text-[12px] leading-tight" style={{ color: "#5C5349" }}>Safe — no metabolic crash</span></div></div>
+              <div className="text-right"><span className="text-[14px] font-semibold" style={{ color: STONE }}>−453</span><span className="-mt-1 block text-[11px]" style={{ color: "#5C5349" }}>kcal</span></div>
+            </div>
+          </div>
+        </div>
+        <p className="rounded-2xl border border-[#E6E9ED] bg-[#f1f4f5] p-4 text-[13px] leading-relaxed text-[#424845]"><span className="font-semibold text-[#181c1d]">Mindful, not extreme.</span> This modest gap keeps your energy and metabolism steady while the weight comes off gently.</p>
+      </main>
+      <PremCTA label="Build my meal plan" />
+    </div>
+  );
+}
+
+/* ---- SLEEP ---- */
+function RestScreen() {
+  return (
+    <div style={SANS}>
+      <PremHeader title="Sleep" />
+      <main className="flex flex-col gap-6 px-6 pb-32 pt-[4.75rem]">
+        <Stepper step={4} total={5} label="Nightly Recovery" pct={80} />
+        <div className="flex flex-col gap-1.5">
+          <p className="text-[28px] font-semibold leading-tight tracking-tight text-[#181c1d]" style={SERIF}>Your Rest Rhythm</p>
+          <p className="text-[16px] leading-relaxed text-[#424845]">Sleep is when the body repairs. Let's set a rhythm that restores you.</p>
+        </div>
+        {/* hero ring */}
+        <div className="relative overflow-hidden rounded-[28px] p-8" style={{ background: GRAD }}>
+          <div className="pointer-events-none absolute -right-14 -bottom-14 h-44 w-44 rounded-full" style={{ background: "rgba(255,255,255,0.06)", filter: "blur(30px)" }} />
+          <div className="relative flex flex-col items-center">
+            <Ring pct={0.78} track="rgba(255,255,255,0.14)" fill="#E6E9ED">
+              <MS name="bedtime" size={20} className="text-white/70" />
+              <span className="mt-1 text-[40px] font-semibold tracking-tight text-white" style={SERIF}>7.5</span>
+              <span className="text-[12px] font-medium text-white/70">hours / night</span>
+            </Ring>
+            <div className="mt-5 inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-white"><MS name="check_circle" size={14} fill /> Restorative range</div>
+          </div>
+        </div>
+        {/* bedtime / wake cards */}
+        <div className="grid grid-cols-2 gap-3">
+          {[["dark_mode", "Bedtime", "10:30 PM"], ["wb_twilight", "Wake", "6:00 AM"]].map(([ic, t, v]) => (
+            <div key={t} className="flex flex-col gap-2 rounded-2xl bg-white p-4 shadow-sm">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full" style={{ background: PLAT, color: CARBON }}><MS name={ic} size={18} /></div>
+              <span className="text-[11px] uppercase tracking-wider text-[#424845]">{t}</span>
+              <span className="text-[20px] font-semibold text-[#181c1d]" style={SERIF}>{v}</span>
+            </div>
+          ))}
+        </div>
+        {/* quality */}
+        <div className="flex items-center justify-between rounded-2xl bg-white p-4 shadow-sm">
+          <div className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-full" style={{ background: STONE_L, color: STONE }}><MS name="self_improvement" size={20} /></div><div className="flex flex-col"><span className="text-[14px] font-semibold text-[#181c1d]">Waking feeling</span><span className="text-[12px] text-[#424845]">How you rise most days</span></div></div>
+          <span className="rounded-full px-3 py-1 text-[12px] font-semibold" style={{ background: PLAT, color: CARBON }}>Balanced</span>
+        </div>
+        <p className="rounded-2xl border border-[#E6E9ED] bg-[#f1f4f5] p-4 text-[13px] leading-relaxed text-[#424845]"><span className="font-semibold text-[#181c1d]">Tonight's nudge —</span> wind down by 10 PM. The deepest cellular repair happens in the first sleep cycles.</p>
+      </main>
+      <PremCTA label="Continue" />
+    </div>
+  );
+}
+
 function Preview() {
   const { screen } = Route.useParams();
   const body =
@@ -444,6 +616,9 @@ function Preview() {
     screen === "sleep" ? <SleepScreen /> :
     screen === "food" ? <FoodScreen /> :
     screen === "calorie" ? <CalorieScreen /> :
-    <div className="p-8 text-center text-sm" style={SANS}>Unknown screen. Try /stitch-preview/about · /activity · /sleep · /food · /calorie</div>;
+    screen === "bmr" ? <BmrScreen /> :
+    screen === "calgoal" ? <CalGoalScreen /> :
+    screen === "rest" ? <RestScreen /> :
+    <div className="p-8 text-center text-sm" style={SANS}>Unknown screen. Try /stitch-preview/bmr · /calgoal · /rest · /calorie · /about · /activity · /sleep · /food</div>;
   return <div className="min-h-svh bg-[#f7fafb] text-[#181c1d]" style={SANS}>{body}</div>;
 }
