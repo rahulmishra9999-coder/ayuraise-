@@ -608,6 +608,143 @@ function RestScreen() {
   );
 }
 
+/* ===== premium Create-profile flow (graphite + terracotta/stone, image-ready heroes) ===== */
+function Hero({ step, pct, title, sub }: { step: string; pct: number; title: string; sub?: string }) {
+  return (
+    <div className="relative overflow-hidden rounded-b-[32px] px-6 pb-7 pt-[calc(env(safe-area-inset-top)+1.75rem)]" style={{ background: GRAD }}>
+      {/* image slot — a real photo drops in here behind the overlay; gradient shows otherwise */}
+      <div className="pointer-events-none absolute -right-16 -top-10 h-48 w-48 rounded-full" style={{ background: "rgba(255,255,255,0.06)", filter: "blur(34px)" }} />
+      <div className="pointer-events-none absolute -left-12 bottom-0 h-40 w-40 rounded-full" style={{ background: "rgba(126,114,104,0.18)", filter: "blur(30px)" }} />
+      <div className="relative flex items-center justify-between text-white">
+        <button aria-label="Back" className="-ml-2 flex h-10 w-10 items-center justify-center rounded-full text-white/90"><MS name="arrow_back_ios_new" size={20} /></button>
+        <span className="text-[11px] font-semibold uppercase tracking-widest text-white/70">{step}</span>
+        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 ring-1 ring-white/20"><MS name="person" size={18} className="text-white" /></div>
+      </div>
+      <div className="relative mt-5">
+        <div className="h-1 w-full overflow-hidden rounded-full bg-white/15"><div className="h-full rounded-full bg-white/80 transition-all" style={{ width: `${pct}%` }} /></div>
+        <h1 className="mt-5 text-[30px] font-semibold leading-tight tracking-tight text-white" style={SERIF}>{title}</h1>
+        {sub && <p className="mt-1 text-[14px] leading-snug text-white/70">{sub}</p>}
+      </div>
+    </div>
+  );
+}
+function Lbl({ children }: { children: React.ReactNode }) { return <span className="text-[11px] font-semibold uppercase tracking-wider text-[#424845]">{children}</span>; }
+function PPill({ opts, def, cols = 4 }: { opts: string[]; def?: string; cols?: number }) {
+  const [v, setV] = useState(def ?? "");
+  return (
+    <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0,1fr))` }}>
+      {opts.map((o) => { const on = v === o; return <button key={o} onClick={() => setV(o)} className="rounded-full px-2 py-2 text-center text-[12.5px] font-semibold transition-all active:scale-95" style={on ? { background: CARBON, color: "#fff" } : { background: "#f1f4f5", color: INK }}>{o}</button>; })}
+    </div>
+  );
+}
+function WCard({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return <div className={`rounded-2xl bg-white p-4 shadow-[0_8px_24px_-16px_rgba(24,28,29,0.25)] ${className}`}>{children}</div>;
+}
+
+function CpAbout() {
+  const [gender, setGender] = useState("Female");
+  const [hU, setHU] = useState("cm"); const [wU, setWU] = useState("kg");
+  return (
+    <div style={SANS}>
+      <Hero step="Step 1 of 4" pct={25} title="About You" sub="A few essentials to personalise everything." />
+      <main className="flex flex-col gap-4 px-6 pb-32 pt-6">
+        <WCard>
+          <Lbl>Name</Lbl>
+          <div className="mt-2 flex items-center gap-3"><div className="flex h-9 w-9 items-center justify-center rounded-full" style={{ background: PLAT, color: CARBON }}><MS name="badge" size={18} /></div><input defaultValue="Elena" className="w-full bg-transparent text-[18px] text-[#181c1d] focus:outline-none" /></div>
+        </WCard>
+        <WCard>
+          <Lbl>Gender</Lbl>
+          <div className="mt-3 grid grid-cols-3 gap-2">{["Male", "Female", "Other"].map((g) => { const on = gender === g; return <button key={g} onClick={() => setGender(g)} className="flex items-center justify-center gap-1.5 rounded-full px-3 py-2.5 text-[14px] font-semibold transition-all" style={on ? { background: CARBON, color: "#fff" } : { background: "#f1f4f5", color: MUT }}>{on && <MS name="check" size={16} />}{g}</button>; })}</div>
+        </WCard>
+        <WCard>
+          <Lbl>Age</Lbl>
+          <div className="mt-1.5 flex items-baseline gap-2"><input type="number" defaultValue={32} className="w-20 bg-transparent text-[26px] font-semibold text-[#181c1d] focus:outline-none" style={SERIF} /><span className="text-[15px] text-[#424845]">years</span></div>
+        </WCard>
+        <div className="grid grid-cols-2 gap-3">
+          {[["Height", "178", "cm", hU, setHU, ["cm", "ft"], "height"], ["Weight", "68", "kg", wU, setWU, ["kg", "lb"], "monitor_weight"]].map(([lab, val, , u, setU, units, ic]: any) => (
+            <WCard key={lab}>
+              <div className="flex items-center justify-between"><Lbl>{lab}</Lbl><div className="flex rounded-full bg-[#f1f4f5] p-0.5">{units.map((x: string) => <button key={x} onClick={() => setU(x)} className="rounded-full px-2 py-0.5 text-[12px] transition-all" style={u === x ? { background: "#fff", color: CARBON, fontWeight: 600 } : { color: MUT }}>{x}</button>)}</div></div>
+              <div className="mt-2 flex items-baseline gap-1.5"><span className="text-[24px] font-semibold text-[#181c1d]" style={SERIF}>{val}</span><span className="text-[14px] text-[#424845]">{u}</span></div>
+              <div className="mt-2 flex items-center gap-1 text-[12px]" style={{ color: STONE }}><MS name={ic} size={13} />{lab === "Height" ? "5 ft 10 in" : "150 lbs"}</div>
+            </WCard>
+          ))}
+        </div>
+      </main>
+      <PremCTA label="Continue" />
+    </div>
+  );
+}
+
+const CP_ACT = [
+  { icon: "chair", label: "Sedentary", cal: "~50–150 cal/day", desc: "Mostly sitting — desk, driving, screens." },
+  { icon: "directions_walk", label: "Lightly active", cal: "~150–300 cal/day", desc: "Light chores + walking; 1–2 workouts a week." },
+  { icon: "fitness_center", label: "Active", cal: "~350–500 cal/day", desc: "Workouts most days, or on your feet." },
+  { icon: "bolt", label: "Very active", cal: "~600–900 cal/day", desc: "Hard physical work or daily training." },
+];
+function CpActivity() {
+  const [sel, setSel] = useState("Lightly active");
+  return (
+    <div style={SANS}>
+      <Hero step="Step 2 of 4" pct={50} title="Activity Level" sub="Choose what best matches your typical routine." />
+      <main className="flex flex-col gap-3.5 px-6 pb-32 pt-6">
+        {CP_ACT.map((a) => { const on = sel === a.label; return (
+          <button key={a.label} onClick={() => setSel(a.label)} className="flex flex-col rounded-2xl p-4 text-left transition-all active:scale-[0.99]" style={on ? { background: "#fff", boxShadow: "0 12px 30px -14px rgba(58,62,69,0.5)", border: `1.5px solid ${CARBON}` } : { background: "#fff", boxShadow: "0 8px 24px -18px rgba(24,28,29,0.3)", border: "1px solid #E6E9ED" }}>
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex min-w-0 items-center gap-3"><div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full" style={on ? { background: CARBON, color: "#fff" } : { background: PLAT, color: STONE }}><MS name={a.icon} size={22} /></div><div className="flex min-w-0 flex-col"><span className="text-[15px] font-semibold text-[#181c1d]">{a.label}</span><span className="mt-0.5 text-[11px] font-medium" style={{ color: on ? CARBON : STONE }}>{a.cal}</span></div></div>
+              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full" style={on ? { background: CARBON, color: "#fff" } : { background: "#ebeeef", color: "transparent" }}><MS name="check" size={16} fill={on} /></div>
+            </div>
+            <p className="mt-2 pl-[56px] text-[12px] leading-[16px] text-[#424845]">{a.desc}</p>
+          </button>
+        ); })}
+      </main>
+      <PremCTA label="Continue" />
+    </div>
+  );
+}
+
+function CpSleep() {
+  return (
+    <div style={SANS}>
+      <Hero step="Step 3 of 4" pct={75} title="Sleep" sub="Let's calibrate your nightly recovery." />
+      <main className="flex flex-col gap-3 px-6 pb-32 pt-6">
+        <WCard>
+          <div className="flex items-center justify-between"><div className="flex items-center gap-1.5" style={{ color: STONE }}><MS name="bedtime" size={16} /><Lbl>Bedtime</Lbl></div><span className="text-[11px] text-[#424845]">Usual window</span></div>
+          <div className="relative mt-2"><div className="flex h-11 items-center justify-between rounded-xl bg-[#f1f4f5] px-3.5 text-[14px] font-medium text-[#181c1d]">10:30 PM – 11:00 PM<MS name="unfold_more" size={18} className="text-[#424845]" /></div></div>
+        </WCard>
+        <WCard>
+          <div className="flex items-center justify-between"><div className="flex items-center gap-1.5" style={{ color: STONE }}><MS name="schedule" size={16} /><Lbl>Sleep Duration</Lbl></div><span className="rounded-full px-2.5 py-0.5 text-[13px] font-semibold" style={{ background: PLAT, color: CARBON }}>7.5 hrs</span></div>
+          <div className="mt-3 flex flex-col gap-1.5"><div className="relative h-1.5 w-full rounded-full bg-[#ebeeef]"><div className="absolute inset-y-0 left-0 rounded-full" style={{ width: "62%", background: CARBON }} /><div className="absolute top-1/2 h-4 w-4 -translate-y-1/2 rounded-full bg-white shadow ring-2" style={{ left: "60%", borderColor: CARBON, boxShadow: `0 0 0 2px ${CARBON}` }} /></div><div className="flex justify-between px-1 text-[11px] text-[#424845]"><span>4h</span><span>6h</span><span>8h</span><span>10h</span></div></div>
+        </WCard>
+        <WCard><div className="mb-2 flex items-center gap-1.5" style={{ color: STONE }}><MS name="timelapse" size={16} /><Lbl>Time to Fall Asleep</Lbl></div><PPill cols={2} opts={["< 10 min", "10–20 min", "20–40 min", "40+ min"]} def="10–20 min" /></WCard>
+        <WCard><div className="mb-2 flex items-center gap-1.5" style={{ color: STONE }}><MS name="wb_twilight" size={16} /><Lbl>Daytime Nap</Lbl></div><PPill cols={3} opts={["No", "Sometimes", "Daily"]} def="Sometimes" /></WCard>
+        <WCard><div className="mb-2 flex items-center gap-1.5" style={{ color: STONE }}><MS name="wb_sunny" size={16} /><Lbl>Waking Feeling</Lbl></div><PPill cols={3} opts={["Fresh", "Balanced", "Tired"]} def="Balanced" /></WCard>
+      </main>
+      <PremCTA label="Continue" />
+    </div>
+  );
+}
+
+function CpFood() {
+  return (
+    <div style={SANS}>
+      <Hero step="Step 4 of 4" pct={100} title="Food & Meals" sub="So your plan uses food you love." />
+      <main className="flex flex-col gap-3 px-6 pb-32 pt-6">
+        <WCard><div className="mb-2"><Lbl>Food style</Lbl></div><PPill opts={["Veg", "Vegan", "Egg", "Non-veg"]} def="Veg" /></WCard>
+        <WCard><div className="mb-2"><Lbl>Main meals / day</Lbl></div><PPill opts={["1", "2", "3", "4+"]} def="3" /></WCard>
+        <WCard><div className="mb-2"><Lbl>Snacks / day</Lbl></div><PPill cols={5} opts={["0", "1", "2", "3", "4+"]} def="1" /></WCard>
+        <WCard>
+          <div className="mb-2"><Lbl>Meal timing</Lbl></div>
+          <div className="grid grid-cols-2 gap-2.5">{[["Breakfast", "8:30 AM"], ["Dinner", "7:30 PM"]].map(([k, v]) => (
+            <div key={k} className="rounded-xl bg-[#f1f4f5] p-3"><span className="text-[12px] text-[#424845]">{k}</span><div className="mt-0.5 flex items-center justify-between"><span className="text-[17px] font-semibold text-[#181c1d]" style={SERIF}>{v}</span><MS name="schedule" size={17} className="text-[#7E7268]" /></div></div>
+          ))}</div>
+        </WCard>
+        <WCard><div className="mb-2"><Lbl>Water / day (L)</Lbl></div><PPill cols={3} opts={["< 1.5", "1.5–2", "2–2.5", "2.5–3", "3–3.5", "3.5+"]} def="2.5–3" /></WCard>
+      </main>
+      <PremCTA label="Finish profile" />
+    </div>
+  );
+}
+
 function Preview() {
   const { screen } = Route.useParams();
   const body =
@@ -619,6 +756,10 @@ function Preview() {
     screen === "bmr" ? <BmrScreen /> :
     screen === "calgoal" ? <CalGoalScreen /> :
     screen === "rest" ? <RestScreen /> :
-    <div className="p-8 text-center text-sm" style={SANS}>Unknown screen. Try /stitch-preview/bmr · /calgoal · /rest · /calorie · /about · /activity · /sleep · /food</div>;
+    screen === "cp-about" ? <CpAbout /> :
+    screen === "cp-activity" ? <CpActivity /> :
+    screen === "cp-sleep" ? <CpSleep /> :
+    screen === "cp-food" ? <CpFood /> :
+    <div className="p-8 text-center text-sm" style={SANS}>Unknown screen. Try /stitch-preview/cp-about · /cp-activity · /cp-sleep · /cp-food · /bmr · /calgoal · /rest</div>;
   return <div className="min-h-svh bg-[#f7fafb] text-[#181c1d]" style={SANS}>{body}</div>;
 }
