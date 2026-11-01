@@ -779,7 +779,27 @@ function BtnCompare() {
 
 /* ===== warm terracotta screens (gradient-B buttons & selected pills) ===== */
 const CREAM = "#FBF5EE", INK2 = "#2B2119", MUT2 = "#7A6A5C", FAINT2 = "#9A8676", TERRA = "#A24E28", GRADB = "linear-gradient(135deg,#C67A4E 0%,#A24E28 100%)", TINT2 = "#F3E7DB", BORD2 = "#EADFD3";
-function WarmShell({ title, pct, cta = "Next", children }: { title: string; pct: number; cta?: string; children: React.ReactNode }) {
+function HeroArt() {
+  return (
+    <div className="mb-5 h-[150px] w-full overflow-hidden rounded-2xl ring-1 ring-[#EADFD3]">
+      <svg viewBox="0 0 390 150" preserveAspectRatio="xMidYMid slice" className="h-full w-full">
+        <defs>
+          <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#FCF3E8" /><stop offset="1" stopColor="#F1DCC6" /></linearGradient>
+          <radialGradient id="sun" cx="0.74" cy="0.4" r="0.55"><stop offset="0" stopColor="#F2D0AA" /><stop offset="1" stopColor="#F2D0AA" stopOpacity="0" /></radialGradient>
+        </defs>
+        <rect width="390" height="150" fill="url(#sky)" />
+        <circle cx="286" cy="58" r="82" fill="url(#sun)" />
+        <circle cx="286" cy="58" r="25" fill="#E7BA8F" />
+        <path d="M0 118 C 90 94, 150 126, 220 110 S 340 94, 390 116 L390 150 L0 150Z" fill="#E8C7A7" />
+        <path d="M0 131 C 100 110, 182 140, 262 125 S 360 117, 390 131 L390 150 L0 150Z" fill="#D7AD86" />
+        <g stroke="#B4633C" strokeWidth="2" fill="none" strokeLinecap="round"><path d="M62 120 C 59 98, 68 80, 80 70" /></g>
+        <g fill="#C98A5E"><ellipse cx="72" cy="92" rx="9" ry="4" transform="rotate(-35 72 92)" /><ellipse cx="84" cy="80" rx="9" ry="4" transform="rotate(-20 84 80)" /><ellipse cx="65" cy="105" rx="8" ry="3.5" transform="rotate(-50 65 105)" /><ellipse cx="300" cy="128" rx="11" ry="4.5" transform="rotate(-28 300 128)" opacity="0.8" /><ellipse cx="316" cy="118" rx="11" ry="4.5" transform="rotate(-12 316 118)" opacity="0.8" /></g>
+        <g stroke="#B4633C" strokeWidth="1.8" fill="none" strokeLinecap="round" opacity="0.8"><path d="M322 132 C 318 118, 320 108, 310 100" /></g>
+      </svg>
+    </div>
+  );
+}
+function WarmShell({ title, pct, cta = "Next", hero = false, children }: { title: string; pct: number; cta?: string; hero?: boolean; children: React.ReactNode }) {
   return (
     <div className="min-h-svh" style={{ background: CREAM, ...SANS }}>
       <header className="fixed inset-x-0 top-0 z-50 border-b border-[#EADFD3] bg-[#FBF5EE]/85 pt-[env(safe-area-inset-top)] backdrop-blur-xl">
@@ -790,7 +810,7 @@ function WarmShell({ title, pct, cta = "Next", children }: { title: string; pct:
         </div>
         <div className="px-6 pb-2.5"><div className="h-1.5 w-full overflow-hidden rounded-full bg-[#EADFD3]"><div className="h-full rounded-full" style={{ width: `${pct}%`, background: GRADB }} /></div></div>
       </header>
-      <main className="px-6 pb-40 pt-[6.25rem]">{children}</main>
+      <main className="px-6 pb-40 pt-[6.25rem]">{hero && <HeroArt />}{children}</main>
       <div className="fixed inset-x-0 bottom-0 z-40 bg-gradient-to-t from-[#FBF5EE] via-[#FBF5EE]/95 to-transparent px-6 pb-3 pt-4">
         <button className="flex h-13 w-full items-center justify-center gap-2 rounded-full py-3.5 text-[14px] font-semibold text-white shadow-[0_14px_30px_-12px_rgba(162,78,40,0.6)] active:scale-[0.99]" style={{ background: GRADB }}>{cta} <MS name="arrow_forward" size={18} /></button>
         <nav className="mt-3 flex items-center justify-around rounded-full border border-[#EADFD3] bg-white/80 px-4 py-2 text-[#9A8676]">
@@ -897,7 +917,7 @@ function WCardW({ children }: { children: React.ReactNode }) { return <div class
 function WAbout() {
   const [g, setG] = useState("Female"); const [hU, setHU] = useState("cm"); const [wU, setWU] = useState("kg");
   return (
-    <WarmShell title="About you" pct={20} cta="Continue">
+    <WarmShell title="About you" pct={20} cta="Continue" hero>
       <WIntro>A few essentials so every plan fits you.</WIntro>
       <div className="flex flex-col gap-4">
         <WCardW><WLbl>Name</WLbl><div className="mt-2 flex items-center gap-3"><div className="flex h-9 w-9 items-center justify-center rounded-full" style={{ background: "#F3E7DB", color: TERRA }}><MS name="badge" size={18} /></div><input defaultValue="Elena" className="w-full bg-transparent text-[18px] text-[#2B2119] focus:outline-none" /></div></WCardW>
@@ -916,7 +936,7 @@ function WAbout() {
 function WActivity() {
   const [sel, setSel] = useState("Lightly active");
   return (
-    <WarmShell title="Activity level" pct={40} cta="Continue">
+    <WarmShell title="Activity level" pct={40} cta="Continue" hero>
       <WIntro>Choose what best matches your typical daily routine.</WIntro>
       <div className="flex flex-col gap-3.5">
         {CP_ACT.map((a) => { const on = sel === a.label; return (
@@ -935,7 +955,7 @@ function WActivity() {
 
 function WSleep() {
   return (
-    <WarmShell title="Sleep" pct={60} cta="Continue">
+    <WarmShell title="Sleep" pct={60} cta="Continue" hero>
       <WIntro>Let's calibrate your nightly recovery rhythm.</WIntro>
       <div className="flex flex-col gap-3">
         <WCardW><div className="flex items-center justify-between"><div className="flex items-center gap-1.5"><MS name="bedtime" size={16} className="text-[#A24E28]" /><WLbl>Bedtime</WLbl></div><span className="text-[11px] text-[#9A8676]">Usual window</span></div><div className="mt-2 flex h-11 items-center justify-between rounded-xl bg-[#F3E7DB] px-3.5 text-[14px] font-medium text-[#2B2119]">10:30 PM – 11:00 PM<MS name="unfold_more" size={18} className="text-[#9A8676]" /></div></WCardW>
@@ -950,7 +970,7 @@ function WSleep() {
 
 function WFood() {
   return (
-    <WarmShell title="Food & meals" pct={80} cta="Continue">
+    <WarmShell title="Food & meals" pct={80} cta="Continue" hero>
       <WIntro>So your plan uses food you love.</WIntro>
       <div className="flex flex-col gap-3">
         <WCardW><div className="mb-2"><WLbl>Food style</WLbl></div><WPills opts={[{ l: "Veg" }, { l: "Vegan" }, { l: "Egg" }, { l: "Non-veg" }]} def="Veg" /></WCardW>
@@ -968,7 +988,7 @@ function WGoals() {
   const [sel, setSel] = useState<string[]>(["Weight loss", "Better sleep"]);
   const tog = (l: string) => setSel((s) => s.includes(l) ? s.filter((x) => x !== l) : s.length >= 2 ? s : [...s, l]);
   return (
-    <WarmShell title="Pick your top goals" pct={100} cta="Continue">
+    <WarmShell title="Pick your top goals" pct={100} cta="Continue" hero>
       <WIntro>Choose up to 2 — we'll build your whole plan around them.</WIntro>
       <div className="grid grid-cols-2 gap-3">
         {GOALS.map(([e, l]) => { const on = sel.includes(l); return (
