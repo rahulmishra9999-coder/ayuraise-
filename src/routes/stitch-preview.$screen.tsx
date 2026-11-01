@@ -777,9 +777,125 @@ function BtnCompare() {
   );
 }
 
+/* ===== warm terracotta screens (gradient-B buttons & selected pills) ===== */
+const CREAM = "#FBF5EE", INK2 = "#2B2119", MUT2 = "#7A6A5C", FAINT2 = "#9A8676", TERRA = "#A24E28", GRADB = "linear-gradient(135deg,#C67A4E 0%,#A24E28 100%)", TINT2 = "#F3E7DB", BORD2 = "#EADFD3";
+function WarmShell({ title, pct, cta = "Next", children }: { title: string; pct: number; cta?: string; children: React.ReactNode }) {
+  return (
+    <div className="min-h-svh" style={{ background: CREAM, ...SANS }}>
+      <header className="fixed inset-x-0 top-0 z-50 border-b border-[#EADFD3] bg-[#FBF5EE]/85 pt-[env(safe-area-inset-top)] backdrop-blur-xl">
+        <div className="flex h-16 items-center gap-3 px-6">
+          <button aria-label="Back" className="flex h-10 w-10 items-center justify-center rounded-full border border-[#EADFD3] bg-white/70 text-[#2B2119]"><MS name="arrow_back_ios_new" size={18} /></button>
+          <h1 className="flex-1 text-center text-[22px] font-semibold tracking-tight text-[#2B2119]" style={SERIF}>{title}</h1>
+          <div className="w-10" />
+        </div>
+        <div className="px-6 pb-2.5"><div className="h-1.5 w-full overflow-hidden rounded-full bg-[#EADFD3]"><div className="h-full rounded-full" style={{ width: `${pct}%`, background: GRADB }} /></div></div>
+      </header>
+      <main className="px-6 pb-40 pt-[6.25rem]">{children}</main>
+      <div className="fixed inset-x-0 bottom-0 z-40 bg-gradient-to-t from-[#FBF5EE] via-[#FBF5EE]/95 to-transparent px-6 pb-3 pt-4">
+        <button className="flex h-13 w-full items-center justify-center gap-2 rounded-full py-3.5 text-[14px] font-semibold text-white shadow-[0_14px_30px_-12px_rgba(162,78,40,0.6)] active:scale-[0.99]" style={{ background: GRADB }}>{cta} <MS name="arrow_forward" size={18} /></button>
+        <nav className="mt-3 flex items-center justify-around rounded-full border border-[#EADFD3] bg-white/80 px-4 py-2 text-[#9A8676]">
+          {["home", "favorite", "grid_view", "school", "auto_awesome", "person"].map((i, n) => <MS key={i} name={i} size={20} className={n === 0 ? "text-[#A24E28]" : ""} />)}
+        </nav>
+      </div>
+    </div>
+  );
+}
+function WIntro({ children }: { children: React.ReactNode }) { return <p className="mb-5 text-[14px] leading-relaxed text-[#7A6A5C]">{children}</p>; }
+function WSecLbl({ icon, children, sub }: { icon?: string; children: React.ReactNode; sub?: string }) {
+  return <div className="mb-2.5 flex items-center gap-2"><div className="flex items-center gap-2">{icon && <MS name={icon} size={18} className="text-[#A24E28]" />}<span className="text-[13px] font-bold uppercase tracking-wider text-[#2B2119]">{children}</span></div>{sub && <span className="text-[12px] text-[#9A8676]">· {sub}</span>}</div>;
+}
+function WPills({ opts, def, cols = 4 }: { opts: { l: string; icon?: string }[]; def: string; cols?: number }) {
+  const [v, setV] = useState(def);
+  return (
+    <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0,1fr))` }}>
+      {opts.map((o) => { const on = v === o.l; return <button key={o.l} onClick={() => setV(o.l)} className="flex items-center justify-center gap-1 rounded-full px-2 py-2.5 text-center text-[12.5px] font-semibold transition-all active:scale-95" style={on ? { background: GRADB, color: "#fff" } : { background: TINT2, color: MUT2 }}>{o.icon && <MS name={o.icon} size={15} />}{o.l}</button>; })}
+    </div>
+  );
+}
+
+function WCalGoal() {
+  const rows = [["spa", "At rest (BMR)", "Calories your body needs at complete rest", "1,628", INK2], ["directions_run", "Your activity burn", "Mostly sitting, 20 min yoga", "~250", TERRA], ["restaurant", "Maintenance calories", "To maintain your current weight", "1,878", INK2]];
+  return (
+    <WarmShell title="Your daily calorie goal" pct={55}>
+      <WIntro>Now let's talk calories — what your body burns, and the number to aim for.</WIntro>
+      {/* BMR hero */}
+      <div className="relative overflow-hidden rounded-2xl p-5" style={{ background: "#FBF3EA", border: `1px solid ${BORD2}` }}>
+        <div className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full" style={{ background: "rgba(198,122,78,0.14)", filter: "blur(22px)" }} />
+        <p className="relative text-[11px] font-bold uppercase tracking-wider" style={{ color: TERRA }}>Your BMR</p>
+        <div className="relative flex items-baseline gap-1"><span className="text-[40px] font-semibold leading-none tracking-tight" style={{ ...SERIF, color: TERRA }}>1,628</span></div>
+        <p className="relative mt-2 text-[13px] leading-snug text-[#7A6A5C]">kcal your body burns<br />at rest, every day</p>
+      </div>
+      {/* target banner (gradient) */}
+      <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl p-4 text-white shadow-[0_14px_30px_-14px_rgba(162,78,40,0.55)]" style={{ background: GRADB }}>
+        <div className="flex items-center gap-3"><div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/15"><MS name="target" size={20} fill /></div><div className="flex flex-col"><span className="text-[14px] font-semibold leading-snug">Your daily calorie target</span><span className="text-[12px] text-white/80">to lose weight gently (~0.4 kg/week)</span></div></div>
+        <div className="shrink-0 text-right"><span className="text-[26px] font-semibold tracking-tight" style={SERIF}>1,425</span><span className="-mt-1 block text-[11px] text-white/80">kcal/day</span></div>
+      </div>
+      {/* breakdown */}
+      <p className="mb-2.5 mt-6 text-[13px] font-bold uppercase tracking-wider text-[#2B2119]">How we got here</p>
+      <div className="flex flex-col gap-2.5">
+        {rows.map(([ic, t, s, v, col]) => (
+          <div key={t} className="flex items-center justify-between rounded-2xl bg-white p-3.5 shadow-sm">
+            <div className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-full" style={{ background: "#F3E7DB", color: TERRA }}><MS name={ic} size={19} /></div><div className="flex flex-col"><span className="text-[14px] font-semibold text-[#2B2119]">{t}</span><span className="text-[11.5px] text-[#9A8676]">{s}</span></div></div>
+            <div className="text-right"><span className="text-[15px] font-semibold" style={{ color: col }}>{v}</span><span className="-mt-1 block text-[11px] text-[#9A8676]">kcal/day</span></div>
+          </div>
+        ))}
+        <div className="flex items-center justify-between rounded-2xl p-3.5" style={{ background: "#F7E7DC" }}>
+          <div className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/70" style={{ color: TERRA }}><MS name="trending_down" size={19} /></div><div className="flex flex-col"><span className="text-[14px] font-semibold" style={{ color: TERRA }}>Calorie deficit</span><span className="text-[11.5px]" style={{ color: "#8A5A42" }}>A safe, steady pace — 453 kcal/day below maintenance</span></div></div>
+          <div className="text-right"><span className="text-[15px] font-semibold" style={{ color: TERRA }}>−453</span><span className="-mt-1 block text-[11px]" style={{ color: "#8A5A42" }}>kcal/day</span></div>
+        </div>
+      </div>
+    </WarmShell>
+  );
+}
+
+const CAL_IN = [["🫓", "1 roti/phulka", "~100"], ["🍚", "1 bowl rice", "~200"], ["🥣", "1 bowl dal", "~120"], ["🥗", "1 cup sabzi", "~150"], ["🥛", "1 glass milk", "~120"], ["🧈", "1 tsp ghee/oil", "~45"], ["🍬", "1 tsp sugar", "~20"], ["🍎", "1 fruit bowl", "~90"]];
+const CAL_OUT = [["👟", "5,000 steps", "~200"], ["🧘", "20 min yoga", "~90"], ["🏋️", "20 min exercise", "~180"], ["🚴", "20 min cycling", "~160"], ["🏊", "20 min swimming", "~200"], ["🧹", "30 min housework", "~80"]];
+function WCalSense() {
+  const grid = (items: string[][], col: string) => (
+    <div className="grid grid-cols-2 gap-x-3 gap-y-2.5">
+      {items.map(([e, n, k]) => (
+        <div key={n} className="flex items-center gap-2"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#F3E7DB] text-[16px]">{e}</span><span className="min-w-0 flex-1 truncate text-[12.5px] text-[#2B2119]">{n}</span><span className="shrink-0 text-right text-[12px] font-bold" style={{ color: col }}>{k}<span className="block -mt-0.5 text-[9px] font-medium text-[#9A8676]">kcal</span></span></div>
+      ))}
+    </div>
+  );
+  return (
+    <WarmShell title="A quick calorie sense" pct={45}>
+      <WIntro>Now we'll build your diet plan — first, a quick feel for how calories work.</WIntro>
+      <div className="rounded-2xl bg-white p-4 shadow-sm"><WSecLbl icon="restaurant" sub="Common everyday foods (approx.)">Calories in</WSecLbl>{grid(CAL_IN, TERRA)}</div>
+      <div className="mt-4 rounded-2xl bg-white p-4 shadow-sm"><WSecLbl icon="local_fire_department" sub="Everyday activities (approx.)">Calories out</WSecLbl>{grid(CAL_OUT, "#B4633C")}</div>
+      <div className="mt-4 rounded-2xl p-3.5" style={{ background: "#EAF1F7", border: "1px solid #D7E4EF" }}>
+        <div className="mb-2 flex items-center gap-1.5"><span className="text-[15px]">💧</span><span className="text-[13px] font-bold text-[#2B5876]">Stay hydrated <span className="font-medium text-[#5E7A94]">(almost zero calories)</span></span></div>
+        <div className="flex justify-between gap-1 text-center">{[["💧", "Water"], ["🍵", "Green / black tea"], ["☕", "Black coffee (no sugar)"], ["🫚", "Ginger water"], ["🍋", "Lemon water"]].map(([e, n]) => <div key={n} className="flex flex-1 flex-col items-center gap-1"><span className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-[16px]">{e}</span><span className="text-[9.5px] leading-tight text-[#5E7A94]">{n}</span></div>)}</div>
+      </div>
+    </WarmShell>
+  );
+}
+
+function WYoga() {
+  return (
+    <WarmShell title="Set up your yoga" pct={35}>
+      <WIntro>Let's customise your yoga practice to your needs and comfort.</WIntro>
+      <WSecLbl>Your level</WSecLbl>
+      <WPills cols={3} opts={[{ l: "Beginner" }, { l: "Intermediate" }, { l: "Advanced" }]} def="Beginner" />
+      <p className="mt-3 text-[13px] leading-relaxed text-[#7A6A5C]">We start at a pace that suits your level — you can increase it week on week as you progress.</p>
+      <div className="mt-5"><WSecLbl>How long each session?</WSecLbl><WPills cols={4} opts={[{ l: "10 min" }, { l: "15 min" }, { l: "20 min" }, { l: "30 min" }, { l: "45 min" }, { l: "60 min" }]} def="20 min" /></div>
+      <div className="mt-4 flex items-start gap-3 rounded-2xl p-3.5" style={{ background: "#F7E7DC" }}>
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/70" style={{ color: TERRA }}><MS name="self_improvement" size={19} /></div>
+        <div><p className="text-[13px] font-semibold" style={{ color: TERRA }}>~ 90–110 cal burned per session</p><p className="text-[11.5px] text-[#8A5A42]">A 20-min beginner session, for your body weight.</p></div>
+      </div>
+      <div className="mt-5"><WSecLbl>Any areas to protect?</WSecLbl>
+        <WPills cols={3} opts={[{ l: "None", icon: "block" }, { l: "Knees", icon: "accessibility_new" }, { l: "Lower back", icon: "airline_seat_recline_normal" }, { l: "Neck", icon: "face" }, { l: "Shoulders", icon: "sports_gymnastics" }, { l: "Wrists", icon: "back_hand" }, { l: "Hips", icon: "directions_walk" }]} def="None" />
+      </div>
+    </WarmShell>
+  );
+}
+
 function Preview() {
   const { screen } = Route.useParams();
   const body =
+    screen === "w-calgoal" ? <WCalGoal /> :
+    screen === "w-calsense" ? <WCalSense /> :
+    screen === "w-yoga" ? <WYoga /> :
     screen === "buttons" ? <BtnCompare /> :
     screen === "about" ? <AboutScreen /> :
     screen === "activity" ? <ActivityScreen /> :
