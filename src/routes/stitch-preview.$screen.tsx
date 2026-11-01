@@ -890,9 +890,108 @@ function WYoga() {
   );
 }
 
+/* ===== warm create-profile + goals (gradient-B) ===== */
+function WLbl({ children }: { children: React.ReactNode }) { return <span className="text-[11px] font-bold uppercase tracking-wider text-[#8A7563]">{children}</span>; }
+function WCardW({ children }: { children: React.ReactNode }) { return <div className="rounded-2xl bg-white p-4 shadow-[0_10px_26px_-18px_rgba(90,50,30,0.35)]">{children}</div>; }
+
+function WAbout() {
+  const [g, setG] = useState("Female"); const [hU, setHU] = useState("cm"); const [wU, setWU] = useState("kg");
+  return (
+    <WarmShell title="About you" pct={20} cta="Continue">
+      <WIntro>A few essentials so every plan fits you.</WIntro>
+      <div className="flex flex-col gap-4">
+        <WCardW><WLbl>Name</WLbl><div className="mt-2 flex items-center gap-3"><div className="flex h-9 w-9 items-center justify-center rounded-full" style={{ background: "#F3E7DB", color: TERRA }}><MS name="badge" size={18} /></div><input defaultValue="Elena" className="w-full bg-transparent text-[18px] text-[#2B2119] focus:outline-none" /></div></WCardW>
+        <WCardW><WLbl>Gender</WLbl><div className="mt-3 grid grid-cols-3 gap-2">{["Male", "Female", "Other"].map((x) => { const on = g === x; return <button key={x} onClick={() => setG(x)} className="flex items-center justify-center gap-1.5 rounded-full px-3 py-2.5 text-[14px] font-semibold transition-all" style={on ? { background: GRADB, color: "#fff" } : { background: TINT2, color: MUT2 }}>{on && <MS name="check" size={16} />}{x}</button>; })}</div></WCardW>
+        <WCardW><WLbl>Age</WLbl><div className="mt-1.5 flex items-baseline gap-2"><input type="number" defaultValue={32} className="w-20 bg-transparent text-[26px] font-semibold text-[#2B2119] focus:outline-none" style={SERIF} /><span className="text-[15px] text-[#7A6A5C]">years</span></div></WCardW>
+        <div className="grid grid-cols-2 gap-3">
+          {[["Height", "178", hU, setHU, ["cm", "ft"], "height", "5 ft 10 in"], ["Weight", "68", wU, setWU, ["kg", "lb"], "monitor_weight", "150 lbs"]].map(([lab, val, u, setU, units, ic, conv]: any) => (
+            <WCardW key={lab}><div className="flex items-center justify-between"><WLbl>{lab}</WLbl><div className="flex rounded-full bg-[#F3E7DB] p-0.5">{units.map((x: string) => <button key={x} onClick={() => setU(x)} className="rounded-full px-2 py-0.5 text-[12px] transition-all" style={u === x ? { background: "#fff", color: TERRA, fontWeight: 700 } : { color: MUT2 }}>{x}</button>)}</div></div><div className="mt-2 flex items-baseline gap-1.5"><span className="text-[24px] font-semibold text-[#2B2119]" style={SERIF}>{val}</span><span className="text-[14px] text-[#7A6A5C]">{u}</span></div><div className="mt-2 flex items-center gap-1 text-[12px]" style={{ color: TERRA }}><MS name={ic} size={13} />{conv}</div></WCardW>
+          ))}
+        </div>
+      </div>
+    </WarmShell>
+  );
+}
+
+function WActivity() {
+  const [sel, setSel] = useState("Lightly active");
+  return (
+    <WarmShell title="Activity level" pct={40} cta="Continue">
+      <WIntro>Choose what best matches your typical daily routine.</WIntro>
+      <div className="flex flex-col gap-3.5">
+        {CP_ACT.map((a) => { const on = sel === a.label; return (
+          <button key={a.label} onClick={() => setSel(a.label)} className="flex flex-col rounded-2xl bg-white p-4 text-left transition-all active:scale-[0.99]" style={on ? { boxShadow: "0 14px 30px -16px rgba(162,78,40,0.5)", border: `1.5px solid ${TERRA}` } : { boxShadow: "0 10px 26px -20px rgba(90,50,30,0.4)", border: `1px solid ${BORD2}` }}>
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex min-w-0 items-center gap-3"><div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white" style={{ background: on ? GRADB : "#D9C3B2" }}><MS name={a.icon} size={22} /></div><div className="flex min-w-0 flex-col"><span className="text-[15px] font-semibold text-[#2B2119]">{a.label}</span><span className="mt-0.5 text-[11px] font-semibold" style={{ color: TERRA }}>{a.cal}</span></div></div>
+              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-white" style={on ? { background: GRADB } : { background: "#EFE3D7", color: "transparent" }}><MS name="check" size={16} fill={on} /></div>
+            </div>
+            <p className="mt-2 pl-[56px] text-[12px] leading-[16px] text-[#7A6A5C]">{a.desc}</p>
+          </button>
+        ); })}
+      </div>
+    </WarmShell>
+  );
+}
+
+function WSleep() {
+  return (
+    <WarmShell title="Sleep" pct={60} cta="Continue">
+      <WIntro>Let's calibrate your nightly recovery rhythm.</WIntro>
+      <div className="flex flex-col gap-3">
+        <WCardW><div className="flex items-center justify-between"><div className="flex items-center gap-1.5"><MS name="bedtime" size={16} className="text-[#A24E28]" /><WLbl>Bedtime</WLbl></div><span className="text-[11px] text-[#9A8676]">Usual window</span></div><div className="mt-2 flex h-11 items-center justify-between rounded-xl bg-[#F3E7DB] px-3.5 text-[14px] font-medium text-[#2B2119]">10:30 PM – 11:00 PM<MS name="unfold_more" size={18} className="text-[#9A8676]" /></div></WCardW>
+        <WCardW><div className="flex items-center justify-between"><div className="flex items-center gap-1.5"><MS name="schedule" size={16} className="text-[#A24E28]" /><WLbl>Sleep duration</WLbl></div><span className="rounded-full px-2.5 py-0.5 text-[13px] font-semibold text-white" style={{ background: GRADB }}>7.5 hrs</span></div><div className="mt-3"><div className="relative h-1.5 w-full rounded-full bg-[#EFE3D7]"><div className="absolute inset-y-0 left-0 rounded-full" style={{ width: "62%", background: GRADB }} /><div className="absolute top-1/2 h-4 w-4 -translate-y-1/2 rounded-full bg-white" style={{ left: "60%", boxShadow: `0 0 0 2px ${TERRA}` }} /></div><div className="mt-1.5 flex justify-between px-1 text-[11px] text-[#9A8676]"><span>4h</span><span>6h</span><span>8h</span><span>10h</span></div></div></WCardW>
+        <WCardW><div className="mb-2 flex items-center gap-1.5"><MS name="timelapse" size={16} className="text-[#A24E28]" /><WLbl>Time to fall asleep</WLbl></div><WPills cols={2} opts={[{ l: "< 10 min" }, { l: "10–20 min" }, { l: "20–40 min" }, { l: "40+ min" }]} def="10–20 min" /></WCardW>
+        <WCardW><div className="mb-2 flex items-center gap-1.5"><MS name="wb_twilight" size={16} className="text-[#A24E28]" /><WLbl>Daytime nap</WLbl></div><WPills cols={3} opts={[{ l: "No" }, { l: "Sometimes" }, { l: "Daily" }]} def="Sometimes" /></WCardW>
+        <WCardW><div className="mb-2 flex items-center gap-1.5"><MS name="wb_sunny" size={16} className="text-[#A24E28]" /><WLbl>Waking feeling</WLbl></div><WPills cols={3} opts={[{ l: "Fresh" }, { l: "Balanced" }, { l: "Tired" }]} def="Balanced" /></WCardW>
+      </div>
+    </WarmShell>
+  );
+}
+
+function WFood() {
+  return (
+    <WarmShell title="Food & meals" pct={80} cta="Continue">
+      <WIntro>So your plan uses food you love.</WIntro>
+      <div className="flex flex-col gap-3">
+        <WCardW><div className="mb-2"><WLbl>Food style</WLbl></div><WPills opts={[{ l: "Veg" }, { l: "Vegan" }, { l: "Egg" }, { l: "Non-veg" }]} def="Veg" /></WCardW>
+        <WCardW><div className="mb-2"><WLbl>Main meals / day</WLbl></div><WPills opts={[{ l: "1" }, { l: "2" }, { l: "3" }, { l: "4+" }]} def="3" /></WCardW>
+        <WCardW><div className="mb-2"><WLbl>Snacks / day</WLbl></div><WPills cols={5} opts={[{ l: "0" }, { l: "1" }, { l: "2" }, { l: "3" }, { l: "4+" }]} def="1" /></WCardW>
+        <WCardW><div className="mb-2"><WLbl>Meal timing</WLbl></div><div className="grid grid-cols-2 gap-2.5">{[["Breakfast", "8:30 AM"], ["Dinner", "7:30 PM"]].map(([k, v]) => <div key={k} className="rounded-xl bg-[#F3E7DB] p-3"><span className="text-[12px] text-[#7A6A5C]">{k}</span><div className="mt-0.5 flex items-center justify-between"><span className="text-[17px] font-semibold text-[#2B2119]" style={SERIF}>{v}</span><MS name="schedule" size={17} className="text-[#A24E28]" /></div></div>)}</div></WCardW>
+        <WCardW><div className="mb-2"><WLbl>Water / day (L)</WLbl></div><WPills cols={3} opts={[{ l: "< 1.5" }, { l: "1.5–2" }, { l: "2–2.5" }, { l: "2.5–3" }, { l: "3–3.5" }, { l: "3.5+" }]} def="2.5–3" /></WCardW>
+      </div>
+    </WarmShell>
+  );
+}
+
+const GOALS = [["⚖️", "Weight loss"], ["🌙", "Better sleep"], ["🧘", "Stress & calm"], ["⚡", "Energy & vitality"], ["🌀", "Gut & digestion"], ["❤️", "Heart health"], ["💪", "Fitness & strength"], ["🌿", "Healthy ageing"]];
+function WGoals() {
+  const [sel, setSel] = useState<string[]>(["Weight loss", "Better sleep"]);
+  const tog = (l: string) => setSel((s) => s.includes(l) ? s.filter((x) => x !== l) : s.length >= 2 ? s : [...s, l]);
+  return (
+    <WarmShell title="Pick your top goals" pct={100} cta="Continue">
+      <WIntro>Choose up to 2 — we'll build your whole plan around them.</WIntro>
+      <div className="grid grid-cols-2 gap-3">
+        {GOALS.map(([e, l]) => { const on = sel.includes(l); return (
+          <button key={l} onClick={() => tog(l)} className="relative flex flex-col items-start gap-3 rounded-2xl bg-white p-4 text-left transition-all active:scale-[0.98]" style={on ? { border: `1.5px solid ${TERRA}`, boxShadow: "0 14px 30px -16px rgba(162,78,40,0.5)" } : { border: `1px solid ${BORD2}`, boxShadow: "0 10px 26px -20px rgba(90,50,30,0.4)" }}>
+            {on && <div className="absolute right-3 top-3 flex h-5 w-5 items-center justify-center rounded-full text-white" style={{ background: GRADB }}><MS name="check" size={13} fill /></div>}
+            <span className="flex h-12 w-12 items-center justify-center rounded-2xl text-[22px]" style={{ background: on ? "#F7E7DC" : "#F3E7DB" }}>{e}</span>
+            <span className="text-[14.5px] font-semibold leading-tight text-[#2B2119]">{l}</span>
+          </button>
+        ); })}
+      </div>
+      <p className="mt-4 text-center text-[12px] text-[#9A8676]">{sel.length}/2 selected</p>
+    </WarmShell>
+  );
+}
+
 function Preview() {
   const { screen } = Route.useParams();
   const body =
+    screen === "w-about" ? <WAbout /> :
+    screen === "w-activity" ? <WActivity /> :
+    screen === "w-sleep" ? <WSleep /> :
+    screen === "w-food" ? <WFood /> :
+    screen === "w-goals" ? <WGoals /> :
     screen === "w-calgoal" ? <WCalGoal /> :
     screen === "w-calsense" ? <WCalSense /> :
     screen === "w-yoga" ? <WYoga /> :
