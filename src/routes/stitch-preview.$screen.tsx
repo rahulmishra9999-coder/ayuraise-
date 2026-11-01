@@ -745,9 +745,42 @@ function CpFood() {
   );
 }
 
+/* ===== warm-terracotta button colour comparison ===== */
+function BtnCompare() {
+  const OPTS: { name: string; note: string; bg: string; pill: string; txt?: string }[] = [
+    { name: "Current", note: "Flat, desaturated taupe — reads muddy", bg: "#9C7C6B", pill: "#9C7C6B" },
+    { name: "A · Rich terracotta", note: "Warmer + more saturated, still soft", bg: "#B4633C", pill: "#B4633C" },
+    { name: "B · Terracotta gradient", note: "Adds depth & premium feel (recommended)", bg: "linear-gradient(135deg,#C67A4E 0%,#A24E28 100%)", pill: "linear-gradient(135deg,#C67A4E,#A24E28)" },
+    { name: "C · Burnt sienna", note: "Brighter, confident, energetic", bg: "#C0663A", pill: "#C0663A" },
+    { name: "D · Deep espresso", note: "Grounded & luxe, high contrast", bg: "#5A4231", pill: "#5A4231" },
+  ];
+  return (
+    <div style={SANS} className="min-h-svh" >
+      <div style={{ background: "#FBF5EE" }} className="min-h-svh px-6 pb-16 pt-[calc(env(safe-area-inset-top)+1.5rem)]">
+        <h1 className="text-[26px] font-semibold tracking-tight text-[#2B2119]" style={SERIF}>Button colour options</h1>
+        <p className="mt-1 text-[13px] text-[#7A6A5C]">Same warm theme — pick the Next button + selected-pill colour.</p>
+        <div className="mt-6 flex flex-col gap-5">
+          {OPTS.map((o) => (
+            <div key={o.name} className="rounded-2xl bg-white/70 p-4 ring-1 ring-[#EADFD3]">
+              <div className="mb-3 flex items-baseline justify-between"><span className="text-[13px] font-bold text-[#2B2119]">{o.name}</span><span className="text-[11px] text-[#9A8676]">{o.note}</span></div>
+              <div className="flex items-center gap-2.5">
+                {/* selected pill + an unselected for context */}
+                <span className="rounded-full px-4 py-2 text-[13px] font-semibold text-white shadow-sm" style={{ background: o.pill }}>Beginner</span>
+                <span className="rounded-full bg-[#F1E7DB] px-4 py-2 text-[13px] font-semibold text-[#7A6A5C]">Intermediate</span>
+              </div>
+              <button className="mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-full text-[14px] font-semibold text-white shadow-[0_12px_28px_-12px_rgba(90,50,30,0.55)] active:scale-[0.99]" style={{ background: o.bg }}>Next <MS name="arrow_forward" size={18} /></button>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Preview() {
   const { screen } = Route.useParams();
   const body =
+    screen === "buttons" ? <BtnCompare /> :
     screen === "about" ? <AboutScreen /> :
     screen === "activity" ? <ActivityScreen /> :
     screen === "sleep" ? <SleepScreen /> :
