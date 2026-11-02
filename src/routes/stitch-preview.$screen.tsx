@@ -779,6 +779,8 @@ function BtnCompare() {
 
 /* ===== warm terracotta screens (gradient-B buttons & selected pills) ===== */
 const CREAM = "#FBF5EE", INK2 = "#2B2119", MUT2 = "#7A6A5C", FAINT2 = "#9A8676", TERRA = "#A24E28", GRADB = "linear-gradient(135deg,#C67A4E 0%,#A24E28 100%)", TINT2 = "#F3E7DB", BORD2 = "#EADFD3";
+/* text hierarchy: softened serif headline → FOOD-STYLE taupe sub-headline → lighter 3rd micro-label → body stays MUT2 */
+const HEAD = "#453C35", SUBH = "#94806D", MICRO = "#B2A496";
 function HeroArt() {
   return (
     <div className="mb-5 h-[150px] w-full overflow-hidden rounded-2xl ring-1 ring-[#EADFD3]">
@@ -805,7 +807,7 @@ function WarmShell({ title, pct, cta = "Next", hero = false, children }: { title
       <header className="fixed inset-x-0 top-0 z-50 border-b border-[#EADFD3] bg-[#FBF5EE]/85 pt-[env(safe-area-inset-top)] backdrop-blur-xl">
         <div className="flex h-16 items-center gap-3 px-6">
           <button aria-label="Back" className="flex h-10 w-10 items-center justify-center rounded-full border border-[#EADFD3] bg-white/70 text-[#2B2119]"><MS name="arrow_back_ios_new" size={18} /></button>
-          <h1 className="flex-1 text-center text-[22px] font-semibold tracking-tight text-[#2B2119]" style={SERIF}>{title}</h1>
+          <h1 className="flex-1 text-center text-[22px] font-semibold tracking-tight" style={{ ...SERIF, color: HEAD }}>{title}</h1>
           <div className="w-10" />
         </div>
         <div className="px-6 pb-2.5"><div className="h-1.5 w-full overflow-hidden rounded-full bg-[#EADFD3]"><div className="h-full rounded-full" style={{ width: `${pct}%`, background: GRADB }} /></div></div>
@@ -822,7 +824,7 @@ function WarmShell({ title, pct, cta = "Next", hero = false, children }: { title
 }
 function WIntro({ children }: { children: React.ReactNode }) { return <p className="mb-5 text-[14px] leading-relaxed text-[#7A6A5C]">{children}</p>; }
 function WSecLbl({ icon, children, sub }: { icon?: string; children: React.ReactNode; sub?: string }) {
-  return <div className="mb-2.5 flex items-center gap-2"><div className="flex items-center gap-2">{icon && <MS name={icon} size={18} className="text-[#A24E28]" />}<span className="text-[13px] font-bold uppercase tracking-wider text-[#2B2119]">{children}</span></div>{sub && <span className="text-[12px] text-[#9A8676]">· {sub}</span>}</div>;
+  return <div className="mb-2.5 flex items-center gap-2"><div className="flex items-center gap-2">{icon && <MS name={icon} size={18} className="text-[#A24E28]" />}<span className="text-[13px] font-bold uppercase tracking-wider" style={{ color: SUBH }}>{children}</span></div>{sub && <span className="text-[12px] text-[#9A8676]">· {sub}</span>}</div>;
 }
 function WPills({ opts, def, cols = 4 }: { opts: { l: string; icon?: string }[]; def: string; cols?: number }) {
   const [v, setV] = useState(def);
@@ -851,11 +853,11 @@ function WCalGoal() {
         <div className="shrink-0 text-right"><span className="text-[26px] font-semibold tracking-tight" style={SERIF}>1,425</span><span className="-mt-1 block text-[11px] text-white/80">kcal/day</span></div>
       </div>
       {/* breakdown */}
-      <p className="mb-2.5 mt-6 text-[13px] font-bold uppercase tracking-wider text-[#2B2119]">How we got here</p>
+      <p className="mb-2.5 mt-6 text-[13px] font-bold uppercase tracking-wider" style={{ color: SUBH }}>How we got here</p>
       <div className="flex flex-col gap-2.5">
         {rows.map(([ic, t, s, v, col]) => (
           <div key={t} className="flex items-center justify-between rounded-2xl bg-white p-3.5 shadow-sm">
-            <div className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-full" style={{ background: "#F3E7DB", color: TERRA }}><MS name={ic} size={19} /></div><div className="flex flex-col"><span className="text-[14px] font-semibold text-[#2B2119]">{t}</span><span className="text-[11.5px] text-[#9A8676]">{s}</span></div></div>
+            <div className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-full" style={{ background: "#F3E7DB", color: TERRA }}><MS name={ic} size={19} /></div><div className="flex flex-col"><span className="text-[14px] font-semibold" style={{ color: SUBH }}>{t}</span><span className="text-[11.5px] text-[#9A8676]">{s}</span></div></div>
             <div className="text-right"><span className="text-[15px] font-semibold" style={{ color: col }}>{v}</span><span className="-mt-1 block text-[11px] text-[#9A8676]">kcal/day</span></div>
           </div>
         ))}
@@ -911,7 +913,7 @@ function WYoga() {
 }
 
 /* ===== warm create-profile + goals (gradient-B) ===== */
-function WLbl({ children }: { children: React.ReactNode }) { return <span className="text-[11px] font-bold uppercase tracking-wider text-[#8A7563]">{children}</span>; }
+function WLbl({ children }: { children: React.ReactNode }) { return <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: MICRO }}>{children}</span>; }
 function WCardW({ children }: { children: React.ReactNode }) { return <div className="rounded-2xl bg-white p-4 shadow-[0_10px_26px_-18px_rgba(90,50,30,0.35)]">{children}</div>; }
 
 function WAbout() {
@@ -942,7 +944,7 @@ function WActivity() {
         {CP_ACT.map((a) => { const on = sel === a.label; return (
           <button key={a.label} onClick={() => setSel(a.label)} className="flex flex-col rounded-2xl bg-white p-4 text-left transition-all active:scale-[0.99]" style={on ? { boxShadow: "0 14px 30px -16px rgba(162,78,40,0.5)", border: `1.5px solid ${TERRA}` } : { boxShadow: "0 10px 26px -20px rgba(90,50,30,0.4)", border: `1px solid ${BORD2}` }}>
             <div className="flex items-center justify-between gap-2">
-              <div className="flex min-w-0 items-center gap-3"><div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white" style={{ background: on ? GRADB : "#D9C3B2" }}><MS name={a.icon} size={22} /></div><div className="flex min-w-0 flex-col"><span className="text-[15px] font-semibold text-[#2B2119]">{a.label}</span><span className="mt-0.5 text-[11px] font-semibold" style={{ color: TERRA }}>{a.cal}</span></div></div>
+              <div className="flex min-w-0 items-center gap-3"><div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white" style={{ background: on ? GRADB : "#D9C3B2" }}><MS name={a.icon} size={22} /></div><div className="flex min-w-0 flex-col"><span className="text-[15px] font-semibold" style={{ color: SUBH }}>{a.label}</span><span className="mt-0.5 text-[11px] font-semibold" style={{ color: TERRA }}>{a.cal}</span></div></div>
               <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-white" style={on ? { background: GRADB } : { background: "#EFE3D7", color: "transparent" }}><MS name="check" size={16} fill={on} /></div>
             </div>
             <p className="mt-2 pl-[56px] text-[12px] leading-[16px] text-[#7A6A5C]">{a.desc}</p>
@@ -995,7 +997,7 @@ function WGoals() {
           <button key={l} onClick={() => tog(l)} className="relative flex flex-col items-start gap-3 rounded-2xl bg-white p-4 text-left transition-all active:scale-[0.98]" style={on ? { border: `1.5px solid ${TERRA}`, boxShadow: "0 14px 30px -16px rgba(162,78,40,0.5)" } : { border: `1px solid ${BORD2}`, boxShadow: "0 10px 26px -20px rgba(90,50,30,0.4)" }}>
             {on && <div className="absolute right-3 top-3 flex h-5 w-5 items-center justify-center rounded-full text-white" style={{ background: GRADB }}><MS name="check" size={13} fill /></div>}
             <span className="flex h-12 w-12 items-center justify-center rounded-2xl text-[22px]" style={{ background: on ? "#F7E7DC" : "#F3E7DB" }}>{e}</span>
-            <span className="text-[14.5px] font-semibold leading-tight text-[#2B2119]">{l}</span>
+            <span className="text-[14.5px] font-semibold leading-tight" style={{ color: SUBH }}>{l}</span>
           </button>
         ); })}
       </div>
