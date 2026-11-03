@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import {
-  ArrowLeft, ArrowRight, ChevronRight, Check, Utensils, Egg, Sprout, Salad, Apple, Nut, Flower2,
+  ArrowLeft, ArrowRight, ChevronRight, Check, Utensils,
   House, Heart, LayoutGrid, GraduationCap, Sparkles, UserRound, Ruler, Scale, Armchair, Footprints,
   Dumbbell, Flame, Moon, Clock, Timer, Sunrise, PersonStanding, Target, Activity, TrendingDown, Droplet,
 } from "lucide-react";
@@ -1029,7 +1029,27 @@ const NW_TONES: Record<string, string> = {
 };
 const NW_NAV: [string, any][] = [["Home", House], ["Favorites", Heart], ["Explore", LayoutGrid], ["Learn", GraduationCap], ["Wellness", Sparkles], ["Profile", UserRound]];
 
-function NWShell({ title, subtitle, pct, cta = "Next", emoji, leaf = true, children }: { title: string; subtitle?: string; pct: number; cta?: string; emoji?: string; leaf?: boolean; children: React.ReactNode }) {
+function NWSaladHero() {
+  const leaves: [number, number, number, number, string][] = [
+    [122, 10, -20, 1.0, "#6FA03C"], [106, 4, -54, 0.95, "#8CBB4C"], [140, 24, 12, 0.95, "#5E8E31"],
+    [98, 18, -90, 0.85, "#7BAE3E"], [126, 36, -34, 0.8, "#4E7A2A"],
+  ];
+  return (
+    <div className="relative h-full w-full">
+      <svg viewBox="0 0 152 64" className="absolute right-0 top-0 h-[60px] w-full">
+        <path d="M150 8 C 128 18, 110 22, 96 40" stroke="#5E8E31" strokeWidth="2" fill="none" strokeLinecap="round" opacity="0.7" />
+        {leaves.map(([x, y, r, s, c], i) => (
+          <g key={i} transform={`translate(${x} ${y}) rotate(${r}) scale(${s})`}>
+            <path d="M0 0 C 6 -6, 18 -5, 25 0 C 18 5, 6 6, 0 0 Z" fill={c} />
+            <path d="M2 0 L22 0" stroke="#3E6420" strokeWidth="0.8" opacity="0.4" />
+          </g>
+        ))}
+      </svg>
+      <div className="absolute bottom-0 right-2 text-[58px] leading-none drop-shadow-sm">🥗</div>
+    </div>
+  );
+}
+function NWShell({ title, subtitle, pct, cta = "Next", emoji, leaf = true, heroArt, children }: { title: string; subtitle?: string; pct: number; cta?: string; emoji?: string; leaf?: boolean; heroArt?: React.ReactNode; children: React.ReactNode }) {
   return (
     <div className="min-h-svh w-full px-4 py-5" style={{ background: NW_BG, color: NW_TEXT, ...SANS }}>
       <div className="mx-auto flex min-h-[calc(100svh-2.5rem)] w-full max-w-[440px] flex-col overflow-hidden rounded-[30px] shadow-[0_8px_32px_rgba(105,67,42,0.10)]" style={{ background: NW_CARD_GRAD }}>
@@ -1038,15 +1058,17 @@ function NWShell({ title, subtitle, pct, cta = "Next", emoji, leaf = true, child
             <button aria-label="Back" className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/85 shadow-sm" style={{ color: NW_TEXT }}><ArrowLeft size={19} strokeWidth={1.8} /></button>
             <div className="h-[6px] flex-1 overflow-hidden rounded-full" style={{ background: "#E5D9D0" }}><div className="h-full rounded-full" style={{ width: `${pct}%`, background: NW_GRAD }} /></div>
           </div>
-          {emoji && (
+          {heroArt ? (
+            <div className="pointer-events-none absolute right-1 top-[30px] h-[122px] w-[152px]">{heroArt}</div>
+          ) : emoji && (
             <div className="pointer-events-none absolute right-4 top-[62px] flex h-[110px] w-[110px] items-center justify-center">
               {leaf && <div className="absolute -right-1 top-0 text-[28px] opacity-80">🌿</div>}
               <div className="relative mt-6 text-[64px] leading-none drop-shadow-sm">{emoji}</div>
             </div>
           )}
           <div className="relative z-10 mt-6 pr-2">
-            <h1 className={`text-[30px] font-semibold leading-[1.12] tracking-[-0.6px] ${emoji ? "max-w-[260px]" : ""}`} style={{ ...SERIF, color: NW_INK }}>{title}</h1>
-            {subtitle && <p className="mt-3 max-w-[270px] text-[14px] leading-[1.55]" style={{ color: NW_SUB }}>{subtitle}</p>}
+            <h1 className="text-[30px] font-semibold leading-[1.12] tracking-[-0.6px]" style={{ ...SERIF, color: NW_INK, maxWidth: emoji || heroArt ? 235 : undefined }}>{title}</h1>
+            {subtitle && <p className="mt-3 text-[14px] leading-[1.55]" style={{ color: NW_SUB, maxWidth: heroArt ? 225 : 270 }}>{subtitle}</p>}
           </div>
         </header>
         <div className="mt-5 flex flex-1 flex-col gap-3 px-4">{children}</div>
@@ -1071,23 +1093,23 @@ function NWPills({ opts, def, cols = 4 }: { opts: { l: string }[]; def: string; 
   );
 }
 
-const NW_TIPS: [string, string, any, string][] = [
-  ["Cut calories gently", "A small, sustainable reduction that works", Utensils, "peach"],
-  ["Eat enough protein", "Keeps you full for longer", Egg, "cream"],
-  ["Choose better carbs (low-GI)", "Steady energy, no sudden crashes", Sprout, "green"],
-  ["Start with a salad", "Helps you feel full, so you eat less", Salad, "cream"],
-  ["Include sprouts at breakfast", "Nutrient-rich and light on calories", Apple, "rose"],
-  ["Go easy on nuts & dry fruits", "Nutritious, but calorie-dense — keep portions small", Nut, "peach"],
-  ["Chew well, eat slowly", "Gives your brain time to feel satisfied", Flower2, "rose"],
+const NW_TIPS: [string, string, string, string][] = [
+  ["Cut calories gently", "A small, sustainable reduction that works", "🍴", "peach"],
+  ["Eat enough protein", "Keeps you full for longer", "🍳", "cream"],
+  ["Choose better carbs (low-GI)", "Steady energy, no sudden crashes", "🌱", "green"],
+  ["Start with a salad", "Helps you feel full, so you eat less", "🥗", "cream"],
+  ["Include sprouts at breakfast", "Nutrient-rich and light on calories", "🍎", "rose"],
+  ["Go easy on nuts & dry fruits", "Nutritious, but calorie-dense — keep portions small", "🥜", "peach"],
+  ["Chew well, eat slowly", "Gives your brain time to feel satisfied", "🪷", "rose"],
 ];
 function NWWeightLoss() {
   return (
-    <NWShell title="How weight loss works" subtitle="Weight loss is mostly about food — the steady, no-starving way. Tap any card to see why it works." pct={30} emoji="🥗" cta="Next">
-      {NW_TIPS.map(([title, sub, Icon, tone]) => (
+    <NWShell title="How weight loss works" subtitle="Weight loss is mostly about food — the steady, no-starving way. Tap any card to see why it works." pct={30} heroArt={<NWSaladHero />} cta="Next">
+      {NW_TIPS.map(([title, sub, emoji, tone]) => (
         <button key={title} className="group flex min-h-[74px] w-full items-center gap-3 rounded-[22px] border border-white/90 bg-white/65 px-3.5 py-3 text-left shadow-[0_3px_12px_rgba(121,79,50,0.06)]">
-          <span className={`grid h-[52px] w-[52px] shrink-0 place-items-center rounded-full ${NW_TONES[tone]}`}><Icon size={25} strokeWidth={1.8} /></span>
+          <span className={`grid h-[52px] w-[52px] shrink-0 place-items-center rounded-full ${NW_TONES[tone]}`}><span className="text-[27px] leading-none">{emoji}</span></span>
           <span className="min-w-0 flex-1">
-            <span className="block text-[14px] font-medium leading-[1.3]" style={{ color: NW_TEXT }}>{title}</span>
+            <span className="block text-[14px] font-semibold leading-[1.3]" style={{ color: NW_TEXT }}>{title}</span>
             <span className="mt-1 block text-[12px] leading-[1.35]" style={{ color: NW_SUB }}>{sub}</span>
           </span>
           <ChevronRight size={19} strokeWidth={1.7} className="shrink-0" style={{ color: NW_ACCENT }} />
