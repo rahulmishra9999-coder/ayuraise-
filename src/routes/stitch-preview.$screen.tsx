@@ -9,7 +9,7 @@ import {
 export const Route = createFileRoute("/stitch-preview/$screen")({
   head: () => ({
     links: [
-      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600&family=Manrope:wght@400;500;600;700&display=swap" },
+      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600;8..60,700&family=Manrope:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" },
       { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" },
     ],
   }),
@@ -18,6 +18,7 @@ export const Route = createFileRoute("/stitch-preview/$screen")({
 
 const SERIF = { fontFamily: '"Source Serif 4", Georgia, serif' } as const;
 const SANS = { fontFamily: '"Manrope", system-ui, sans-serif' } as const;
+const JAKARTA = { fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif' } as const;
 
 function MS({ name, size = 20, fill = false, className = "" }: { name: string; size?: number; fill?: boolean; className?: string }) {
   return <span className={`material-symbols-outlined ${className}`} style={{ fontSize: size, lineHeight: 1, fontVariationSettings: fill ? "'FILL' 1" : "'FILL' 0" }}>{name}</span>;
@@ -1029,26 +1030,6 @@ const NW_TONES: Record<string, string> = {
 };
 const NW_NAV: [string, any][] = [["Home", House], ["Favorites", Heart], ["Explore", LayoutGrid], ["Learn", GraduationCap], ["Wellness", Sparkles], ["Profile", UserRound]];
 
-function NWSaladHero() {
-  const leaves: [number, number, number, number, string][] = [
-    [122, 10, -20, 1.0, "#6FA03C"], [106, 4, -54, 0.95, "#8CBB4C"], [140, 24, 12, 0.95, "#5E8E31"],
-    [98, 18, -90, 0.85, "#7BAE3E"], [126, 36, -34, 0.8, "#4E7A2A"],
-  ];
-  return (
-    <div className="relative h-full w-full">
-      <svg viewBox="0 0 152 64" className="absolute right-0 top-0 h-[60px] w-full">
-        <path d="M150 8 C 128 18, 110 22, 96 40" stroke="#5E8E31" strokeWidth="2" fill="none" strokeLinecap="round" opacity="0.7" />
-        {leaves.map(([x, y, r, s, c], i) => (
-          <g key={i} transform={`translate(${x} ${y}) rotate(${r}) scale(${s})`}>
-            <path d="M0 0 C 6 -6, 18 -5, 25 0 C 18 5, 6 6, 0 0 Z" fill={c} />
-            <path d="M2 0 L22 0" stroke="#3E6420" strokeWidth="0.8" opacity="0.4" />
-          </g>
-        ))}
-      </svg>
-      <div className="absolute bottom-0 right-2 text-[58px] leading-none drop-shadow-sm">🥗</div>
-    </div>
-  );
-}
 function NWShell({ title, subtitle, pct, cta = "Next", emoji, leaf = true, heroArt, children }: { title: string; subtitle?: string; pct: number; cta?: string; emoji?: string; leaf?: boolean; heroArt?: React.ReactNode; children: React.ReactNode }) {
   return (
     <div className="min-h-svh w-full px-4 py-5" style={{ background: NW_BG, color: NW_TEXT, ...SANS }}>
@@ -1093,29 +1074,56 @@ function NWPills({ opts, def, cols = 4 }: { opts: { l: string }[]; def: string; 
   );
 }
 
-const NW_TIPS: [string, string, string, string][] = [
-  ["Cut calories gently", "A small, sustainable reduction that works", "🍴", "peach"],
-  ["Eat enough protein", "Keeps you full for longer", "🍳", "cream"],
-  ["Choose better carbs (low-GI)", "Steady energy, no sudden crashes", "🌱", "green"],
-  ["Start with a salad", "Helps you feel full, so you eat less", "🥗", "cream"],
-  ["Include sprouts at breakfast", "Nutrient-rich and light on calories", "🍎", "rose"],
-  ["Go easy on nuts & dry fruits", "Nutritious, but calorie-dense — keep portions small", "🥜", "peach"],
-  ["Chew well, eat slowly", "Gives your brain time to feel satisfied", "🪷", "rose"],
+/* Weight-loss screen — faithful rebuild of the shared HTML (terracotta #8E5A3C,
+   Plus Jakarta Sans, Material Symbols icons in pastel circles, 🥗 badge). */
+const WL_CARDS: [string, string, string, string, string][] = [
+  ["Cut calories gently", "A small, sustainable reduction that works", "restaurant", "#FAECE2", "#B05B27"],
+  ["Eat enough protein", "Keeps you full for longer", "egg_alt", "#FEF4DC", "#A67812"],
+  ["Choose better carbs (low-GI)", "Steady energy, no sudden crashes", "eco", "#EAF4E8", "#3D7834"],
+  ["Start with a salad", "Helps you feel full, so you eat less", "soup_kitchen", "#FFF0E0", "#BC671F"],
+  ["Include sprouts at breakfast", "Nutrient-rich and light on calories", "nutrition", "#FCECEE", "#B83D4F"],
+  ["Go easy on nuts & dry fruits", "Nutritious, but calorie-dense — keep portions small", "grain", "#FBF0DD", "#A66E14"],
+  ["Chew well, eat slowly", "Gives your brain time to feel satisfied", "self_improvement", "#FAEBEE", "#B84058"],
 ];
 function NWWeightLoss() {
   return (
-    <NWShell title="How weight loss works" subtitle="Weight loss is mostly about food — the steady, no-starving way. Tap any card to see why it works." pct={30} heroArt={<NWSaladHero />} cta="Next">
-      {NW_TIPS.map(([title, sub, emoji, tone]) => (
-        <button key={title} className="group flex min-h-[74px] w-full items-center gap-3 rounded-[22px] border border-white/90 bg-white/65 px-3.5 py-3 text-left shadow-[0_3px_12px_rgba(121,79,50,0.06)]">
-          <span className={`grid h-[52px] w-[52px] shrink-0 place-items-center rounded-full ${NW_TONES[tone]}`}><span className="text-[27px] leading-none">{emoji}</span></span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-[14px] font-semibold leading-[1.3]" style={{ color: NW_TEXT }}>{title}</span>
-            <span className="mt-1 block text-[12px] leading-[1.35]" style={{ color: NW_SUB }}>{sub}</span>
-          </span>
-          <ChevronRight size={19} strokeWidth={1.7} className="shrink-0" style={{ color: NW_ACCENT }} />
-        </button>
-      ))}
-    </NWShell>
+    <div className="flex min-h-svh items-start justify-center" style={{ background: "#ECE7DF", color: "#2D2823", ...JAKARTA }}>
+      <main className="relative flex min-h-svh w-full max-w-[414px] flex-col overflow-hidden" style={{ background: "#FAF7F2" }}>
+        <div className="pointer-events-none absolute -right-10 -top-10 h-52 w-52 rounded-full bg-amber-100/35 blur-3xl" />
+        <div className="pointer-events-none absolute -left-12 top-1/3 h-48 w-48 rounded-full bg-orange-100/25 blur-3xl" />
+        <div className="relative z-10 flex-1 overflow-y-auto px-5 pb-28 pt-6">
+          <header className="mb-5 flex items-center gap-4">
+            <button aria-label="Go back" className="flex h-10 w-10 items-center justify-center rounded-full border border-stone-200/70 bg-white/95 text-stone-700 shadow-sm active:scale-95"><MS name="arrow_back" size={20} /></button>
+            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-stone-200/80"><div className="h-full rounded-full" style={{ width: "38%", background: "#8E5A3C" }} /></div>
+          </header>
+          <div className="relative mb-5 pr-16">
+            <h1 className="mb-2 text-[27px] font-semibold leading-[1.2] tracking-tight" style={{ ...SERIF, color: "#2D2823" }}>How weight loss works</h1>
+            <p className="text-[13.5px] leading-relaxed" style={{ color: "#6E675F" }}>Weight loss is mostly about food — the steady, no-starving way. Tap any card to see why it works.</p>
+            <div className="absolute right-[-4px] top-0 flex h-16 w-16 rotate-6 items-center justify-center rounded-full border border-stone-200/60 bg-amber-50/90 shadow-sm"><span className="select-none text-3xl drop-shadow-sm">🥗</span></div>
+          </div>
+          <div className="space-y-2.5">
+            {WL_CARDS.map(([title, sub, icon, bg, fg]) => (
+              <div key={title} className="group flex cursor-pointer items-center gap-3.5 rounded-2xl border p-3.5 shadow-[0_2px_8px_rgba(0,0,0,0.03)] transition-all active:scale-[0.99]" style={{ background: "#FFFFFF", borderColor: "#F0ECE4" }}>
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full" style={{ background: bg, color: fg }}><MS name={icon} size={22} /></div>
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-[15px] font-semibold leading-snug" style={{ color: "#2D2823" }}>{title}</h2>
+                  <p className="truncate text-[12.5px]" style={{ color: "#6E675F" }}>{sub}</p>
+                </div>
+                <MS name="chevron_right" size={20} className="text-stone-300" />
+              </div>
+            ))}
+          </div>
+          <div className="mb-2 mt-6">
+            <button className="flex w-full items-center justify-center gap-2 rounded-2xl px-6 py-3.5 text-[15px] font-semibold text-white shadow-sm active:scale-[0.98]" style={{ background: "#8E5A3C" }}>Next <MS name="arrow_forward" size={18} /></button>
+          </div>
+        </div>
+        <nav aria-label="Bottom Navigation" className="absolute inset-x-0 bottom-0 z-20 flex h-16 items-center justify-around border-t border-stone-200/70 bg-white/95 px-2 backdrop-blur-md">
+          {["home", "favorite", "grid_view", "school", "auto_awesome", "person"].map((n, i) => (
+            <button key={n} aria-label={n} className={`flex flex-col items-center justify-center py-1 ${i === 0 ? "text-stone-700" : "text-stone-400"}`}><MS name={n} size={22} /></button>
+          ))}
+        </nav>
+      </main>
+    </div>
   );
 }
 
