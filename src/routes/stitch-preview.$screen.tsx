@@ -1076,14 +1076,14 @@ function NWPills({ opts, def, cols = 4 }: { opts: { l: string }[]; def: string; 
 
 /* Weight-loss screen — faithful rebuild of the shared HTML (terracotta #8E5A3C,
    Plus Jakarta Sans, Material Symbols icons in pastel circles, 🥗 badge). */
-const WL_CARDS: [string, string, string, string, string][] = [
-  ["Cut calories gently", "A small, sustainable reduction that works", "restaurant", "#FAECE2", "#B05B27"],
-  ["Eat enough protein", "Keeps you full for longer", "egg_alt", "#FEF4DC", "#A67812"],
-  ["Choose better carbs (low-GI)", "Steady energy, no sudden crashes", "eco", "#EAF4E8", "#3D7834"],
-  ["Start with a salad", "Helps you feel full, so you eat less", "soup_kitchen", "#FFF0E0", "#BC671F"],
-  ["Include sprouts at breakfast", "Nutrient-rich and light on calories", "nutrition", "#FCECEE", "#B83D4F"],
-  ["Go easy on nuts & dry fruits", "Nutritious, but calorie-dense — keep portions small", "grain", "#FBF0DD", "#A66E14"],
-  ["Chew well, eat slowly", "Gives your brain time to feel satisfied", "self_improvement", "#FAEBEE", "#B84058"],
+const WL_CARDS: [string, string, string, string, string, string][] = [
+  ["Cut calories gently", "A small, sustainable reduction that works", "restaurant", "#FAECE2", "#B05B27", "calories.png"],
+  ["Eat enough protein", "Keeps you full for longer", "egg_alt", "#FEF4DC", "#A67812", "protein.png"],
+  ["Choose better carbs (low-GI)", "Steady energy, no sudden crashes", "eco", "#EAF4E8", "#3D7834", "carbs.png"],
+  ["Start with a salad", "Helps you feel full, so you eat less", "soup_kitchen", "#FFF0E0", "#BC671F", "salad.png"],
+  ["Include sprouts at breakfast", "Nutrient-rich and light on calories", "nutrition", "#FCECEE", "#B83D4F", "sprouts.png"],
+  ["Go easy on nuts & dry fruits", "Nutritious, but calorie-dense — keep portions small", "grain", "#FBF0DD", "#A66E14", "nuts.png"],
+  ["Chew well, eat slowly", "Gives your brain time to feel satisfied", "self_improvement", "#FAEBEE", "#B84058", "chew.png"],
 ];
 function NWWeightLoss() {
   return (
@@ -1096,15 +1096,19 @@ function NWWeightLoss() {
             <button aria-label="Go back" className="flex h-10 w-10 items-center justify-center rounded-full border border-stone-200/70 bg-white/95 text-stone-700 shadow-sm active:scale-95"><MS name="arrow_back" size={20} /></button>
             <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-stone-200/80"><div className="h-full rounded-full" style={{ width: "38%", background: "#8E5A3C" }} /></div>
           </header>
-          <div className="relative mb-5 pr-16">
-            <h1 className="mb-2 text-[27px] font-semibold leading-[1.2] tracking-tight" style={{ ...SERIF, color: "#2D2823" }}>How weight loss works</h1>
-            <p className="text-[13.5px] leading-relaxed" style={{ color: "#6E675F" }}>Weight loss is mostly about food — the steady, no-starving way. Tap any card to see why it works.</p>
-            <div className="absolute right-[-4px] top-0 flex h-16 w-16 rotate-6 items-center justify-center rounded-full border border-stone-200/60 bg-amber-50/90 shadow-sm"><span className="select-none text-3xl drop-shadow-sm">🥗</span></div>
+          <div className="relative mb-5">
+            <h1 className="mb-2 text-[27px] font-semibold leading-[1.2] tracking-tight" style={{ ...SERIF, color: "#2D2823", maxWidth: 235 }}>How weight loss works</h1>
+            <p className="text-[13.5px] leading-relaxed" style={{ color: "#6E675F", maxWidth: 240 }}>Weight loss is mostly about food — the steady, no-starving way. Tap any card to see why it works.</p>
+            {/* Hero illustration slot — drop /images/weightloss/hero.png in to show the real art; 🥗 badge is the interim placeholder */}
+            <div className="pointer-events-none absolute right-[-10px] top-[-8px] h-[150px] w-[158px]">
+              <img src="/images/weightloss/hero.png" alt="" className="h-full w-full object-contain drop-shadow-sm" onError={(e) => { const el = e.currentTarget; el.style.display = "none"; const fb = el.nextElementSibling as HTMLElement | null; if (fb) fb.style.display = "flex"; }} />
+              <div className="absolute right-5 top-7 hidden h-16 w-16 rotate-6 items-center justify-center rounded-full border border-stone-200/60 bg-amber-50/90 shadow-sm"><span className="select-none text-3xl">🥗</span></div>
+            </div>
           </div>
           <div className="space-y-2.5">
-            {WL_CARDS.map(([title, sub, icon, bg, fg]) => (
+            {WL_CARDS.map(([title, sub, icon, bg, fg, img]) => (
               <div key={title} className="group flex cursor-pointer items-center gap-3.5 rounded-2xl border p-3.5 shadow-[0_2px_8px_rgba(0,0,0,0.03)] transition-all active:scale-[0.99]" style={{ background: "#FFFFFF", borderColor: "#F0ECE4" }}>
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full" style={{ background: bg, color: fg }}><MS name={icon} size={22} /></div>
+                <div className="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full" style={{ background: bg, color: fg }}><MS name={icon} size={22} /><img src={`/images/weightloss/${img}`} alt="" className="absolute inset-0 h-full w-full object-contain p-1.5" onError={(e) => { e.currentTarget.style.display = "none"; }} /></div>
                 <div className="min-w-0 flex-1">
                   <h2 className="text-[15px] font-semibold leading-snug" style={{ color: "#2D2823" }}>{title}</h2>
                   <p className="truncate text-[12.5px]" style={{ color: "#6E675F" }}>{sub}</p>
