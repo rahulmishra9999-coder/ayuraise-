@@ -1,5 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
+import {
+  ArrowLeft, ArrowRight, ChevronRight, Check, Utensils, Egg, Sprout, Salad, Apple, Nut, Flower2,
+  House, Heart, LayoutGrid, GraduationCap, Sparkles, UserRound, Ruler, Scale, Armchair, Footprints,
+  Dumbbell, Flame, Moon, Clock, Timer, Sunrise, PersonStanding, Target, Activity, TrendingDown, Droplet,
+} from "lucide-react";
 
 export const Route = createFileRoute("/stitch-preview/$screen")({
   head: () => ({
@@ -1006,9 +1011,235 @@ function WGoals() {
   );
 }
 
+/* ===================== NEW WARM BASE (from WeightLossScreen.tsx) ===================== */
+const NW_BG = "#FFF8F1";
+const NW_CARD_GRAD = "radial-gradient(ellipse at top right,#F9E8D5 0%,#FFF8F1 48%,#FFF4EA 100%)";
+const NW_INK = "#2B211B";     // serif headline / big values
+const NW_TEXT = "#39332F";    // card title / primary
+const NW_SUB = "#6B625B";     // body / subtitle
+const NW_LABEL = "#9A8575";   // micro field label
+const NW_ACCENT = "#8F4B25";  // brown accent (icons, chevrons)
+const NW_GRAD = "linear-gradient(to right,#8F4B25,#C88A60)";  // progress + selected
+const NW_CTA = "linear-gradient(to right,#A77B60,#95674D)";   // next button
+const NW_TONES: Record<string, string> = {
+  peach: "bg-[#FCE9D8] text-[#9A4D1D]",
+  cream: "bg-[#F9EED6] text-[#A36A22]",
+  green: "bg-[#EEF1D0] text-[#557C20]",
+  rose: "bg-[#FCE3DF] text-[#C83B35]",
+};
+const NW_NAV: [string, any][] = [["Home", House], ["Favorites", Heart], ["Explore", LayoutGrid], ["Learn", GraduationCap], ["Wellness", Sparkles], ["Profile", UserRound]];
+
+function NWShell({ title, subtitle, pct, cta = "Next", emoji, leaf = true, children }: { title: string; subtitle?: string; pct: number; cta?: string; emoji?: string; leaf?: boolean; children: React.ReactNode }) {
+  return (
+    <div className="min-h-svh w-full px-4 py-5" style={{ background: NW_BG, color: NW_TEXT, ...SANS }}>
+      <div className="mx-auto flex min-h-[calc(100svh-2.5rem)] w-full max-w-[440px] flex-col overflow-hidden rounded-[30px] shadow-[0_8px_32px_rgba(105,67,42,0.10)]" style={{ background: NW_CARD_GRAD }}>
+        <header className="relative px-5 pt-5">
+          <div className="flex items-center gap-3">
+            <button aria-label="Back" className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/85 shadow-sm" style={{ color: NW_TEXT }}><ArrowLeft size={19} strokeWidth={1.8} /></button>
+            <div className="h-[6px] flex-1 overflow-hidden rounded-full" style={{ background: "#E5D9D0" }}><div className="h-full rounded-full" style={{ width: `${pct}%`, background: NW_GRAD }} /></div>
+          </div>
+          {emoji && (
+            <div className="pointer-events-none absolute right-4 top-[62px] flex h-[110px] w-[110px] items-center justify-center">
+              {leaf && <div className="absolute -right-1 top-0 text-[28px] opacity-80">🌿</div>}
+              <div className="relative mt-6 text-[64px] leading-none drop-shadow-sm">{emoji}</div>
+            </div>
+          )}
+          <div className="relative z-10 mt-6 pr-2">
+            <h1 className={`text-[30px] font-semibold leading-[1.12] tracking-[-0.6px] ${emoji ? "max-w-[260px]" : ""}`} style={{ ...SERIF, color: NW_INK }}>{title}</h1>
+            {subtitle && <p className="mt-3 max-w-[270px] text-[14px] leading-[1.55]" style={{ color: NW_SUB }}>{subtitle}</p>}
+          </div>
+        </header>
+        <div className="mt-5 flex flex-1 flex-col gap-3 px-4">{children}</div>
+        <div className="px-5 pb-4 pt-5">
+          <button className="flex h-[52px] w-full items-center justify-center gap-3 rounded-full text-[15px] font-medium text-white shadow-[0_4px_12px_rgba(116,72,45,0.16)]" style={{ background: NW_CTA }}>{cta} <ArrowRight size={19} strokeWidth={1.8} /></button>
+        </div>
+        <nav className="mx-4 mb-4 flex h-[58px] items-center justify-around rounded-full border border-white/90 bg-white/65 px-2 shadow-[0_3px_12px_rgba(121,79,50,0.06)]">
+          {NW_NAV.map(([label, Icon]) => <button key={label} aria-label={label} className="grid h-10 w-10 place-items-center rounded-full" style={{ color: "#75401F" }}><Icon size={19} strokeWidth={1.65} /></button>)}
+        </nav>
+      </div>
+    </div>
+  );
+}
+function NWCard({ children }: { children: React.ReactNode }) { return <div className="rounded-[22px] border border-white/90 bg-white/65 p-4 shadow-[0_3px_12px_rgba(121,79,50,0.06)]">{children}</div>; }
+function NWLbl({ children }: { children: React.ReactNode }) { return <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: NW_LABEL }}>{children}</span>; }
+function NWPills({ opts, def, cols = 4 }: { opts: { l: string }[]; def: string; cols?: number }) {
+  const [v, setV] = useState(def);
+  return (
+    <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${cols},minmax(0,1fr))` }}>
+      {opts.map((o) => { const on = v === o.l; return <button key={o.l} onClick={() => setV(o.l)} className="flex items-center justify-center rounded-full px-2 py-2.5 text-center text-[12.5px] font-medium transition-all active:scale-95" style={on ? { background: NW_GRAD, color: "#fff" } : { background: "#F4E9DB", color: NW_SUB }}>{o.l}</button>; })}
+    </div>
+  );
+}
+
+const NW_TIPS: [string, string, any, string][] = [
+  ["Cut calories gently", "A small, sustainable reduction that works", Utensils, "peach"],
+  ["Eat enough protein", "Keeps you full for longer", Egg, "cream"],
+  ["Choose better carbs (low-GI)", "Steady energy, no sudden crashes", Sprout, "green"],
+  ["Start with a salad", "Helps you feel full, so you eat less", Salad, "cream"],
+  ["Include sprouts at breakfast", "Nutrient-rich and light on calories", Apple, "rose"],
+  ["Go easy on nuts & dry fruits", "Nutritious, but calorie-dense — keep portions small", Nut, "peach"],
+  ["Chew well, eat slowly", "Gives your brain time to feel satisfied", Flower2, "rose"],
+];
+function NWWeightLoss() {
+  return (
+    <NWShell title="How weight loss works" subtitle="Weight loss is mostly about food — the steady, no-starving way. Tap any card to see why it works." pct={30} emoji="🥗" cta="Next">
+      {NW_TIPS.map(([title, sub, Icon, tone]) => (
+        <button key={title} className="group flex min-h-[74px] w-full items-center gap-3 rounded-[22px] border border-white/90 bg-white/65 px-3.5 py-3 text-left shadow-[0_3px_12px_rgba(121,79,50,0.06)]">
+          <span className={`grid h-[52px] w-[52px] shrink-0 place-items-center rounded-full ${NW_TONES[tone]}`}><Icon size={25} strokeWidth={1.8} /></span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[14px] font-medium leading-[1.3]" style={{ color: NW_TEXT }}>{title}</span>
+            <span className="mt-1 block text-[12px] leading-[1.35]" style={{ color: NW_SUB }}>{sub}</span>
+          </span>
+          <ChevronRight size={19} strokeWidth={1.7} className="shrink-0" style={{ color: NW_ACCENT }} />
+        </button>
+      ))}
+    </NWShell>
+  );
+}
+
+function NWAbout() {
+  const [g, setG] = useState("Male"); const [hU, setHU] = useState("cm"); const [wU, setWU] = useState("kg");
+  return (
+    <NWShell title="A little about you" subtitle="This helps us personalise your plan." pct={20} emoji="🌸" cta="Continue">
+      <NWCard><NWLbl>Name</NWLbl>
+        <div className="mt-2 flex items-center gap-3"><span className="grid h-9 w-9 place-items-center rounded-full bg-[#FCE9D8] text-[#9A4D1D]"><UserRound size={18} /></span><input defaultValue="rahul" className="w-full bg-transparent text-[18px] focus:outline-none" style={{ color: NW_INK }} /></div>
+      </NWCard>
+      <NWCard><NWLbl>Gender</NWLbl>
+        <div className="mt-3 grid grid-cols-3 gap-2">{["Male", "Female", "Other"].map((x) => { const on = g === x; return <button key={x} onClick={() => setG(x)} className="flex items-center justify-center gap-1.5 rounded-full px-3 py-2.5 text-[14px] font-medium transition-all" style={on ? { background: NW_GRAD, color: "#fff" } : { background: "#F4E9DB", color: NW_SUB }}>{on && <Check size={15} />}{x}</button>; })}</div>
+      </NWCard>
+      <NWCard><NWLbl>Age</NWLbl>
+        <div className="mt-1.5 flex items-baseline gap-2"><input type="number" defaultValue={32} className="w-20 bg-transparent text-[26px] font-semibold focus:outline-none" style={{ ...SERIF, color: NW_INK }} /><span className="text-[15px]" style={{ color: NW_SUB }}>years</span></div>
+      </NWCard>
+      <div className="grid grid-cols-2 gap-3">
+        {[["Height", "178", hU, setHU, ["cm", "ft"], Ruler], ["Weight", "72", wU, setWU, ["kg", "lb"], Scale]].map(([lab, val, u, setU, units, Ic]: any) => (
+          <NWCard key={lab}>
+            <div className="flex items-center justify-between"><NWLbl>{lab}</NWLbl><div className="flex rounded-full bg-[#F4E9DB] p-0.5">{units.map((x: string) => <button key={x} onClick={() => setU(x)} className="rounded-full px-2 py-0.5 text-[12px]" style={u === x ? { background: "#fff", color: NW_ACCENT, fontWeight: 700 } : { color: NW_SUB }}>{x}</button>)}</div></div>
+            <div className="mt-2 flex items-baseline gap-1.5"><span className="text-[24px] font-semibold" style={{ ...SERIF, color: NW_INK }}>{val}</span><span className="text-[14px]" style={{ color: NW_SUB }}>{u}</span><span className="ml-auto" style={{ color: NW_ACCENT }}><Ic size={16} /></span></div>
+          </NWCard>
+        ))}
+      </div>
+    </NWShell>
+  );
+}
+
+const NW_ACT: [string, string, string, any, string][] = [
+  ["Sedentary", "~50–150 cal/day", "Mostly sitting — desk, driving, screens.", Armchair, "cream"],
+  ["Lightly active", "~150–300 cal/day", "Light chores + walking; 1–2 workouts a week.", Footprints, "peach"],
+  ["Active", "~350–500 cal/day", "Workouts most days, or on your feet.", Dumbbell, "green"],
+  ["Very active", "~600–900 cal/day", "Hard physical work or intense training.", Flame, "rose"],
+];
+function NWActivity() {
+  const [sel, setSel] = useState("Lightly active");
+  return (
+    <NWShell title="Activity level" subtitle="Choose what best matches your typical day." pct={40} emoji="🚶" cta="Continue">
+      {NW_ACT.map(([lab, cal, desc, Ic, tone]) => { const on = sel === lab; return (
+        <button key={lab} onClick={() => setSel(lab)} className="flex w-full items-start gap-3 rounded-[22px] border bg-white/65 px-3.5 py-3 text-left transition" style={on ? { borderColor: NW_ACCENT, boxShadow: "0 6px 18px rgba(143,75,37,0.16)" } : { borderColor: "rgba(255,255,255,0.9)", boxShadow: "0 3px 12px rgba(121,79,50,0.06)" }}>
+          <span className={`grid h-[52px] w-[52px] shrink-0 place-items-center rounded-full ${NW_TONES[tone]}`}><Ic size={24} strokeWidth={1.8} /></span>
+          <span className="min-w-0 flex-1">
+            <span className="flex items-center justify-between gap-2"><span className="text-[15px] font-semibold" style={{ color: NW_TEXT }}>{lab}</span><span className="grid h-5 w-5 shrink-0 place-items-center rounded-full" style={on ? { background: NW_GRAD } : { border: "2px solid #E0D2C6" }}>{on && <Check size={12} className="text-white" />}</span></span>
+            <span className="mt-0.5 block text-[12px] font-semibold" style={{ color: NW_ACCENT }}>{cal}</span>
+            <span className="mt-1 block text-[12px] leading-[1.35]" style={{ color: NW_SUB }}>{desc}</span>
+          </span>
+        </button>
+      ); })}
+    </NWShell>
+  );
+}
+
+function NWSleep() {
+  return (
+    <NWShell title="Sleep" subtitle="Help us calibrate your nightly recovery." pct={60} emoji="🌙" cta="Continue">
+      <NWCard>
+        <div className="flex items-center justify-between"><div className="flex items-center gap-2"><Moon size={16} style={{ color: NW_ACCENT }} /><NWLbl>Bedtime</NWLbl></div><span className="text-[11px]" style={{ color: NW_LABEL }}>Usual window</span></div>
+        <div className="mt-2 flex h-11 items-center justify-between rounded-xl bg-[#F4E9DB] px-3.5 text-[14px] font-medium" style={{ color: NW_INK }}>10:30 PM – 11:00 PM<ChevronRight size={16} style={{ color: NW_LABEL }} /></div>
+      </NWCard>
+      <NWCard><div className="mb-2 flex items-center gap-2"><Clock size={16} style={{ color: NW_ACCENT }} /><NWLbl>Sleep duration</NWLbl></div><NWPills cols={6} opts={[{ l: "5h" }, { l: "6h" }, { l: "7h" }, { l: "8h" }, { l: "9h" }, { l: "10h" }]} def="7h" /></NWCard>
+      <NWCard><div className="mb-2 flex items-center gap-2"><Timer size={16} style={{ color: NW_ACCENT }} /><NWLbl>Time to fall asleep</NWLbl></div><NWPills cols={2} opts={[{ l: "< 10 min" }, { l: "10–20 min" }, { l: "20–40 min" }, { l: "40+ min" }]} def="10–20 min" /></NWCard>
+      <NWCard><div className="mb-2 flex items-center gap-2"><Sunrise size={16} style={{ color: NW_ACCENT }} /><NWLbl>Daytime nap</NWLbl></div><NWPills cols={3} opts={[{ l: "No" }, { l: "Sometimes" }, { l: "Daily" }]} def="Sometimes" /></NWCard>
+      <NWCard><div className="mb-2 flex items-center gap-2"><Sparkles size={16} style={{ color: NW_ACCENT }} /><NWLbl>Waking feeling</NWLbl></div><NWPills cols={3} opts={[{ l: "Fresh" }, { l: "Balanced" }, { l: "Tired" }]} def="Balanced" /></NWCard>
+    </NWShell>
+  );
+}
+
+function NWYoga() {
+  return (
+    <NWShell title="Set up your yoga" subtitle="Customise your practice to your comfort." pct={35} emoji="🧘" cta="Continue">
+      <NWCard><div className="mb-2"><NWLbl>Your level</NWLbl></div><NWPills cols={3} opts={[{ l: "Beginner" }, { l: "Intermediate" }, { l: "Advanced" }]} def="Beginner" /></NWCard>
+      <NWCard><div className="mb-2"><NWLbl>Session length</NWLbl></div><NWPills cols={3} opts={[{ l: "10 min" }, { l: "15 min" }, { l: "20 min" }, { l: "30 min" }, { l: "45 min" }, { l: "60 min" }]} def="20 min" /></NWCard>
+      <div className="flex items-start gap-3 rounded-[22px] px-3.5 py-3" style={{ background: "#FBEEE0", border: "1px solid rgba(255,255,255,0.9)" }}>
+        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white/70" style={{ color: NW_ACCENT }}><PersonStanding size={19} /></span>
+        <div><p className="text-[13px] font-semibold" style={{ color: NW_ACCENT }}>~ 90–110 cal per session</p><p className="text-[12px]" style={{ color: NW_SUB }}>A 20-min beginner session, for your weight.</p></div>
+      </div>
+      <NWCard><div className="mb-2"><NWLbl>Any areas to protect?</NWLbl></div><NWPills cols={3} opts={[{ l: "None" }, { l: "Knees" }, { l: "Lower back" }, { l: "Neck" }, { l: "Shoulders" }, { l: "Wrists" }, { l: "Hips" }]} def="None" /></NWCard>
+    </NWShell>
+  );
+}
+
+function NWFood() {
+  return (
+    <NWShell title="Food & meals" subtitle="So your plan uses food you love." pct={80} emoji="🥘" cta="Continue">
+      <NWCard><div className="mb-2"><NWLbl>Food style</NWLbl></div><NWPills opts={[{ l: "Veg" }, { l: "Vegan" }, { l: "Egg" }, { l: "Non-veg" }]} def="Veg" /></NWCard>
+      <NWCard><div className="mb-2"><NWLbl>Main meals / day</NWLbl></div><NWPills opts={[{ l: "1" }, { l: "2" }, { l: "3" }, { l: "4+" }]} def="3" /></NWCard>
+      <NWCard><div className="mb-2"><NWLbl>Snacks / day</NWLbl></div><NWPills cols={5} opts={[{ l: "0" }, { l: "1" }, { l: "2" }, { l: "3" }, { l: "4+" }]} def="1" /></NWCard>
+      <NWCard><div className="mb-2"><NWLbl>Meal timing</NWLbl></div>
+        <div className="grid grid-cols-2 gap-2.5">{[["Breakfast", "8:30 AM"], ["Dinner", "7:30 PM"]].map(([k, v]) => <div key={k} className="rounded-xl bg-[#F4E9DB] p-3"><span className="text-[12px]" style={{ color: NW_SUB }}>{k}</span><div className="mt-0.5 flex items-center justify-between"><span className="text-[17px] font-semibold" style={{ ...SERIF, color: NW_INK }}>{v}</span><Clock size={16} style={{ color: NW_ACCENT }} /></div></div>)}</div>
+      </NWCard>
+      <NWCard><div className="mb-2"><NWLbl>Water / day (L)</NWLbl></div><NWPills cols={3} opts={[{ l: "< 1.5" }, { l: "1.5–2" }, { l: "2–2.5" }, { l: "2.5–3" }, { l: "3+" }]} def="2–2.5" /></NWCard>
+    </NWShell>
+  );
+}
+
+function NWCalGoal() {
+  const rows: [string, string, string, any][] = [["At rest (BMR)", "Calories burned at complete rest", "1,628", Activity], ["Activity burn", "Mostly sitting, 20 min yoga", "~250", Footprints], ["Maintenance", "To keep your current weight", "1,878", Scale]];
+  return (
+    <NWShell title="Your daily calorie goal" subtitle="Your target — based on your profile and activity." pct={55} emoji="🔥" cta="Continue">
+      <div className="relative overflow-hidden rounded-[22px] border border-white/90 bg-white/70 p-5 shadow-[0_3px_12px_rgba(121,79,50,0.06)]">
+        <div className="flex items-center gap-2"><Flame size={16} style={{ color: NW_ACCENT }} /><span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: NW_ACCENT }}>Your BMR</span></div>
+        <div className="mt-1 flex items-baseline gap-1.5"><span className="text-[40px] font-semibold leading-none" style={{ ...SERIF, color: NW_INK }}>1,628</span><span className="text-[14px]" style={{ color: NW_SUB }}>kcal/day</span></div>
+        <p className="mt-1 text-[13px]" style={{ color: NW_SUB }}>what your body burns at rest, every day</p>
+      </div>
+      <div className="flex items-center justify-between gap-3 rounded-[22px] p-4 text-white shadow-[0_6px_18px_rgba(143,75,37,0.2)]" style={{ background: NW_GRAD }}>
+        <div className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-full bg-white/15"><Target size={20} /></span><div><p className="text-[14px] font-semibold leading-snug">Daily calorie target</p><p className="text-[12px] text-white/80">to lose weight gently</p></div></div>
+        <div className="text-right"><span className="text-[26px] font-semibold" style={SERIF}>1,425</span><span className="-mt-1 block text-[11px] text-white/80">kcal/day</span></div>
+      </div>
+      <p className="mb-1 mt-3 text-[11px] font-bold uppercase tracking-wider" style={{ color: NW_LABEL }}>How we got here</p>
+      {rows.map(([t, s, v, Ic]) => (
+        <div key={t} className="flex items-center justify-between rounded-[18px] border border-white/90 bg-white/65 p-3.5"><div className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-full bg-[#FCE9D8]" style={{ color: "#9A4D1D" }}><Ic size={18} /></span><div><p className="text-[14px] font-semibold" style={{ color: NW_TEXT }}>{t}</p><p className="text-[11.5px]" style={{ color: NW_SUB }}>{s}</p></div></div><span className="text-[15px] font-semibold" style={{ color: NW_INK }}>{v}</span></div>
+      ))}
+      <div className="flex items-center justify-between rounded-[18px] p-3.5" style={{ background: "#FBEEE0" }}><div className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-full bg-white/70" style={{ color: NW_ACCENT }}><TrendingDown size={18} /></span><div><p className="text-[14px] font-semibold" style={{ color: NW_ACCENT }}>Calorie deficit</p><p className="text-[11.5px]" style={{ color: NW_SUB }}>453 kcal/day below maintenance</p></div></div><span className="text-[15px] font-semibold" style={{ color: NW_ACCENT }}>−453</span></div>
+    </NWShell>
+  );
+}
+
+const NW_CALIN: string[][] = [["🫓", "1 roti", "~100"], ["🍚", "1 bowl rice", "~200"], ["🥣", "1 bowl dal", "~120"], ["🥗", "1 cup sabzi", "~150"], ["🥛", "1 glass milk", "~120"], ["🍎", "1 fruit bowl", "~90"]];
+const NW_CALOUT: string[][] = [["👟", "5,000 steps", "~200"], ["🧘", "20 min yoga", "~90"], ["🏋️", "20 min workout", "~180"], ["🚴", "20 min cycling", "~160"]];
+function NWCalSense() {
+  const grid = (items: string[][], col: string) => (
+    <div className="grid grid-cols-2 gap-x-3 gap-y-2.5">{items.map(([e, n, k]) => <div key={n} className="flex items-center gap-2"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#F4E9DB] text-[16px]">{e}</span><span className="min-w-0 flex-1 truncate text-[12.5px]" style={{ color: NW_TEXT }}>{n}</span><span className="shrink-0 text-right text-[12px] font-bold" style={{ color: col }}>{k}<span className="-mt-0.5 block text-[9px] font-medium" style={{ color: NW_LABEL }}>kcal</span></span></div>)}</div>
+  );
+  return (
+    <NWShell title="A quick calorie sense" subtitle="A quick feel for how calories work." pct={45} emoji="🍽️" cta="Continue">
+      <NWCard><div className="mb-2.5 flex items-center gap-2"><Utensils size={16} style={{ color: NW_ACCENT }} /><NWLbl>Calories in</NWLbl></div>{grid(NW_CALIN, "#9A4D1D")}</NWCard>
+      <NWCard><div className="mb-2.5 flex items-center gap-2"><Flame size={16} style={{ color: NW_ACCENT }} /><NWLbl>Calories out</NWLbl></div>{grid(NW_CALOUT, "#C83B35")}</NWCard>
+      <div className="rounded-[22px] p-3.5" style={{ background: "#EAF1F7", border: "1px solid #D7E4EF" }}>
+        <div className="mb-2 flex items-center gap-1.5"><Droplet size={15} style={{ color: "#2F6E8F" }} /><span className="text-[13px] font-bold" style={{ color: "#2B5876" }}>Stay hydrated <span className="font-medium" style={{ color: "#5E7A94" }}>(almost zero cal)</span></span></div>
+        <div className="flex justify-between gap-1 text-center">{[["💧", "Water"], ["🍵", "Green tea"], ["☕", "Black coffee"], ["🍋", "Lemon water"]].map(([e, n]) => <div key={n} className="flex flex-1 flex-col items-center gap-1"><span className="grid h-9 w-9 place-items-center rounded-full bg-white text-[16px]">{e}</span><span className="text-[9.5px] leading-tight" style={{ color: "#5E7A94" }}>{n}</span></div>)}</div>
+      </div>
+    </NWShell>
+  );
+}
+
 function Preview() {
   const { screen } = Route.useParams();
   const body =
+    screen === "nw-weightloss" ? <NWWeightLoss /> :
+    screen === "nw-about" ? <NWAbout /> :
+    screen === "nw-activity" ? <NWActivity /> :
+    screen === "nw-sleep" ? <NWSleep /> :
+    screen === "nw-yoga" ? <NWYoga /> :
+    screen === "nw-food" ? <NWFood /> :
+    screen === "nw-calgoal" ? <NWCalGoal /> :
+    screen === "nw-calsense" ? <NWCalSense /> :
     screen === "w-about" ? <WAbout /> :
     screen === "w-activity" ? <WActivity /> :
     screen === "w-sleep" ? <WSleep /> :
