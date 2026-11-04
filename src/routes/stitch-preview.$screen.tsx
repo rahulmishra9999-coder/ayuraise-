@@ -1089,11 +1089,11 @@ const WL_CARDS: [string, string, string, string, string, string][] = [
 ];
 function NWWeightLoss() {
   return (
-    <div className="flex min-h-svh items-start justify-center" style={{ background: "#ECE7DF", color: "#39332F", ...INTER }}>
-      <main className="relative flex min-h-svh w-full max-w-[414px] flex-col overflow-hidden" style={{ background: "#FFF8F2" }}>
+    <div className="min-h-svh" style={{ background: "#FFF8F2", color: "#39332F", ...INTER }}>
+      <main className="relative mx-auto flex min-h-svh w-full flex-col overflow-hidden" style={{ background: "#FFF8F2" }}>
         <div className="pointer-events-none absolute -right-10 -top-10 h-52 w-52 rounded-full bg-amber-100/35 blur-3xl" />
         <div className="pointer-events-none absolute -left-12 top-1/3 h-48 w-48 rounded-full bg-orange-100/25 blur-3xl" />
-        <div className="relative z-10 flex-1 overflow-y-auto px-5 pb-28 pt-6">
+        <div className="relative z-10 flex-1 overflow-y-auto px-5 pb-24 pt-5">
           <header className="mb-5 flex items-center gap-4">
             <button aria-label="Go back" className="flex h-10 w-10 items-center justify-center rounded-full border border-stone-200/70 bg-white/95 text-stone-700 shadow-sm active:scale-95"><MS name="arrow_back" size={20} /></button>
             <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-stone-200/80"><div className="h-full rounded-full" style={{ width: "38%", background: "#A07859" }} /></div>
@@ -1107,9 +1107,9 @@ function NWWeightLoss() {
               <div className="absolute right-3 top-5 hidden h-16 w-16 rotate-6 items-center justify-center rounded-full border border-stone-200/60 bg-amber-50/90 shadow-sm"><span className="select-none text-3xl">🥗</span></div>
             </div>
           </div>
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             {WL_CARDS.map(([title, sub, icon, bg, fg, img]) => (
-              <div key={title} className="group flex cursor-pointer items-center gap-3 rounded-[20px] border px-3 py-2 shadow-[0_1px_5px_rgba(90,60,40,0.045)] transition-all active:scale-[0.99]" style={{ background: "#FFFDF9", borderColor: "#F4EEE5" }}>
+              <div key={title} className="group flex cursor-pointer items-center gap-3 rounded-[20px] border px-3 py-2.5 shadow-[0_1px_5px_rgba(90,60,40,0.045)] transition-all active:scale-[0.99]" style={{ background: "#FFFDF9", borderColor: "#F4EEE5" }}>
                 <div className="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full" style={{ background: bg, color: fg }}><MS name={icon} size={22} /><img src={`/images/weightloss/${img}`} alt="" className="absolute inset-0 h-full w-full scale-[1.05] object-cover" onError={(e) => { e.currentTarget.style.display = "none"; }} /></div>
                 <div className="min-w-0 flex-1">
                   <h2 className="text-[14.5px] font-semibold leading-snug" style={{ color: "#39332F" }}>{title}</h2>
