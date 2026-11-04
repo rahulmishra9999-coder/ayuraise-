@@ -1120,7 +1120,7 @@ function NWWeightLoss() {
             ))}
           </div>
           <div className="mb-1 mt-4">
-            <button className="flex w-full items-center justify-center gap-2 rounded-[26px] px-6 py-3.5 text-[15px] font-semibold text-white shadow-[0_6px_16px_-8px_rgba(160,120,89,0.6)] active:scale-[0.98]" style={{ background: "#A17A58" }}>Next <MS name="arrow_forward" size={18} /></button>
+            <button className="flex w-full items-center justify-center gap-2 rounded-[26px] px-6 py-3.5 text-[15px] font-semibold text-white shadow-[0_6px_16px_-8px_rgba(110,70,45,0.55)] active:scale-[0.98]" style={{ background: "#8E5A3C" }}>Next <MS name="arrow_forward" size={18} /></button>
           </div>
         </div>
         <nav aria-label="Bottom Navigation" className="absolute inset-x-5 bottom-5 z-20 flex h-[54px] items-center justify-around rounded-full border px-4 backdrop-blur-md" style={{ background: "rgba(255,253,249,0.97)", borderColor: "#EEE2D4", boxShadow: "0 6px 20px -6px rgba(120,80,45,0.16)" }}>
