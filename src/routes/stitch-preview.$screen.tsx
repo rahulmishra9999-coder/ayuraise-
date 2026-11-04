@@ -1098,34 +1098,34 @@ function NWWeightLoss() {
             <button aria-label="Go back" className="flex h-10 w-10 items-center justify-center rounded-full border border-stone-200/70 bg-white/95 text-stone-700 shadow-sm active:scale-95"><MS name="arrow_back" size={20} /></button>
             <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-stone-200/80"><div className="h-full rounded-full" style={{ width: "38%", background: "#A07859" }} /></div>
           </header>
-          <div className="relative mb-5">
-            <h1 className="mb-2 text-[27px] font-bold leading-[1.2] tracking-tight" style={{ ...PLAYFAIR, color: "#2B211B", maxWidth: 235 }}>How weight loss works</h1>
-            <p className="text-[13.5px] leading-relaxed" style={{ color: "#6B625B", maxWidth: 205 }}>Weight loss is mostly about food — the steady, no-starving way. Tap any card to see why it works.</p>
-            {/* Hero illustration slot — /images/weightloss/hero.png (🥗 badge is the fallback) */}
-            <div className="pointer-events-none absolute right-[-12px] top-[-18px] h-[140px] w-[150px]">
+          <div className="relative mb-4">
+            <h1 className="mb-2 text-[26px] font-bold leading-[1.18] tracking-tight" style={{ ...PLAYFAIR, color: "#2B211B", maxWidth: 240 }}>How weight loss works</h1>
+            <p className="text-[13px] leading-[1.5]" style={{ color: "#6B625B", maxWidth: 230 }}>Weight loss is mostly about food — the steady, no-starving way. Tap any card to see why it works.</p>
+            {/* Hero illustration — /images/weightloss/hero.png (🥗 badge is the fallback) */}
+            <div className="pointer-events-none absolute right-[-6px] top-[-6px] h-[112px] w-[120px]">
               <img src="/images/weightloss/hero.png" alt="" className="h-full w-full object-contain drop-shadow-sm" onError={(e) => { const el = e.currentTarget; el.style.display = "none"; const fb = el.nextElementSibling as HTMLElement | null; if (fb) fb.style.display = "flex"; }} />
-              <div className="absolute right-5 top-7 hidden h-16 w-16 rotate-6 items-center justify-center rounded-full border border-stone-200/60 bg-amber-50/90 shadow-sm"><span className="select-none text-3xl">🥗</span></div>
+              <div className="absolute right-3 top-5 hidden h-16 w-16 rotate-6 items-center justify-center rounded-full border border-stone-200/60 bg-amber-50/90 shadow-sm"><span className="select-none text-3xl">🥗</span></div>
             </div>
           </div>
-          <div className="space-y-2.5">
+          <div className="space-y-2">
             {WL_CARDS.map(([title, sub, icon, bg, fg, img]) => (
-              <div key={title} className="group flex cursor-pointer items-center gap-3.5 rounded-[22px] border p-3.5 shadow-[0_2px_8px_rgba(0,0,0,0.06)] transition-all active:scale-[0.99]" style={{ background: "#FFFDF9", borderColor: "#F0ECE4" }}>
-                <div className="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full" style={{ background: bg, color: fg }}><MS name={icon} size={22} /><img src={`/images/weightloss/${img}`} alt="" className="absolute inset-0 h-full w-full scale-[1.14] object-cover" onError={(e) => { e.currentTarget.style.display = "none"; }} /></div>
+              <div key={title} className="group flex cursor-pointer items-center gap-3 rounded-[20px] border px-3 py-2.5 shadow-[0_2px_8px_rgba(0,0,0,0.06)] transition-all active:scale-[0.99]" style={{ background: "#FFFDF9", borderColor: "#F0ECE4" }}>
+                <div className="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full" style={{ background: bg, color: fg }}><MS name={icon} size={22} /><img src={`/images/weightloss/${img}`} alt="" className="absolute inset-0 h-full w-full scale-[1.12] object-cover" onError={(e) => { e.currentTarget.style.display = "none"; }} /></div>
                 <div className="min-w-0 flex-1">
-                  <h2 className="text-[15px] font-semibold leading-snug" style={{ color: "#39332F" }}>{title}</h2>
-                  <p className="truncate text-[12.5px]" style={{ color: "#6B625B" }}>{sub}</p>
+                  <h2 className="text-[14.5px] font-semibold leading-snug" style={{ color: "#39332F" }}>{title}</h2>
+                  <p className="text-[12px] leading-[1.35]" style={{ color: "#6B625B" }}>{sub}</p>
                 </div>
-                <MS name="chevron_right" size={20} className="text-stone-300" />
+                <span className="shrink-0" style={{ color: "#8E5A3C" }}><MS name="chevron_right" size={20} /></span>
               </div>
             ))}
           </div>
-          <div className="mb-2 mt-6">
-            <button className="flex w-full items-center justify-center gap-2 rounded-[30px] px-6 py-3.5 text-[15px] font-semibold text-white shadow-sm active:scale-[0.98]" style={{ background: "#A07859" }}>Next <MS name="arrow_forward" size={18} /></button>
+          <div className="mb-1 mt-5">
+            <button className="flex w-full items-center justify-center gap-2 rounded-[28px] px-6 py-3.5 text-[15px] font-semibold text-white shadow-sm active:scale-[0.98]" style={{ background: "#A07859" }}>Next <MS name="arrow_forward" size={18} /></button>
           </div>
         </div>
-        <nav aria-label="Bottom Navigation" className="absolute inset-x-0 bottom-0 z-20 flex h-16 items-center justify-around border-t border-stone-200/70 bg-white/95 px-2 backdrop-blur-md" style={{ boxShadow: "0 -4px 16px rgba(0,0,0,0.08)" }}>
+        <nav aria-label="Bottom Navigation" className="absolute inset-x-4 bottom-4 z-20 flex h-14 items-center justify-around rounded-full border px-3 backdrop-blur-md" style={{ background: "rgba(255,253,249,0.96)", borderColor: "#EFE3D6", boxShadow: "0 4px 16px rgba(0,0,0,0.08)" }}>
           {["home", "favorite", "grid_view", "school", "auto_awesome", "person"].map((n, i) => (
-            <button key={n} aria-label={n} className={`flex flex-col items-center justify-center py-1 ${i === 0 ? "text-stone-700" : "text-stone-400"}`}><MS name={n} size={22} /></button>
+            <button key={n} aria-label={n} className="flex items-center justify-center" style={{ color: i === 0 ? "#8E5A3C" : "#BCA389" }}><MS name={n} size={22} /></button>
           ))}
         </nav>
       </main>
