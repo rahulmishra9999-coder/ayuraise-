@@ -1087,47 +1087,58 @@ const WL_CARDS: [string, string, string, string, string, string][] = [
   ["Go easy on nuts & dry fruits", "Nutritious, but calorie-dense — keep portions small", "grain", "#FBF0DD", "#A66E14", "nuts.png"],
   ["Chew well, eat slowly", "Gives your brain time to feel satisfied", "self_improvement", "#FAEBEE", "#B84058", "chew.png"],
 ];
+/* Material Symbol sized in container-query units (cqw) so it scales with the canvas. */
+function MSq({ name, size, color }: { name: string; size: string; color?: string }) {
+  return <span className="material-symbols-outlined" style={{ fontSize: size, lineHeight: 1, color }}>{name}</span>;
+}
+/* Built to the 1024x1536 design canvas using cqw units (1cqw = 1% of the frame width),
+   so measurements match exactly at 1024 wide and scale proportionally on any screen. */
 function NWWeightLoss() {
   return (
-    <div className="min-h-svh" style={{ background: "#FFF8F2", color: "#39332F", ...INTER }}>
-      <main className="relative mx-auto flex min-h-svh w-full flex-col overflow-hidden" style={{ background: "#FFF8F2" }}>
-        <div className="pointer-events-none absolute -right-10 -top-10 h-52 w-52 rounded-full bg-amber-100/35 blur-3xl" />
-        <div className="pointer-events-none absolute -left-12 top-1/3 h-48 w-48 rounded-full bg-orange-100/25 blur-3xl" />
-        <div className="relative z-10 flex-1 overflow-y-auto px-5 pb-24 pt-5">
-          <header className="mb-5 flex items-center gap-4">
-            <button aria-label="Go back" className="flex h-10 w-10 items-center justify-center rounded-full border border-stone-200/70 bg-white/95 text-stone-700 shadow-sm active:scale-95"><MS name="arrow_back" size={20} /></button>
-            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-stone-200/80"><div className="h-full rounded-full" style={{ width: "38%", background: "#A07859" }} /></div>
-          </header>
-          <div className="relative mb-4">
-            <h1 className="mb-2 whitespace-nowrap text-[24px] font-semibold leading-[1.15] tracking-[-0.01em]" style={{ ...PLAYFAIR, color: "#2B211B" }}>How weight loss works</h1>
-            <p className="text-[13px] leading-[1.5]" style={{ color: "#6B625B", maxWidth: 220 }}>Weight loss is mostly about food — the steady, no-starving way. Tap any card to see why it works.</p>
-            {/* Hero illustration — /images/weightloss/hero.png (🥗 badge is the fallback) */}
-            <div className="pointer-events-none absolute right-[-6px] top-[2px] h-[100px] w-[104px]">
-              <img src="/images/weightloss/hero.png" alt="" className="h-full w-full object-contain drop-shadow-sm" onError={(e) => { const el = e.currentTarget; el.style.display = "none"; const fb = el.nextElementSibling as HTMLElement | null; if (fb) fb.style.display = "flex"; }} />
-              <div className="absolute right-3 top-5 hidden h-16 w-16 rotate-6 items-center justify-center rounded-full border border-stone-200/60 bg-amber-50/90 shadow-sm"><span className="select-none text-3xl">🥗</span></div>
+    <div className="min-h-svh w-full" style={{ background: "#FFF8F2", color: "#39332F", ...INTER }}>
+      <main className="relative mx-auto w-full overflow-hidden" style={{ containerType: "inline-size", maxWidth: 1024, background: "#FFF8F2" }}>
+        <div className="pointer-events-none absolute" style={{ right: "-3cqw", top: "-3cqw", width: "34cqw", height: "34cqw", borderRadius: "50%", background: "rgba(251,224,180,0.35)", filter: "blur(6cqw)" }} />
+        <div style={{ padding: "2.7cqw 3.9cqw 0" }}>
+          {/* header */}
+          <div className="flex items-center" style={{ gap: "3cqw", marginBottom: "2.6cqw" }}>
+            <button aria-label="Go back" className="flex shrink-0 items-center justify-center rounded-full border bg-white/95 shadow-sm" style={{ width: "7.2cqw", height: "7.2cqw", borderColor: "rgba(214,204,194,0.7)" }}><MSq name="arrow_back" size="3cqw" color="#39332F" /></button>
+            <div className="flex-1 overflow-hidden rounded-full" style={{ height: "0.8cqw", background: "rgba(214,204,194,0.8)" }}><div className="h-full rounded-full" style={{ width: "38%", background: "#8E5A3C" }} /></div>
+          </div>
+          {/* heading + hero */}
+          <div className="relative" style={{ marginBottom: "3cqw" }}>
+            <h1 className="whitespace-nowrap font-semibold" style={{ ...PLAYFAIR, color: "#2B211B", fontSize: "5.6cqw", lineHeight: 1.14, letterSpacing: "-0.01em", marginBottom: "1.4cqw" }}>How weight loss works</h1>
+            <p style={{ color: "#6B625B", fontSize: "2.7cqw", lineHeight: 1.5, maxWidth: "58cqw" }}>Weight loss is mostly about food — the steady, no-starving way. Tap any card to see why it works.</p>
+            <div className="pointer-events-none absolute" style={{ right: "-1cqw", top: "-0.5cqw", width: "30cqw", height: "28cqw" }}>
+              <img src="/images/weightloss/hero.png" alt="" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
             </div>
           </div>
-          <div className="space-y-3">
+          {/* cards */}
+          <div className="flex flex-col" style={{ gap: "1.1cqw" }}>
             {WL_CARDS.map(([title, sub, icon, bg, fg, img]) => (
-              <div key={title} className="group flex cursor-pointer items-center gap-3 rounded-[20px] border px-3 py-2 shadow-[0_1px_5px_rgba(90,60,40,0.045)] transition-all active:scale-[0.99]" style={{ background: "#FFFDF9", borderColor: "#F4EEE5" }}>
-                <div className="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full" style={{ background: bg, color: fg }}><MS name={icon} size={22} /><img src={`/images/weightloss/${img}`} alt="" className="absolute inset-0 h-full w-full scale-[1.05] object-cover" onError={(e) => { e.currentTarget.style.display = "none"; }} /></div>
-                <div className="min-w-0 flex-1">
-                  <h2 className="text-[14.5px] font-semibold leading-snug" style={{ color: "#39332F" }}>{title}</h2>
-                  <p className="text-[12px] leading-[1.35]" style={{ color: "#6B625B" }}>{sub}</p>
+              <div key={title} className="group flex cursor-pointer items-center" style={{ minHeight: "12cqw", gap: "3cqw", padding: "0 3cqw", borderRadius: "2.1cqw", border: "1px solid #F4EEE5", background: "#FFFDF9", boxShadow: "0 0.1cqw 0.5cqw rgba(90,60,40,0.045)" }}>
+                <div className="relative flex shrink-0 items-center justify-center overflow-hidden rounded-full" style={{ width: "10cqw", height: "10cqw", background: bg }}>
+                  <MSq name={icon} size="4.3cqw" color={fg} />
+                  <img src={`/images/weightloss/${img}`} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", transform: "scale(1.05)" }} onError={(e) => { e.currentTarget.style.display = "none"; }} />
                 </div>
-                <span className="shrink-0" style={{ color: "#8E5A3C" }}><MS name="chevron_right" size={20} /></span>
+                <div className="min-w-0 flex-1">
+                  <h2 className="font-semibold" style={{ color: "#39332F", fontSize: "3.4cqw", lineHeight: 1.2 }}>{title}</h2>
+                  <p style={{ color: "#6B625B", fontSize: "2.7cqw", lineHeight: 1.3, marginTop: "0.3cqw" }}>{sub}</p>
+                </div>
+                <span className="shrink-0" style={{ color: "#8E5A3C" }}><MSq name="chevron_right" size="4.2cqw" /></span>
               </div>
             ))}
           </div>
-          <div className="mb-1 mt-4">
-            <button className="flex w-full items-center justify-center gap-2 rounded-[26px] px-6 py-3.5 text-[15px] font-semibold text-white shadow-[0_6px_16px_-8px_rgba(110,70,45,0.55)] active:scale-[0.98]" style={{ background: "#8E5A3C" }}>Next <MS name="arrow_forward" size={18} /></button>
+          {/* Next */}
+          <div style={{ marginTop: "2.9cqw" }}>
+            <button className="flex w-full items-center justify-center font-semibold text-white active:scale-[0.99]" style={{ gap: "1.5cqw", height: "8.5cqw", borderRadius: "4.3cqw", fontSize: "3cqw", background: "#8E5A3C", boxShadow: "0 0.6cqw 1.6cqw -0.8cqw rgba(110,70,45,0.55)" }}>Next <MSq name="arrow_forward" size="3.4cqw" /></button>
+          </div>
+          {/* bottom nav */}
+          <div aria-label="Bottom Navigation" className="flex items-center justify-around rounded-full border" style={{ marginTop: "3cqw", marginBottom: "2.6cqw", height: "10.7cqw", padding: "0 3cqw", background: "rgba(255,253,249,0.97)", borderColor: "#EEE2D4", boxShadow: "0 0.6cqw 2cqw -0.6cqw rgba(120,80,45,0.16)" }}>
+            {["home", "favorite", "grid_view", "school", "auto_awesome", "person"].map((n, i) => (
+              <span key={n} className="flex items-center justify-center" style={{ color: i === 0 ? "#7E5234" : "#A9815F" }}><MSq name={n} size="4.6cqw" /></span>
+            ))}
           </div>
         </div>
-        <nav aria-label="Bottom Navigation" className="absolute inset-x-5 bottom-5 z-20 flex h-[54px] items-center justify-around rounded-full border px-4 backdrop-blur-md" style={{ background: "rgba(255,253,249,0.97)", borderColor: "#EEE2D4", boxShadow: "0 6px 20px -6px rgba(120,80,45,0.16)" }}>
-          {["home", "favorite", "grid_view", "school", "auto_awesome", "person"].map((n, i) => (
-            <button key={n} aria-label={n} className="flex items-center justify-center" style={{ color: i === 0 ? "#7E5234" : "#A9815F" }}><MS name={n} size={23} /></button>
-          ))}
-        </nav>
       </main>
     </div>
   );
