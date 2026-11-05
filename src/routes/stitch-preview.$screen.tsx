@@ -1076,7 +1076,7 @@ function NWPills({ opts, def, cols = 4 }: { opts: { l: string }[]; def: string; 
   );
 }
 
-/* Weight-loss screen — faithful rebuild of the shared HTML (terracotta #8E5A3C,
+/* Weight-loss screen — faithful rebuild of the shared HTML (terracotta #936548,
    Plus Jakarta Sans, Material Symbols icons in pastel circles, 🥗 badge). */
 const WL_CARDS: [string, string, string, string, string, string][] = [
   ["Cut calories gently", "A small, sustainable reduction that works", "restaurant", "#FAECE2", "#B05B27", "calories.png"],
@@ -1098,7 +1098,7 @@ function NWWeightLoss() {
       <header className="shrink-0 px-5 pb-2" style={{ paddingTop: "max(0.9rem, env(safe-area-inset-top))" }}>
         <div className="flex items-center gap-4">
           <button aria-label="Go back" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-stone-200/70 bg-white/95 shadow-sm active:scale-95" style={{ color: "#39332F" }}><MS name="arrow_back" size={20} /></button>
-          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-stone-200/80"><div className="h-full rounded-full" style={{ width: "38%", background: "#8E5A3C" }} /></div>
+          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-stone-200/80"><div className="h-full rounded-full" style={{ width: "38%", background: "#936548" }} /></div>
         </div>
       </header>
       {/* scrollable content — fills height; extra space on taller phones distributes into the card gaps */}
@@ -1118,11 +1118,11 @@ function NWWeightLoss() {
                 <h2 className="text-[14.5px] font-semibold leading-snug" style={{ color: "#39332F" }}>{title}</h2>
                 <p className="text-[12px] leading-[1.35]" style={{ color: "#6B625B" }}>{sub}</p>
               </div>
-              <span className="shrink-0" style={{ color: "#8E5A3C" }}><MS name="chevron_right" size={20} /></span>
+              <span className="shrink-0" style={{ color: "#936548" }}><MS name="chevron_right" size={20} /></span>
             </div>
           ))}
         </div>
-        <button className="mt-3 flex w-full shrink-0 items-center justify-center gap-2 rounded-[26px] px-6 py-3 text-[15px] font-semibold text-white shadow-[0_6px_16px_-8px_rgba(110,70,45,0.55)] active:scale-[0.98]" style={{ background: "#8E5A3C" }}>Next <MS name="arrow_forward" size={18} /></button>
+        <button className="mt-3 flex w-full shrink-0 items-center justify-center gap-2 rounded-[26px] px-6 py-3 text-[15px] font-semibold text-white shadow-[0_6px_16px_-8px_rgba(110,70,45,0.55)] active:scale-[0.98]" style={{ background: "#936548" }}>Next <MS name="arrow_forward" size={18} /></button>
       </main>
       {/* pinned bottom nav (safe-area aware) */}
       <nav aria-label="Bottom Navigation" className="shrink-0 px-5 pt-2" style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}>
