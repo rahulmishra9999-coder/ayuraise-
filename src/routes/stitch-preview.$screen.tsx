@@ -1,9 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import {
-  ArrowLeft, ArrowRight, ChevronRight, Check, Utensils,
+  ArrowLeft, ArrowRight, ChevronRight, Check,
   House, Heart, LayoutGrid, GraduationCap, Sparkles, UserRound, Ruler, Scale, Armchair, Footprints,
-  Dumbbell, Flame, Moon, Clock, Timer, Sunrise, PersonStanding, Target, Activity, TrendingDown, Droplet,
+  Dumbbell, Flame, Moon, Clock, Timer, Sunrise,
 } from "lucide-react";
 
 export const Route = createFileRoute("/stitch-preview/$screen")({
@@ -1200,17 +1200,66 @@ function NWSleep() {
   );
 }
 
+/* ===== device-first onboarding frame (weight-loss pattern): pinned header + nav, scrolling middle ===== */
+function NWFrame({ title, subtitle, pct, cta = "Next", children }: { title: string; subtitle: string; pct: number; cta?: string; children: React.ReactNode }) {
+  return (
+    <div className="mx-auto flex h-dvh w-full max-w-[520px] flex-col" style={{ background: "#FFF8F2", color: "#39332F", ...INTER }}>
+      <header className="shrink-0 px-5 pb-2" style={{ paddingTop: "max(0.9rem, env(safe-area-inset-top))" }}>
+        <div className="flex items-center gap-4">
+          <button aria-label="Go back" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-stone-200/70 bg-white/95 shadow-sm active:scale-95" style={{ color: "#39332F" }}><MS name="arrow_back" size={20} /></button>
+          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-stone-200/80"><div className="h-full rounded-full" style={{ width: `${pct}%`, background: "#936548" }} /></div>
+        </div>
+      </header>
+      <main className="flex min-h-0 flex-1 flex-col overflow-y-auto px-5 pb-5 pt-1">
+        <div className="mb-3 shrink-0">
+          <h1 className="mb-1.5 text-[23px] font-semibold leading-[1.15] tracking-[-0.01em]" style={{ ...PLAYFAIR, color: "#2B211B" }}>{title}</h1>
+          <p className="text-[12.5px] leading-[1.45]" style={{ color: "#6B625B" }}>{subtitle}</p>
+        </div>
+        {children}
+        <button className="mt-4 flex w-full shrink-0 items-center justify-center gap-2 rounded-[26px] px-6 py-3 text-[15px] font-semibold text-white shadow-[0_6px_16px_-8px_rgba(110,70,45,0.55)] active:scale-[0.98]" style={{ background: "#936548" }}>{cta} <MS name="arrow_forward" size={18} /></button>
+      </main>
+      <nav aria-label="Bottom Navigation" className="shrink-0 px-5 pt-2" style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}>
+        <div className="flex h-[54px] items-center justify-around rounded-full border px-4" style={{ background: "rgba(255,253,249,0.97)", borderColor: "#EEE2D4", boxShadow: "0 6px 20px -6px rgba(120,80,45,0.16)" }}>
+          {["home", "favorite", "grid_view", "school", "auto_awesome", "person"].map((n, i) => (
+            <button key={n} aria-label={n} className="flex items-center justify-center" style={{ color: i === 0 ? "#7E5234" : "#A9815F" }}><MS name={n} size={23} /></button>
+          ))}
+        </div>
+      </nav>
+    </div>
+  );
+}
+function NW2Card({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return <div className={`rounded-[18px] border p-3.5 shadow-[0_1px_5px_rgba(90,60,40,0.045)] ${className}`} style={{ background: "#FFFDF9", borderColor: "#F4EEE5" }}>{children}</div>;
+}
+function NW2Lbl({ children }: { children: React.ReactNode }) {
+  return <span className="text-[11.5px] font-bold uppercase tracking-wider" style={{ color: "#5A4B3C" }}>{children}</span>;
+}
+function NW2Pills({ opts, def, cols = 3 }: { opts: string[]; def: string; cols?: number }) {
+  const [v, setV] = useState(def);
+  return (
+    <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${cols},minmax(0,1fr))` }}>
+      {opts.map((o) => { const on = v === o; return <button key={o} onClick={() => setV(o)} className="rounded-full px-2 py-2.5 text-center text-[12.5px] font-semibold transition-all active:scale-95" style={on ? { background: "#936548", color: "#fff" } : { background: "#F4ECE2", color: "#6B625B" }}>{o}</button>; })}
+    </div>
+  );
+}
 function NWYoga() {
   return (
-    <NWShell title="Set up your yoga" subtitle="Customise your practice to your comfort." pct={35} emoji="🧘" cta="Continue">
-      <NWCard><div className="mb-2"><NWLbl>Your level</NWLbl></div><NWPills cols={3} opts={[{ l: "Beginner" }, { l: "Intermediate" }, { l: "Advanced" }]} def="Beginner" /></NWCard>
-      <NWCard><div className="mb-2"><NWLbl>Session length</NWLbl></div><NWPills cols={3} opts={[{ l: "10 min" }, { l: "15 min" }, { l: "20 min" }, { l: "30 min" }, { l: "45 min" }, { l: "60 min" }]} def="20 min" /></NWCard>
-      <div className="flex items-start gap-3 rounded-[22px] px-3.5 py-3" style={{ background: "#FBEEE0", border: "1px solid rgba(255,255,255,0.9)" }}>
-        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white/70" style={{ color: NW_ACCENT }}><PersonStanding size={19} /></span>
-        <div><p className="text-[13px] font-semibold" style={{ color: NW_ACCENT }}>~ 90–110 cal per session</p><p className="text-[12px]" style={{ color: NW_SUB }}>A 20-min beginner session, for your weight.</p></div>
+    <NWFrame title="Set up your yoga" subtitle="Let's customise your yoga practice to your needs and comfort." pct={80}>
+      <div className="mb-3 overflow-hidden rounded-[18px] border" style={{ borderColor: "#F0E6D8" }}>
+        <img src="/images/yoga/yoga-hero.png" alt="" className="block h-[122px] w-full object-cover" style={{ objectPosition: "center 72%" }} onError={(e) => { e.currentTarget.style.display = "none"; }} />
       </div>
-      <NWCard><div className="mb-2"><NWLbl>Any areas to protect?</NWLbl></div><NWPills cols={3} opts={[{ l: "None" }, { l: "Knees" }, { l: "Lower back" }, { l: "Neck" }, { l: "Shoulders" }, { l: "Wrists" }, { l: "Hips" }]} def="None" /></NWCard>
-    </NWShell>
+      <div className="mb-1.5"><NW2Lbl>Your level</NW2Lbl></div>
+      <NW2Pills cols={3} opts={["Beginner", "Intermediate", "Advanced"]} def="Beginner" />
+      <p className="mb-3 mt-2 text-[12px] leading-[1.45]" style={{ color: "#6B625B" }}>We start at a pace that suits your level — you can increase it week on week as you progress.</p>
+      <div className="mb-1.5"><NW2Lbl>How long each session?</NW2Lbl></div>
+      <NW2Pills cols={4} opts={["10 min", "15 min", "20 min", "30 min", "45 min", "60 min"]} def="20 min" />
+      <div className="my-3 flex items-start gap-3 rounded-[18px] p-3" style={{ background: "#F7ECE1", border: "1px solid #EFE0D0" }}>
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/80" style={{ color: "#936548" }}><MS name="self_improvement" size={19} /></span>
+        <div><p className="text-[12.5px] font-semibold" style={{ color: "#936548" }}>~ 90–110 cal burned per session</p><p className="text-[11.5px]" style={{ color: "#6B625B" }}>A 20-min beginner session, for your body weight.</p></div>
+      </div>
+      <div className="mb-1.5"><NW2Lbl>Any areas to protect?</NW2Lbl></div>
+      <NW2Pills cols={3} opts={["None", "Knees", "Lower back", "Neck", "Shoulders", "Wrists", "Hips"]} def="None" />
+    </NWFrame>
   );
 }
 
@@ -1228,43 +1277,84 @@ function NWFood() {
   );
 }
 
+const NW_BMR_ROWS: [string, string, string, string][] = [
+  ["self_improvement", "At rest (BMR)", "Calories your body needs at complete rest", "1,628"],
+  ["directions_run", "Your activity burn", "Mostly sitting, 20 min yoga", "~250"],
+  ["restaurant", "Maintenance calories", "To maintain your current weight", "1,878"],
+];
 function NWCalGoal() {
-  const rows: [string, string, string, any][] = [["At rest (BMR)", "Calories burned at complete rest", "1,628", Activity], ["Activity burn", "Mostly sitting, 20 min yoga", "~250", Footprints], ["Maintenance", "To keep your current weight", "1,878", Scale]];
   return (
-    <NWShell title="Your daily calorie goal" subtitle="Your target — based on your profile and activity." pct={55} emoji="🔥" cta="Continue">
-      <div className="relative overflow-hidden rounded-[22px] border border-white/90 bg-white/70 p-5 shadow-[0_3px_12px_rgba(121,79,50,0.06)]">
-        <div className="flex items-center gap-2"><Flame size={16} style={{ color: NW_ACCENT }} /><span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: NW_ACCENT }}>Your BMR</span></div>
-        <div className="mt-1 flex items-baseline gap-1.5"><span className="text-[40px] font-semibold leading-none" style={{ ...SERIF, color: NW_INK }}>1,628</span><span className="text-[14px]" style={{ color: NW_SUB }}>kcal/day</span></div>
-        <p className="mt-1 text-[13px]" style={{ color: NW_SUB }}>what your body burns at rest, every day</p>
+    <NWFrame title="Your daily calorie goal" subtitle="Now let's talk calories — what your body burns, and the number to aim for." pct={55}>
+      {/* BMR card with almonds */}
+      <div className="relative mb-3 overflow-hidden rounded-[18px] border" style={{ background: "#FBF3EA", borderColor: "#F0E6D8" }}>
+        <img src="/images/calorie/almonds-hero.png" alt="" className="pointer-events-none absolute right-0 top-0 h-full w-[48%] object-cover" style={{ WebkitMaskImage: "linear-gradient(to right, transparent, #000 34%)", maskImage: "linear-gradient(to right, transparent, #000 34%)" }} onError={(e) => { e.currentTarget.style.display = "none"; }} />
+        <div className="relative p-4" style={{ maxWidth: "64%" }}>
+          <div className="flex items-center gap-1.5"><span style={{ color: "#936548" }}><MS name="local_fire_department" size={15} /></span><span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: "#936548" }}>Your BMR</span></div>
+          <div className="mt-1 flex items-baseline gap-1.5"><span className="text-[37px] font-semibold leading-none" style={{ ...PLAYFAIR, color: "#936548" }}>1,628</span></div>
+          <p className="mt-1.5 text-[12px] leading-snug" style={{ color: "#6B625B" }}>kcal your body burns at rest, every day</p>
+        </div>
       </div>
-      <div className="flex items-center justify-between gap-3 rounded-[22px] p-4 text-white shadow-[0_6px_18px_rgba(143,75,37,0.2)]" style={{ background: NW_GRAD }}>
-        <div className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-full bg-white/15"><Target size={20} /></span><div><p className="text-[14px] font-semibold leading-snug">Daily calorie target</p><p className="text-[12px] text-white/80">to lose weight gently</p></div></div>
-        <div className="text-right"><span className="text-[26px] font-semibold" style={SERIF}>1,425</span><span className="-mt-1 block text-[11px] text-white/80">kcal/day</span></div>
+      {/* target banner */}
+      <div className="mb-3 flex items-center justify-between gap-3 rounded-[18px] p-3.5 text-white" style={{ background: "linear-gradient(135deg,#A2714A 0%,#7E5234 100%)", boxShadow: "0 8px 18px -10px rgba(110,70,45,0.6)" }}>
+        <div className="flex items-center gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/15"><MS name="target" size={20} fill /></span><div><p className="text-[13px] font-semibold leading-snug">Your daily calorie target</p><p className="text-[11px] text-white/80">to lose weight gently (~0.4 kg/week)</p></div></div>
+        <div className="shrink-0 text-right"><span className="text-[23px] font-semibold leading-none" style={PLAYFAIR}>1,425</span><span className="mt-0.5 block text-[10.5px] text-white/80">kcal/day</span></div>
       </div>
-      <p className="mb-1 mt-3 text-[11px] font-bold uppercase tracking-wider" style={{ color: NW_LABEL }}>How we got here</p>
-      {rows.map(([t, s, v, Ic]) => (
-        <div key={t} className="flex items-center justify-between rounded-[18px] border border-white/90 bg-white/65 p-3.5"><div className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-full bg-[#FCE9D8]" style={{ color: "#9A4D1D" }}><Ic size={18} /></span><div><p className="text-[14px] font-semibold" style={{ color: NW_TEXT }}>{t}</p><p className="text-[11.5px]" style={{ color: NW_SUB }}>{s}</p></div></div><span className="text-[15px] font-semibold" style={{ color: NW_INK }}>{v}</span></div>
-      ))}
-      <div className="flex items-center justify-between rounded-[18px] p-3.5" style={{ background: "#FBEEE0" }}><div className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-full bg-white/70" style={{ color: NW_ACCENT }}><TrendingDown size={18} /></span><div><p className="text-[14px] font-semibold" style={{ color: NW_ACCENT }}>Calorie deficit</p><p className="text-[11.5px]" style={{ color: NW_SUB }}>453 kcal/day below maintenance</p></div></div><span className="text-[15px] font-semibold" style={{ color: NW_ACCENT }}>−453</span></div>
-    </NWShell>
+      <div className="mb-2"><NW2Lbl>How we got here</NW2Lbl></div>
+      <div className="flex flex-col gap-2">
+        {NW_BMR_ROWS.map(([ic, t, s, v]) => (
+          <div key={t} className="flex items-center gap-3 rounded-[18px] border p-3" style={{ background: "#FFFDF9", borderColor: "#F4EEE5" }}>
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full" style={{ background: "#F7ECE1", color: "#936548" }}><MS name={ic} size={19} /></span>
+            <div className="min-w-0 flex-1"><p className="text-[13.5px] font-semibold" style={{ color: "#39332F" }}>{t}</p><p className="text-[11px] leading-tight" style={{ color: "#6B625B" }}>{s}</p></div>
+            <div className="shrink-0 text-right"><span className="text-[14.5px] font-semibold" style={{ color: "#2B211B" }}>{v}</span><span className="-mt-0.5 block text-[10px]" style={{ color: "#9A8676" }}>kcal/day</span></div>
+          </div>
+        ))}
+        <div className="flex items-center gap-3 rounded-[18px] p-3" style={{ background: "#F7ECE1" }}>
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/70" style={{ color: "#936548" }}><MS name="trending_down" size={19} /></span>
+          <div className="min-w-0 flex-1"><p className="text-[13.5px] font-semibold" style={{ color: "#936548" }}>Calorie deficit</p><p className="text-[11px] leading-tight" style={{ color: "#6B625B" }}>A safe, steady pace — 453 kcal/day below maintenance</p></div>
+          <div className="shrink-0 text-right"><span className="text-[14.5px] font-semibold" style={{ color: "#936548" }}>−453</span><span className="-mt-0.5 block text-[10px]" style={{ color: "#B08968" }}>kcal/day</span></div>
+        </div>
+      </div>
+    </NWFrame>
   );
 }
 
-const NW_CALIN: string[][] = [["🫓", "1 roti", "~100"], ["🍚", "1 bowl rice", "~200"], ["🥣", "1 bowl dal", "~120"], ["🥗", "1 cup sabzi", "~150"], ["🥛", "1 glass milk", "~120"], ["🍎", "1 fruit bowl", "~90"]];
-const NW_CALOUT: string[][] = [["👟", "5,000 steps", "~200"], ["🧘", "20 min yoga", "~90"], ["🏋️", "20 min workout", "~180"], ["🚴", "20 min cycling", "~160"]];
+const NW_FOOD: [string, string, string][] = [["f-roti", "1 roti/phulka", "~100"], ["f-rice", "1 bowl rice", "~200"], ["f-dal", "1 bowl dal", "~120"], ["f-sabzi", "1 cup sabzi", "~150"], ["f-milk", "1 glass milk", "~120"], ["f-ghee", "1 tsp ghee/oil", "~45"], ["f-sugar", "1 tsp sugar", "~20"], ["f-fruit", "1 fruit bowl", "~90"]];
+const NW_ACT2: [string, string, string][] = [["a-steps", "5,000 steps", "~200"], ["a-yoga", "20 min yoga", "~90"], ["a-exercise", "20 min exercise", "~180"], ["a-cycling", "20 min cycling", "~160"], ["a-swimming", "20 min swimming", "~200"], ["a-housework", "30 min housework", "~80"]];
+const NW_DRINK: [string, string][] = [["d-water", "Water"], ["d-tea", "Green / black tea"], ["d-coffee", "Black coffee (no sugar)"], ["d-ginger", "Ginger water"], ["d-lemon", "Lemon water"]];
 function NWCalSense() {
-  const grid = (items: string[][], col: string) => (
-    <div className="grid grid-cols-2 gap-x-3 gap-y-2.5">{items.map(([e, n, k]) => <div key={n} className="flex items-center gap-2"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#F4E9DB] text-[16px]">{e}</span><span className="min-w-0 flex-1 truncate text-[12.5px]" style={{ color: NW_TEXT }}>{n}</span><span className="shrink-0 text-right text-[12px] font-bold" style={{ color: col }}>{k}<span className="-mt-0.5 block text-[9px] font-medium" style={{ color: NW_LABEL }}>kcal</span></span></div>)}</div>
+  const grid = (items: [string, string, string][], col: string) => (
+    <div className="grid grid-cols-2 gap-x-3 gap-y-2">
+      {items.map(([img, n, k]) => (
+        <div key={n} className="flex items-center gap-2">
+          <img src={`/images/calorie/${img}.png`} alt="" className="h-9 w-9 shrink-0 rounded-full object-cover" onError={(e) => { e.currentTarget.style.visibility = "hidden"; }} />
+          <span className="min-w-0 flex-1 text-[11.5px] leading-[1.15]" style={{ color: "#39332F" }}>{n}</span>
+          <span className="shrink-0 text-right text-[11.5px] font-bold leading-none" style={{ color: col }}>{k}<span className="mt-0.5 block text-[9px] font-medium" style={{ color: "#9A8676" }}>kcal</span></span>
+        </div>
+      ))}
+    </div>
   );
   return (
-    <NWShell title="A quick calorie sense" subtitle="A quick feel for how calories work." pct={45} emoji="🍽️" cta="Continue">
-      <NWCard><div className="mb-2.5 flex items-center gap-2"><Utensils size={16} style={{ color: NW_ACCENT }} /><NWLbl>Calories in</NWLbl></div>{grid(NW_CALIN, "#9A4D1D")}</NWCard>
-      <NWCard><div className="mb-2.5 flex items-center gap-2"><Flame size={16} style={{ color: NW_ACCENT }} /><NWLbl>Calories out</NWLbl></div>{grid(NW_CALOUT, "#C83B35")}</NWCard>
-      <div className="rounded-[22px] p-3.5" style={{ background: "#EAF1F7", border: "1px solid #D7E4EF" }}>
-        <div className="mb-2 flex items-center gap-1.5"><Droplet size={15} style={{ color: "#2F6E8F" }} /><span className="text-[13px] font-bold" style={{ color: "#2B5876" }}>Stay hydrated <span className="font-medium" style={{ color: "#5E7A94" }}>(almost zero cal)</span></span></div>
-        <div className="flex justify-between gap-1 text-center">{[["💧", "Water"], ["🍵", "Green tea"], ["☕", "Black coffee"], ["🍋", "Lemon water"]].map(([e, n]) => <div key={n} className="flex flex-1 flex-col items-center gap-1"><span className="grid h-9 w-9 place-items-center rounded-full bg-white text-[16px]">{e}</span><span className="text-[9.5px] leading-tight" style={{ color: "#5E7A94" }}>{n}</span></div>)}</div>
+    <NWFrame title="A quick calorie sense" subtitle="Now we'll build your diet plan — first, a quick feel for how calories work." pct={45}>
+      <NW2Card className="mb-3">
+        <div className="mb-2.5 flex items-center gap-2"><span style={{ color: "#936548" }}><MS name="restaurant" size={16} /></span><NW2Lbl>Calories in</NW2Lbl><span className="text-[10.5px]" style={{ color: "#9A8676" }}>· everyday foods</span></div>
+        {grid(NW_FOOD, "#9A4D1D")}
+      </NW2Card>
+      <NW2Card className="mb-3">
+        <div className="mb-2.5 flex items-center gap-2"><span style={{ color: "#C0663A" }}><MS name="local_fire_department" size={16} /></span><NW2Lbl>Calories out</NW2Lbl><span className="text-[10.5px]" style={{ color: "#9A8676" }}>· everyday activities</span></div>
+        {grid(NW_ACT2, "#C0663A")}
+      </NW2Card>
+      <div className="rounded-[18px] p-3.5" style={{ background: "#EAF1F7", border: "1px solid #D7E4EF" }}>
+        <div className="mb-2.5 flex items-center gap-1.5"><span style={{ color: "#2F6E8F" }}><MS name="water_drop" size={15} /></span><span className="text-[12.5px] font-bold" style={{ color: "#2B5876" }}>Stay hydrated <span className="font-medium" style={{ color: "#5E7A94" }}>(almost zero calories)</span></span></div>
+        <div className="flex justify-between gap-1 text-center">
+          {NW_DRINK.map(([img, n]) => (
+            <div key={n} className="flex flex-1 flex-col items-center gap-1">
+              <img src={`/images/calorie/${img}.png`} alt="" className="h-9 w-9 rounded-full object-cover" onError={(e) => { e.currentTarget.style.visibility = "hidden"; }} />
+              <span className="text-[9.5px] leading-tight" style={{ color: "#5E7A94" }}>{n}</span>
+            </div>
+          ))}
+        </div>
       </div>
-    </NWShell>
+    </NWFrame>
   );
 }
 
