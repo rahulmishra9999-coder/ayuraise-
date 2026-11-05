@@ -1106,7 +1106,7 @@ function NWWeightLoss() {
         <div className="relative mb-3 shrink-0">
           <h1 className="mb-2 whitespace-nowrap text-[24px] font-semibold leading-[1.15] tracking-[-0.01em]" style={{ ...PLAYFAIR, color: "#2B211B" }}>How weight loss works</h1>
           <p className="text-[13px] leading-[1.5]" style={{ color: "#6B625B", maxWidth: 220 }}>Weight loss is mostly about food — the steady, no-starving way. Tap any card to see why it works.</p>
-          <div className="pointer-events-none absolute right-[-6px] top-[-4px] h-[104px] w-[108px]">
+          <div className="pointer-events-none absolute right-[-10px] top-[-12px] h-[128px] w-[134px]">
             <img src="/images/weightloss/hero.png" alt="" className="h-full w-full object-contain" onError={(e) => { e.currentTarget.style.display = "none"; }} />
           </div>
         </div>
