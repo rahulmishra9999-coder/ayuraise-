@@ -1243,32 +1243,54 @@ function NWSleep() {
 }
 
 /* ===== device-first onboarding frame (weight-loss pattern): pinned header + nav, scrolling middle ===== */
+/* Soft botanical leaf cluster for the top-right corner, matching the reference screens. */
+function NWLeaves() {
+  const L: [number, number, number, number, string][] = [
+    [120, 16, -18, 1.25, "#8FB762"], [140, 6, -46, 1.1, "#6E9A3E"], [152, 34, 8, 1.1, "#A9CB76"],
+    [104, 30, -84, 1.0, "#7FAE48"], [130, 46, -28, 0.95, "#5E8A32"], [150, 60, -4, 0.9, "#93BE5E"],
+    [96, 52, -112, 0.85, "#E3C9A0"], [116, 64, -72, 0.8, "#D9B88A"],
+  ];
+  return (
+    <svg viewBox="0 0 170 150" className="h-full w-full" style={{ opacity: 0.85 }}>
+      <path d="M164 6 C 134 20, 112 28, 92 56" stroke="#5E8A32" strokeWidth="2" fill="none" strokeLinecap="round" opacity="0.5" />
+      {L.map(([x, y, r, s, c], i) => (
+        <g key={i} transform={`translate(${x} ${y}) rotate(${r}) scale(${s})`}>
+          <path d="M0 0 C 7 -7, 22 -6, 30 0 C 22 6, 7 7, 0 0 Z" fill={c} />
+          <path d="M3 0 L26 0" stroke="#3E6420" strokeWidth="0.7" opacity="0.4" />
+        </g>
+      ))}
+    </svg>
+  );
+}
 function NWFrame({ title, subtitle, pct, cta = "Next", children }: { title: string; subtitle: string; pct: number; cta?: string; children: React.ReactNode }) {
   return (
-    <div className="mx-auto flex h-dvh w-full max-w-[520px] flex-col" style={{ background: "#FFF8F2", color: "#39332F", ...INTER }}>
-      <header className="shrink-0 px-5 pb-2" style={{ paddingTop: "max(0.9rem, env(safe-area-inset-top))" }}>
-        <div className="flex items-center gap-4">
-          <button aria-label="Go back" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-stone-200/70 bg-white/95 shadow-sm active:scale-95" style={{ color: "#39332F" }}><MS name="arrow_back" size={20} /></button>
-          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-stone-200/80"><div className="h-full rounded-full" style={{ width: `${pct}%`, background: "#936548" }} /></div>
-        </div>
-      </header>
-      <main className="flex min-h-0 flex-1 flex-col overflow-y-auto px-5 pb-5 pt-1">
-        <div className="mb-3 shrink-0">
-          <h1 className="mb-1.5 text-[23px] font-semibold leading-[1.15] tracking-[-0.01em]" style={{ ...PLAYFAIR, color: "#2B211B" }}>{title}</h1>
-          <p className="text-[12.5px] leading-[1.45]" style={{ color: "#6B625B" }}>{subtitle}</p>
-        </div>
-        {children}
-        <div className="mt-auto shrink-0 pt-4">
-          <button className="flex w-full items-center justify-center gap-2 rounded-[26px] px-6 py-3 text-[15px] font-semibold text-white shadow-[0_6px_16px_-8px_rgba(110,70,45,0.55)] active:scale-[0.98]" style={{ background: "#936548" }}>{cta} <MS name="arrow_forward" size={18} /></button>
-        </div>
-      </main>
-      <nav aria-label="Bottom Navigation" className="shrink-0 px-5 pt-2" style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}>
-        <div className="flex h-[54px] items-center justify-around rounded-full border px-4" style={{ background: "rgba(255,253,249,0.97)", borderColor: "#EEE2D4", boxShadow: "0 6px 20px -6px rgba(120,80,45,0.16)" }}>
-          {["home", "favorite", "grid_view", "school", "auto_awesome", "person"].map((n, i) => (
-            <button key={n} aria-label={n} className="flex items-center justify-center" style={{ color: i === 0 ? "#7E5234" : "#A9815F" }}><MS name={n} size={23} /></button>
-          ))}
-        </div>
-      </nav>
+    <div className="relative mx-auto h-dvh w-full max-w-[520px] overflow-hidden" style={{ background: "#FFF8F2", color: "#39332F", ...INTER }}>
+      <div className="pointer-events-none absolute right-[-6px] top-[-6px] z-0 h-[138px] w-[150px]"><NWLeaves /></div>
+      <div className="relative z-10 flex h-full flex-col">
+        <header className="shrink-0 px-5 pb-2" style={{ paddingTop: "max(0.9rem, env(safe-area-inset-top))" }}>
+          <div className="flex items-center gap-4">
+            <button aria-label="Go back" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-stone-200/70 bg-white/95 shadow-sm active:scale-95" style={{ color: "#39332F" }}><MS name="arrow_back" size={20} /></button>
+            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-stone-200/80"><div className="h-full rounded-full" style={{ width: `${pct}%`, background: "#936548" }} /></div>
+          </div>
+        </header>
+        <main className="flex min-h-0 flex-1 flex-col overflow-y-auto px-5 pb-5 pt-1">
+          <div className="mb-3 shrink-0" style={{ maxWidth: 240 }}>
+            <h1 className="mb-1.5 text-[23px] font-semibold leading-[1.15] tracking-[-0.01em]" style={{ ...PLAYFAIR, color: "#2B211B" }}>{title}</h1>
+            <p className="text-[12.5px] leading-[1.45]" style={{ color: "#6B625B" }}>{subtitle}</p>
+          </div>
+          {children}
+          <div className="mt-auto shrink-0 pt-4">
+            <button className="flex w-full items-center justify-center gap-2 rounded-[26px] px-6 py-3 text-[15px] font-semibold text-white shadow-[0_6px_16px_-8px_rgba(110,70,45,0.55)] active:scale-[0.98]" style={{ background: "#936548" }}>{cta} <MS name="arrow_forward" size={18} /></button>
+          </div>
+        </main>
+        <nav aria-label="Bottom Navigation" className="shrink-0 px-5 pt-2" style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}>
+          <div className="flex h-[54px] items-center justify-around rounded-full border px-4" style={{ background: "rgba(255,253,249,0.97)", borderColor: "#EEE2D4", boxShadow: "0 6px 20px -6px rgba(120,80,45,0.16)" }}>
+            {["home", "favorite", "grid_view", "school", "auto_awesome", "person"].map((n, i) => (
+              <button key={n} aria-label={n} className="flex items-center justify-center" style={{ color: i === 0 ? "#7E5234" : "#A9815F" }}><MS name={n} size={23} /></button>
+            ))}
+          </div>
+        </nav>
+      </div>
     </div>
   );
 }
