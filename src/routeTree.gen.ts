@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as WeightLossRouteImport } from './routes/weight-loss'
 import { Route as StitchActivityRouteImport } from './routes/stitch-activity'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PrakritiGuestRouteImport } from './routes/prakriti-guest'
@@ -47,6 +48,11 @@ import { Route as DietAcademyRouteImport } from './routes/diet.academy'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as DietJourneySlugRouteImport } from './routes/diet.journey.$slug'
 
+const WeightLossRoute = WeightLossRouteImport.update({
+  id: '/weight-loss',
+  path: '/weight-loss',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const StitchActivityRoute = StitchActivityRouteImport.update({
   id: '/stitch-activity',
   path: '/stitch-activity',
@@ -253,6 +259,7 @@ export interface FileRoutesByFullPath {
   '/prakriti-guest': typeof PrakritiGuestRoute
   '/profile': typeof ProfileRoute
   '/stitch-activity': typeof StitchActivityRoute
+  '/weight-loss': typeof WeightLossRoute
   '/api/chat': typeof ApiChatRoute
   '/diet/academy': typeof DietAcademyRoute
   '/disease/$slug': typeof DiseaseSlugRoute
@@ -292,6 +299,7 @@ export interface FileRoutesByTo {
   '/prakriti-guest': typeof PrakritiGuestRoute
   '/profile': typeof ProfileRoute
   '/stitch-activity': typeof StitchActivityRoute
+  '/weight-loss': typeof WeightLossRoute
   '/api/chat': typeof ApiChatRoute
   '/diet/academy': typeof DietAcademyRoute
   '/disease/$slug': typeof DiseaseSlugRoute
@@ -332,6 +340,7 @@ export interface FileRoutesById {
   '/prakriti-guest': typeof PrakritiGuestRoute
   '/profile': typeof ProfileRoute
   '/stitch-activity': typeof StitchActivityRoute
+  '/weight-loss': typeof WeightLossRoute
   '/api/chat': typeof ApiChatRoute
   '/diet/academy': typeof DietAcademyRoute
   '/disease/$slug': typeof DiseaseSlugRoute
@@ -373,6 +382,7 @@ export interface FileRouteTypes {
     | '/prakriti-guest'
     | '/profile'
     | '/stitch-activity'
+    | '/weight-loss'
     | '/api/chat'
     | '/diet/academy'
     | '/disease/$slug'
@@ -412,6 +422,7 @@ export interface FileRouteTypes {
     | '/prakriti-guest'
     | '/profile'
     | '/stitch-activity'
+    | '/weight-loss'
     | '/api/chat'
     | '/diet/academy'
     | '/disease/$slug'
@@ -451,6 +462,7 @@ export interface FileRouteTypes {
     | '/prakriti-guest'
     | '/profile'
     | '/stitch-activity'
+    | '/weight-loss'
     | '/api/chat'
     | '/diet/academy'
     | '/disease/$slug'
@@ -491,6 +503,7 @@ export interface RootRouteChildren {
   PrakritiGuestRoute: typeof PrakritiGuestRoute
   ProfileRoute: typeof ProfileRoute
   StitchActivityRoute: typeof StitchActivityRoute
+  WeightLossRoute: typeof WeightLossRoute
   ApiChatRoute: typeof ApiChatRoute
   DietAcademyRoute: typeof DietAcademyRoute
   DiseaseSlugRoute: typeof DiseaseSlugRoute
@@ -512,6 +525,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/weight-loss': {
+      id: '/weight-loss'
+      path: '/weight-loss'
+      fullPath: '/weight-loss'
+      preLoaderRoute: typeof WeightLossRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/stitch-activity': {
       id: '/stitch-activity'
       path: '/stitch-activity'
@@ -804,6 +824,7 @@ const rootRouteChildren: RootRouteChildren = {
   PrakritiGuestRoute: PrakritiGuestRoute,
   ProfileRoute: ProfileRoute,
   StitchActivityRoute: StitchActivityRoute,
+  WeightLossRoute: WeightLossRoute,
   ApiChatRoute: ApiChatRoute,
   DietAcademyRoute: DietAcademyRoute,
   DiseaseSlugRoute: DiseaseSlugRoute,
