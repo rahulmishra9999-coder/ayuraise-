@@ -38,17 +38,19 @@ const WL_INTER = { fontFamily: '"Inter", system-ui, sans-serif' } as const;
 function WLMS({ name, size = 20, fill = false, className = "" }: { name: string; size?: number; fill?: boolean; className?: string }) {
   return <span className={`material-symbols-outlined ${className}`} style={{ fontSize: size, lineHeight: 1, fontVariationSettings: fill ? "'FILL' 1" : "'FILL' 0" }}>{name}</span>;
 }
-const WL_WHY_CARDS: [string, string, string, string, string, string][] = [
-  ["Cut calories gently", "A small, sustainable reduction that works", "restaurant", "#FAECE2", "#B05B27", "calories.png"],
-  ["Eat enough protein", "Keeps you full for longer", "egg_alt", "#FEF4DC", "#A67812", "protein.png"],
-  ["Choose better carbs (low-GI)", "Steady energy, no sudden crashes", "eco", "#EAF4E8", "#3D7834", "carbs.png"],
-  ["Start with a salad", "Helps you feel full, so you eat less", "soup_kitchen", "#FFF0E0", "#BC671F", "salad.png"],
-  ["Include sprouts at breakfast", "Nutrient-rich and light on calories", "nutrition", "#FCECEE", "#B83D4F", "sprouts.png"],
-  ["Go easy on nuts & dry fruits", "Nutritious, but calorie-dense — keep portions small", "grain", "#FBF0DD", "#A66E14", "nuts.png"],
-  ["Chew well, eat slowly", "Gives your brain time to feel satisfied", "self_improvement", "#FAEBEE", "#B84058", "chew.png"],
+type WLCard = { title: string; sub: string; icon: string; bg: string; fg: string; img: string; detail: string };
+const WL_WHY_CARDS: WLCard[] = [
+  { title: "Cut calories gently", sub: "A small, sustainable reduction that works", icon: "restaurant", bg: "#FAECE2", fg: "#B05B27", img: "calories.png", detail: "Weight loss needs a calorie gap — but a small, steady one. Going extreme backfires: your body slows down to protect itself and hits back with revenge eating (cravings & binges). Don't starve — just trim a little. That's what actually lasts." },
+  { title: "Eat enough protein", sub: "Keeps you full for longer", icon: "egg_alt", bg: "#FEF4DC", fg: "#A67812", img: "protein.png", detail: "Protein is the most filling nutrient and protects your muscle while you lose fat. Lead your meals with dal, paneer, tofu, sprouts, eggs or curd at breakfast, lunch and dinner." },
+  { title: "Choose better carbs (low-GI)", sub: "Steady energy, no sudden crashes", icon: "eco", bg: "#EAF4E8", fg: "#3D7834", img: "carbs.png", detail: "Low-GI foods release glucose slowly, so your energy stays steady and you avoid the sugar-crash that triggers cravings — and it helps with insulin resistance. Pick whole grains, millets, oats and legumes over white rice, maida and sugar." },
+  { title: "Start with a salad", sub: "Helps you feel full, so you eat less", icon: "soup_kitchen", bg: "#FFF0E0", fg: "#BC671F", img: "salad.png", detail: "A plate of salad first fills part of your stomach with fibre and water, so you eat less of the heavier food that follows — without feeling deprived." },
+  { title: "Include sprouts at breakfast", sub: "Nutrient-rich and light on calories", icon: "nutrition", bg: "#FCECEE", fg: "#B83D4F", img: "sprouts.png", detail: "Sprouts are high in protein and fibre but low in calories — a filling, light way to start the day (also great at dinner)." },
+  { title: "Go easy on nuts & dry fruits", sub: "Nutritious, but calorie-dense — keep portions small", icon: "grain", bg: "#FBF0DD", fg: "#A66E14", img: "nuts.png", detail: "They're nutritious, but very calorie-dense — a small handful can be 150–200 calories. Keep the portion tiny." },
+  { title: "Chew well, eat slowly", sub: "Gives your brain time to feel satisfied", icon: "self_improvement", bg: "#FAEBEE", fg: "#B84058", img: "chew.png", detail: "Your stomach takes roughly 20 minutes to tell your brain it's full. Chewing each bite 20–30 times and eating slowly gives that 'I'm full' signal time to arrive — so you stop at enough instead of overeating." },
 ];
 const WL_NAV: [string, string][] = [["home", "/home"], ["favorite", "/my-plans"], ["grid_view", "/learn"], ["school", "/diet/academy"], ["auto_awesome", "/coach"], ["person", "/profile"]];
 function WLWhyScreen({ progress, onBack, onNext }: { progress: number; onBack: () => void; onNext: () => void }) {
+  const [open, setOpen] = useState<WLCard | null>(null);
   return (
     <div className="mx-auto flex h-dvh w-full max-w-[520px] flex-col" style={{ background: "#FFF8F2", color: "#39332F", ...WL_INTER }}>
       <header className="shrink-0 px-5 pb-2" style={{ paddingTop: "max(0.9rem, env(safe-area-inset-top))" }}>
@@ -66,15 +68,15 @@ function WLWhyScreen({ progress, onBack, onNext }: { progress: number; onBack: (
           </div>
         </div>
         <div className="flex min-h-0 flex-1 flex-col justify-between gap-2 py-0.5">
-          {WL_WHY_CARDS.map(([title, sub, icon, bg, fg, img]) => (
-            <div key={title} className="group flex shrink-0 items-center gap-3 rounded-[20px] border px-3 py-2 shadow-[0_1px_5px_rgba(90,60,40,0.045)]" style={{ background: "#FFFDF9", borderColor: "#F4EEE5" }}>
-              <div className="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full" style={{ background: bg, color: fg }}><WLMS name={icon} size={22} /><img src={`/images/weightloss/${img}`} alt="" className="absolute inset-0 h-full w-full scale-[1.05] object-cover" onError={(e) => { e.currentTarget.style.display = "none"; }} /></div>
+          {WL_WHY_CARDS.map((c) => (
+            <button key={c.title} onClick={() => setOpen(c)} className="group flex shrink-0 items-center gap-3 rounded-[20px] border px-3 py-2 text-left shadow-[0_1px_5px_rgba(90,60,40,0.045)] active:scale-[0.99]" style={{ background: "#FFFDF9", borderColor: "#F4EEE5" }}>
+              <div className="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full" style={{ background: c.bg, color: c.fg }}><WLMS name={c.icon} size={22} /><img src={`/images/weightloss/${c.img}`} alt="" className="absolute inset-0 h-full w-full scale-[1.05] object-cover" onError={(e) => { e.currentTarget.style.display = "none"; }} /></div>
               <div className="min-w-0 flex-1">
-                <h2 className="text-[14.5px] font-semibold leading-snug" style={{ color: "#39332F" }}>{title}</h2>
-                <p className="text-[12px] leading-[1.35]" style={{ color: "#6B625B" }}>{sub}</p>
+                <h2 className="text-[14.5px] font-semibold leading-snug" style={{ color: "#39332F" }}>{c.title}</h2>
+                <p className="text-[12px] leading-[1.35]" style={{ color: "#6B625B" }}>{c.sub}</p>
               </div>
               <span className="shrink-0" style={{ color: "#936548" }}><WLMS name="chevron_right" size={20} /></span>
-            </div>
+            </button>
           ))}
         </div>
         <button onClick={onNext} className="mt-3 flex w-full shrink-0 items-center justify-center gap-2 rounded-[26px] px-6 py-3 text-[15px] font-semibold text-white shadow-[0_6px_16px_-8px_rgba(110,70,45,0.55)] active:scale-[0.98]" style={{ background: "#936548" }}>Next <WLMS name="arrow_forward" size={18} /></button>
@@ -86,6 +88,21 @@ function WLWhyScreen({ progress, onBack, onNext }: { progress: number; onBack: (
           ))}
         </div>
       </nav>
+      {/* detail popup — styled to match the weight-loss screen */}
+      {open && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center" style={{ background: "rgba(43,33,27,0.42)", ...WL_INTER }} onClick={() => setOpen(null)}>
+          <div className="w-full max-w-[520px] rounded-t-[28px] px-5 pt-3 shadow-[0_-10px_40px_-12px_rgba(60,40,25,0.4)]" style={{ background: "#FFF8F2", paddingBottom: "max(1.25rem, env(safe-area-inset-bottom))" }} onClick={(e) => e.stopPropagation()}>
+            <div className="mx-auto mb-4 h-1 w-10 rounded-full" style={{ background: "#E6D9CA" }} />
+            <div className="flex items-center gap-3">
+              <div className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full" style={{ background: open.bg, color: open.fg }}><WLMS name={open.icon} size={24} /><img src={`/images/weightloss/${open.img}`} alt="" className="absolute inset-0 h-full w-full scale-[1.05] object-cover" onError={(e) => { e.currentTarget.style.display = "none"; }} /></div>
+              <h3 className="min-w-0 flex-1 text-[19px] font-semibold leading-tight" style={{ ...WL_PLAYFAIR, color: "#2B211B" }}>{open.title}</h3>
+              <button aria-label="Close" onClick={() => setOpen(null)} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full" style={{ background: "#F1E9DE", color: "#8A7B6C" }}><WLMS name="close" size={18} /></button>
+            </div>
+            <p className="mt-3.5 text-[13.5px] leading-[1.6]" style={{ color: "#5A4B3C" }}>{open.detail}</p>
+            <button onClick={() => setOpen(null)} className="mt-5 w-full rounded-[22px] py-3 text-[14.5px] font-semibold text-white active:scale-[0.98]" style={{ background: "#936548" }}>Got it</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
