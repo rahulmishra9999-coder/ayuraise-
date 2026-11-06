@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   ArrowLeft, ArrowRight, ChevronRight, Check,
   House, Heart, LayoutGrid, GraduationCap, Sparkles, UserRound, Ruler, Scale, Armchair, Footprints,
@@ -1426,11 +1426,195 @@ function NWCalSense() {
   );
 }
 
+/* ===================== ABOUT YOU — tap-to-open input flow ===================== */
+function AYShell({ progress, onBack, label, children, nav }: { progress: number; onBack: () => void; label?: string; children: React.ReactNode; nav?: boolean }) {
+  return (
+    <div className="mx-auto flex h-dvh w-full max-w-[520px] flex-col" style={{ background: "#FFF8F2", color: "#39332F", ...INTER }}>
+      <header className="shrink-0 px-5 pb-2" style={{ paddingTop: "max(0.9rem, env(safe-area-inset-top))" }}>
+        <div className="flex items-center gap-4">
+          <button aria-label="Back" onClick={onBack} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-stone-200/70 bg-white/95 shadow-sm active:scale-95" style={{ color: "#39332F" }}><MS name="arrow_back" size={20} /></button>
+          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-stone-200/80"><div className="h-full rounded-full" style={{ width: `${progress}%`, background: "#936548" }} /></div>
+        </div>
+        {label && <p className="mt-3 text-center text-[12px] font-bold uppercase tracking-[0.15em]" style={{ color: "#5A4B3C" }}>{label}</p>}
+      </header>
+      {children}
+      {nav && (
+        <nav className="shrink-0 px-5 pt-2" style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}>
+          <div className="flex h-[54px] items-center justify-around rounded-full border px-4" style={{ background: "rgba(255,253,249,0.97)", borderColor: "#EEE2D4", boxShadow: "0 6px 20px -6px rgba(120,80,45,0.16)" }}>
+            {["home", "favorite", "grid_view", "school", "auto_awesome", "person"].map((n, i) => <span key={n} className="flex items-center justify-center" style={{ color: i === 0 ? "#7E5234" : "#A9815F" }}><MS name={n} size={23} /></span>)}
+          </div>
+        </nav>
+      )}
+    </div>
+  );
+}
+function AYSave({ onClick, disabled }: { onClick: () => void; disabled?: boolean }) {
+  return <div className="shrink-0 px-5 pt-3" style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}><button onClick={onClick} disabled={disabled} className="w-full rounded-[22px] py-3.5 text-[15px] font-semibold text-white transition active:scale-[0.98]" style={{ background: disabled ? "#D9C9B8" : "#936548" }}>Save</button></div>;
+}
+function AYToggle({ opts, val, set }: { opts: [string, string][]; val: string; set: (v: string) => void }) {
+  return <div className="flex rounded-full p-1" style={{ background: "#F1E9DE" }}>{opts.map(([lab, v]) => { const on = val === v; return <button key={v} onClick={() => set(v)} className="rounded-full px-5 py-1.5 text-[13px] font-semibold transition" style={on ? { background: "#936548", color: "#fff" } : { color: "#8A7B6C" }}>{lab}</button>; })}</div>;
+}
+function NameEntry({ initial, onSave, onBack }: { initial: string; onSave: (v: string) => void; onBack: () => void }) {
+  const [v, setV] = useState(initial);
+  const ref = useRef<HTMLInputElement>(null);
+  useEffect(() => { ref.current?.focus(); }, []);
+  return (
+    <AYShell progress={25} onBack={onBack} label="Name">
+      <div className="flex flex-1 flex-col items-center px-6 pt-[16vh]">
+        <h1 className="mb-9 text-center text-[30px] font-semibold leading-tight" style={{ ...PLAYFAIR, color: "#2B211B" }}>What's your name?</h1>
+        <input ref={ref} value={v} onChange={(e) => setV(e.target.value)} placeholder="Enter your name" className="w-full max-w-[280px] bg-transparent text-center text-[22px] font-medium focus:outline-none" style={{ color: "#2B211B", caretColor: "#936548" }} />
+        <div className="mt-2 h-px w-44" style={{ background: "#E6D9CA" }} />
+      </div>
+      <AYSave onClick={() => onSave(v.trim())} disabled={!v.trim()} />
+    </AYShell>
+  );
+}
+function WeightPicker({ kg, unit, setUnit, heightCm, onSave, onBack }: { kg: number; unit: string; setUnit: (u: string) => void; heightCm: number; onSave: (v: number) => void; onBack: () => void }) {
+  const MIN = 40, MAX = 160, PX = 56;
+  const ref = useRef<HTMLDivElement>(null);
+  const [val, setVal] = useState(kg);
+  useEffect(() => { if (ref.current) ref.current.scrollLeft = (kg - MIN) * PX; }, []);
+  const onScroll = () => { if (ref.current) setVal(Math.round((MIN + ref.current.scrollLeft / PX) * 10) / 10); };
+  const display = unit === "kg" ? val : Math.round(val * 2.20462 * 10) / 10;
+  const bmi = heightCm > 0 ? Math.round((val / Math.pow(heightCm / 100, 2)) * 10) / 10 : 0;
+  const ticks: { k: number; major: boolean }[] = [];
+  for (let k = MIN; k <= MAX + 0.001; k += 0.2) { const r = Math.round(k * 10) / 10; ticks.push({ k: r, major: Math.abs(r - Math.round(r)) < 0.05 }); }
+  const near = Math.round(val);
+  return (
+    <AYShell progress={60} onBack={onBack} label="Weight">
+      <div className="flex min-h-0 flex-1 flex-col px-5">
+        <h1 className="mt-2 text-center text-[26px] font-semibold leading-tight" style={{ ...PLAYFAIR, color: "#2B211B" }}>What's your current weight?</h1>
+        <div className="mx-auto mt-5"><AYToggle opts={[["lbs", "lb"], ["kg", "kg"]]} val={unit} set={setUnit} /></div>
+        <div className="mt-6 flex items-baseline justify-center gap-1"><span className="text-[54px] font-semibold leading-none" style={{ ...PLAYFAIR, color: "#2B211B" }}>{display.toFixed(1)}</span><span className="text-[18px]" style={{ color: "#8A7B6C" }}>{unit}</span></div>
+        <div className="relative mt-5 h-[60px]">
+          <div className="pointer-events-none absolute left-1/2 top-0 z-10 h-[30px] w-[2px] -translate-x-1/2 rounded-full" style={{ background: "#936548" }} />
+          <div ref={ref} onScroll={onScroll} className="flex h-full items-start overflow-x-auto [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: "none" }}>
+            <div className="shrink-0" style={{ width: "50%" }} />
+            {ticks.map((t, i) => (
+              <div key={i} className="flex shrink-0 flex-col items-center" style={{ width: PX / 5 }}>
+                <div style={{ width: t.major ? 2 : 1, height: t.major ? 22 : 12, background: t.major ? "#A98B6E" : "#D9C9B8", borderRadius: 2 }} />
+                {t.major && <span className="mt-1 text-[11px]" style={{ color: Math.abs(t.k - near) < 0.05 ? "#936548" : "#B0A194" }}>{t.k}</span>}
+              </div>
+            ))}
+            <div className="shrink-0" style={{ width: "50%" }} />
+          </div>
+        </div>
+        <div className="mt-6 flex items-center gap-4 rounded-[18px] border p-4" style={{ background: "#FFFDF9", borderColor: "#F4EEE5" }}>
+          <div className="shrink-0 border-r pr-4" style={{ borderColor: "#EEE2D4" }}><p className="text-[12px] font-semibold" style={{ color: "#5A4B3C" }}>Your BMI:</p><p className="text-[26px] font-bold leading-none" style={{ color: "#936548" }}>{bmi.toFixed(1)}</p></div>
+          <p className="text-[12.5px] leading-snug" style={{ color: "#6B625B" }}>{bmi < 18.5 ? "A little more nourishment will help you feel your best." : bmi < 25 ? "You only need a bit more sweat exercise to see a fitter you!" : bmi < 30 ? "A gentle, steady plan will bring you to a healthier range." : "Let's build a kind, steady plan to lighten the load."}</p>
+        </div>
+      </div>
+      <AYSave onClick={() => onSave(val)} />
+    </AYShell>
+  );
+}
+function HeightPicker({ cm, unit, setUnit, onSave, onBack }: { cm: number; unit: string; setUnit: (u: string) => void; onSave: (v: number) => void; onBack: () => void }) {
+  const MIN = 120, MAX = 220, PX = 22;
+  const ref = useRef<HTMLDivElement>(null);
+  const [val, setVal] = useState(cm);
+  useEffect(() => { if (ref.current) ref.current.scrollTop = (cm - MIN) * PX; }, []);
+  const onScroll = () => { if (ref.current) setVal(Math.round((MIN + ref.current.scrollTop / PX) * 10) / 10); };
+  const totalIn = val / 2.54, ft = Math.floor(totalIn / 12), inch = Math.round(totalIn - ft * 12);
+  const ticks: { c: number; major: boolean }[] = [];
+  for (let c = MIN; c <= MAX + 0.001; c += 0.5) { const r = Math.round(c * 10) / 10; ticks.push({ c: r, major: Math.abs(r - Math.round(r)) < 0.05 }); }
+  const near = Math.round(val);
+  return (
+    <AYShell progress={75} onBack={onBack} label="Height">
+      <div className="flex min-h-0 flex-1 flex-col px-5">
+        <h1 className="mt-2 text-center text-[26px] font-semibold leading-tight" style={{ ...PLAYFAIR, color: "#2B211B" }}>What's your height?</h1>
+        <div className="mx-auto mt-5"><AYToggle opts={[["ft", "ft"], ["cm", "cm"]]} val={unit} set={setUnit} /></div>
+        <div className="relative mt-4 flex min-h-0 flex-1">
+          <div className="relative w-[128px]">
+            <div className="pointer-events-none absolute left-0 top-1/2 z-10 h-[2px] w-[96px] -translate-y-1/2 rounded-full" style={{ background: "#936548" }} />
+            <div ref={ref} onScroll={onScroll} className="h-full overflow-y-auto [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: "none" }}>
+              <div style={{ height: "50%" }} />
+              {ticks.map((t, i) => (
+                <div key={i} className="flex items-center" style={{ height: PX / 2 }}>
+                  <div style={{ width: t.major ? 30 : 16, height: t.major ? 2 : 1, background: t.major ? "#A98B6E" : "#D9C9B8", borderRadius: 2 }} />
+                  {t.major && <span className="ml-2 text-[11px]" style={{ color: Math.abs(t.c - near) < 0.05 ? "#936548" : "#B0A194" }}>{t.c}</span>}
+                </div>
+              ))}
+              <div style={{ height: "50%" }} />
+            </div>
+          </div>
+          <div className="flex flex-1 items-center justify-center">
+            <div className="flex items-baseline gap-1">{unit === "cm"
+              ? <><span className="text-[54px] font-semibold leading-none" style={{ ...PLAYFAIR, color: "#2B211B" }}>{val.toFixed(1)}</span><span className="text-[18px]" style={{ color: "#8A7B6C" }}>cm</span></>
+              : <span className="text-[44px] font-semibold leading-none" style={{ ...PLAYFAIR, color: "#2B211B" }}>{ft}<span className="text-[18px]" style={{ color: "#8A7B6C" }}> ft </span>{inch}<span className="text-[18px]" style={{ color: "#8A7B6C" }}> in</span></span>}
+            </div>
+          </div>
+        </div>
+      </div>
+      <AYSave onClick={() => onSave(val)} />
+    </AYShell>
+  );
+}
+function AYRow({ icon, bg, label, children, onClick }: { icon: string; bg: string; label: string; children: React.ReactNode; onClick?: () => void }) {
+  const Tag: any = onClick ? "button" : "div";
+  return (
+    <Tag onClick={onClick} className="flex w-full items-center gap-3 rounded-[18px] border px-3.5 py-3 text-left transition active:scale-[0.99]" style={{ background: "#FFFDF9", borderColor: "#F4EEE5" }}>
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full" style={{ background: bg, color: "#936548" }}><MS name={icon} size={18} /></span>
+      <span className="text-[13.5px] font-semibold" style={{ color: "#39332F" }}>{label}</span>
+      <div className="ml-auto flex items-center gap-2">{children}</div>
+    </Tag>
+  );
+}
+function AboutYouFlow({ initialView = "about" }: { initialView?: "about" | "name" | "weight" | "height" }) {
+  const [view, setView] = useState<"about" | "name" | "weight" | "height">(initialView);
+  const [name, setName] = useState("");
+  const [gender, setGender] = useState("Male");
+  const [weight, setWeight] = useState(72);
+  const [wUnit, setWUnit] = useState("kg");
+  const [height, setHeight] = useState(177);
+  const [hUnit, setHUnit] = useState("cm");
+  if (view === "name") return <NameEntry initial={name} onBack={() => setView("about")} onSave={(v) => { setName(v); setView("about"); }} />;
+  if (view === "weight") return <WeightPicker kg={weight} unit={wUnit} setUnit={setWUnit} heightCm={height} onBack={() => setView("about")} onSave={(v) => { setWeight(v); setView("about"); }} />;
+  if (view === "height") return <HeightPicker cm={height} unit={hUnit} setUnit={setHUnit} onBack={() => setView("about")} onSave={(v) => { setHeight(v); setView("about"); }} />;
+  const hDisp = hUnit === "cm" ? `${height} cm` : (() => { const t = height / 2.54; return `${Math.floor(t / 12)}'${Math.round(t - Math.floor(t / 12) * 12)}"`; })();
+  const wDisp = wUnit === "kg" ? `${weight} kg` : `${Math.round(weight * 2.20462)} lb`;
+  return (
+    <AYShell progress={20} onBack={() => {}} nav>
+      <main className="relative flex min-h-0 flex-1 flex-col overflow-y-auto px-5 pb-5 pt-1">
+        <img src="/images/aboutyou/stones.png" alt="" className="pointer-events-none absolute right-[-4px] top-[-10px] z-0 w-[104px]" style={{ WebkitMaskImage: "linear-gradient(to bottom,#000 90%,transparent)", maskImage: "linear-gradient(to bottom,#000 90%,transparent)" }} onError={(e) => { e.currentTarget.style.display = "none"; }} />
+        <div className="relative z-10 mb-4" style={{ maxWidth: 230 }}>
+          <h1 className="mb-1 text-[28px] font-semibold leading-tight tracking-[-0.01em]" style={{ ...PLAYFAIR, color: "#2B211B" }}>About You</h1>
+          <p className="text-[12.5px] leading-[1.45]" style={{ color: "#6B625B" }}>Help us personalise your plan with a few basic details.</p>
+        </div>
+        <div className="relative z-10 flex flex-col gap-2.5">
+          <AYRow icon="person" bg="#F7ECE1" label="Name" onClick={() => setView("name")}>
+            <span className="text-[13px]" style={{ color: name ? "#2B211B" : "#B0A194" }}>{name || "Enter your name"}</span><MS name="chevron_right" size={18} className="text-[#C7B6A4]" />
+          </AYRow>
+          <AYRow icon="person" bg="#F7ECE1" label="Gender">
+            <div className="flex gap-1.5">{["Male", "Female", "Other"].map((g) => { const on = gender === g; return <button key={g} onClick={() => setGender(g)} className="rounded-full px-2.5 py-1 text-[11.5px] font-semibold" style={on ? { background: "#936548", color: "#fff" } : { background: "#F4ECE2", color: "#8A7B6C" }}>{g}</button>; })}</div>
+          </AYRow>
+          <AYRow icon="calendar_month" bg="#F7ECE1" label="Age">
+            <span className="text-[13px]" style={{ color: "#B0A194" }}>Select…</span><MS name="expand_more" size={18} className="text-[#C7B6A4]" />
+          </AYRow>
+          <AYRow icon="straighten" bg="#EAF4E8" label="Height" onClick={() => setView("height")}>
+            <span className="text-[13px] font-medium" style={{ color: "#2B211B" }}>{hDisp}</span><MS name="chevron_right" size={18} className="text-[#C7B6A4]" />
+          </AYRow>
+          <AYRow icon="monitor_weight" bg="#FCECEE" label="Weight" onClick={() => setView("weight")}>
+            <span className="text-[13px] font-medium" style={{ color: "#2B211B" }}>{wDisp}</span><MS name="chevron_right" size={18} className="text-[#C7B6A4]" />
+          </AYRow>
+          <AYRow icon="location_on" bg="#FFF0E0" label="Location">
+            <span className="text-[12px]" style={{ color: "#936548" }}>Use current</span><MS name="chevron_right" size={18} className="text-[#C7B6A4]" />
+          </AYRow>
+        </div>
+        <button className="mt-5 flex w-full shrink-0 items-center justify-center gap-2 rounded-[26px] px-6 py-3 text-[15px] font-semibold text-white shadow-[0_6px_16px_-8px_rgba(110,70,45,0.55)]" style={{ background: "#936548" }}>Next <MS name="arrow_forward" size={18} /></button>
+      </main>
+    </AYShell>
+  );
+}
+
 function Preview() {
   const { screen } = Route.useParams();
   const body =
     screen === "nw-weightloss" ? <NWWeightLoss /> :
     screen === "nw-about" ? <NWAbout /> :
+    screen === "nw-aboutyou" ? <AboutYouFlow /> :
+    screen === "nw-ay-name" ? <AboutYouFlow initialView="name" /> :
+    screen === "nw-ay-weight" ? <AboutYouFlow initialView="weight" /> :
+    screen === "nw-ay-height" ? <AboutYouFlow initialView="height" /> :
     screen === "nw-goals" ? <NWGoals /> :
     screen === "nw-activity" ? <NWActivity /> :
     screen === "nw-sleep" ? <NWSleep /> :
