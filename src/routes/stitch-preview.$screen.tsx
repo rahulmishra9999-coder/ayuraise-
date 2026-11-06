@@ -1265,7 +1265,7 @@ function NWLeaves() {
 function NWFrame({ title, subtitle, pct, cta = "Next", children }: { title: string; subtitle: string; pct: number; cta?: string; children: React.ReactNode }) {
   return (
     <div className="relative mx-auto h-dvh w-full max-w-[520px] overflow-hidden" style={{ background: "#FFF8F2", color: "#39332F", ...INTER }}>
-      <div className="pointer-events-none absolute right-[-6px] top-[-6px] z-0 h-[138px] w-[150px]"><NWLeaves /></div>
+      <img src="/images/leaf-corner.png" alt="" className="pointer-events-none absolute right-[-26px] top-[-22px] z-0 w-[205px]" style={{ transform: "rotate(8deg)" }} onError={(e) => { e.currentTarget.style.display = "none"; }} />
       <div className="relative z-10 flex h-full flex-col">
         <header className="shrink-0 px-5 pb-2" style={{ paddingTop: "max(0.9rem, env(safe-area-inset-top))" }}>
           <div className="flex items-center gap-4">
