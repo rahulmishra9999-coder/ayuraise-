@@ -981,31 +981,36 @@ function CreatePlan() {
 
         {/* WEIGHT LOSS — food strategies (tap a card for the why) */}
         {key === "wl-why" && (() => {
-          const WL_FOOD = [
-            { icon: "🍽️", title: "Cut calories gently", sub: "We'll build your diet plan next", detail: "Weight loss needs a calorie gap — but a small, steady one. Going extreme backfires: your body slows down to protect itself and hits back with revenge eating (cravings & binges). Don't starve — just trim a little. That's what actually lasts." },
-            { icon: "🥩", title: "Eat enough protein", sub: "Keeps you full for hours", detail: "Protein is the most filling nutrient and protects your muscle while you lose fat. Lead your meals with dal, paneer, tofu, sprouts, eggs or curd at breakfast, lunch and dinner." },
-            { icon: "🌾", title: "Cut carbs — choose low-GI", sub: "Steady energy, no crashes", detail: "Low-GI foods release glucose slowly, so your energy stays steady and you avoid the sugar-crash that triggers cravings — and it helps with insulin resistance. Pick whole grains, millets, oats and legumes over white rice, maida and sugar." },
-            { icon: "🥗", title: "Salad before your meal", sub: "You'll naturally eat less", detail: "A plate of salad first fills part of your stomach with fibre and water, so you eat less of the heavier food that follows — without feeling deprived." },
-            { icon: "🌱", title: "Sprouts at breakfast", sub: "Raw or lightly steamed", detail: "Sprouts are high in protein and fibre but low in calories — a filling, light way to start the day (also great at dinner)." },
-            { icon: "🍎", title: "Fruit as your snack", sub: "High water, naturally filling", detail: "Whole fruit has high water and fibre content, so it fills you up for very few calories. Reach for seasonal fruit instead of fried or packaged snacks." },
-            { icon: "🥜", title: "Go easy on nuts & dry fruits", sub: "Healthy but calorie-dense", detail: "They're nutritious, but very calorie-dense — a small handful can be 150–200 calories. Keep the portion tiny." },
-            { icon: "👄", title: "Chew well, eat slowly", sub: "About 20–30 chews a bite", detail: "Your stomach takes roughly 20 minutes to tell your brain it's full. Chewing each bite 20–30 times and eating slowly gives that 'I'm full' signal time to arrive — so you stop at enough instead of overeating." },
-            { icon: "⏱️", title: "Try intermittent fasting", sub: "Start with a 12-hour window", detail: "Begin easy — finish dinner by 8pm and eat next around 8am (a 12-hour window). As it gets comfortable you can widen it. Or try a fruit fast one day a week, maybe a weekend. Tip: move fruit to breakfast, but don't mix fat with fruit." },
-            { icon: "🍵", title: "Detox drink before breakfast", sub: "Lightens your first meal", detail: "A warm drink on an empty stomach helps you eat lighter at breakfast: methi (fenugreek) water, amla juice with water, warm turmeric water, or warm lemon water." },
-            { icon: "💧", title: "Sip first on cravings", sub: "Often it's thirst, not hunger", detail: "When you feel like eating between meals, have a near-zero-calorie drink first and wait a few minutes — often it's thirst, not hunger. Try plain water, ginger water, lemon water, or black tea/coffee." },
+          const WL_FOOD: { icon: string; img?: string; bg: string; title: string; sub?: string; detail: string }[] = [
+            { icon: "🍽️", img: "calories.png", bg: "#FAECE2", title: "Cut calories gently", sub: "We'll build your diet plan next", detail: "Weight loss needs a calorie gap — but a small, steady one. Going extreme backfires: your body slows down to protect itself and hits back with revenge eating (cravings & binges). Don't starve — just trim a little. That's what actually lasts." },
+            { icon: "🥩", img: "protein.png", bg: "#FEF4DC", title: "Eat enough protein", sub: "Keeps you full for hours", detail: "Protein is the most filling nutrient and protects your muscle while you lose fat. Lead your meals with dal, paneer, tofu, sprouts, eggs or curd at breakfast, lunch and dinner." },
+            { icon: "🌾", img: "carbs.png", bg: "#EAF4E8", title: "Cut carbs — choose low-GI", sub: "Steady energy, no crashes", detail: "Low-GI foods release glucose slowly, so your energy stays steady and you avoid the sugar-crash that triggers cravings — and it helps with insulin resistance. Pick whole grains, millets, oats and legumes over white rice, maida and sugar." },
+            { icon: "🥗", img: "salad.png", bg: "#FFF0E0", title: "Salad before your meal", sub: "You'll naturally eat less", detail: "A plate of salad first fills part of your stomach with fibre and water, so you eat less of the heavier food that follows — without feeling deprived." },
+            { icon: "🌱", bg: "#EAF4E8", title: "Sprouts at breakfast", sub: "Raw or lightly steamed", detail: "Sprouts are high in protein and fibre but low in calories — a filling, light way to start the day (also great at dinner)." },
+            { icon: "🍎", img: "sprouts.png", bg: "#FCECEE", title: "Fruit as your snack", sub: "High water, naturally filling", detail: "Whole fruit has high water and fibre content, so it fills you up for very few calories. Reach for seasonal fruit instead of fried or packaged snacks." },
+            { icon: "🥜", img: "nuts.png", bg: "#FBF0DD", title: "Go easy on nuts & dry fruits", sub: "Healthy but calorie-dense", detail: "They're nutritious, but very calorie-dense — a small handful can be 150–200 calories. Keep the portion tiny." },
+            { icon: "👄", img: "chew.png", bg: "#FAEBEE", title: "Chew well, eat slowly", sub: "About 20–30 chews a bite", detail: "Your stomach takes roughly 20 minutes to tell your brain it's full. Chewing each bite 20–30 times and eating slowly gives that 'I'm full' signal time to arrive — so you stop at enough instead of overeating." },
+            { icon: "⏱️", bg: "#F1ECE2", title: "Try intermittent fasting", sub: "Start with a 12-hour window", detail: "Begin easy — finish dinner by 8pm and eat next around 8am (a 12-hour window). As it gets comfortable you can widen it. Or try a fruit fast one day a week, maybe a weekend. Tip: move fruit to breakfast, but don't mix fat with fruit." },
+            { icon: "🍵", bg: "#EAF4E8", title: "Detox drink before breakfast", sub: "Lightens your first meal", detail: "A warm drink on an empty stomach helps you eat lighter at breakfast: methi (fenugreek) water, amla juice with water, warm turmeric water, or warm lemon water." },
+            { icon: "💧", bg: "#EAF1F7", title: "Sip first on cravings", sub: "Often it's thirst, not hunger", detail: "When you feel like eating between meals, have a near-zero-calorie drink first and wait a few minutes — often it's thirst, not hunger. Try plain water, ginger water, lemon water, or black tea/coffee." },
           ];
           return (
             <div className="space-y-2.5">
-              <p className="px-1 text-[11.5px] leading-snug text-muted-foreground">Weight loss is mostly about food — the steady, no-starving way. <b className="text-foreground">Tap any card</b> to see why it works.</p>
-              <div className="space-y-1.5">
+              <div className="relative">
+                <p className="px-1 pr-[86px] text-[11.5px] leading-snug text-muted-foreground">Weight loss is mostly about food — the steady, no-starving way. <b className="text-foreground">Tap any card</b> to see why it works.</p>
+                <img src="/images/weightloss/hero.png" alt="" className="pointer-events-none absolute right-[-8px] top-[-34px] h-[86px] w-[90px] object-contain" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+              </div>
+              <div className="space-y-2">
                 {WL_FOOD.map((x, i) => (
-                  <button key={i} onClick={() => setWlTip(x)} className="flex w-full items-center gap-2.5 rounded-2xl bg-card p-2.5 text-left ring-1 ring-border/60 active:scale-[0.99]">
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-accent/40 text-[16px]">{x.icon}</span>
+                  <button key={i} onClick={() => setWlTip(x)} className="flex w-full items-center gap-3 rounded-[18px] border px-3 py-2 text-left shadow-[0_1px_5px_rgba(90,60,40,0.045)] active:scale-[0.99]" style={{ background: "#FFFDF9", borderColor: "#F4EEE5" }}>
+                    <span className="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full text-[18px]" style={{ background: x.bg }}>
+                      {x.img ? <img src={`/images/weightloss/${x.img}`} alt="" className="absolute inset-0 h-full w-full scale-[1.05] object-cover" onError={(e) => { e.currentTarget.style.display = "none"; }} /> : x.icon}
+                    </span>
                     <div className="min-w-0 flex-1">
-                      <p className="text-[12px] font-bold text-foreground">{x.title}</p>
-                      {x.sub && <p className="text-[10px] leading-snug text-muted-foreground">{x.sub}</p>}
+                      <p className="text-[13.5px] font-semibold" style={{ color: "#39332F" }}>{x.title}</p>
+                      {x.sub && <p className="text-[11px] leading-snug" style={{ color: "#6B625B" }}>{x.sub}</p>}
                     </div>
-                    <Info size={14} className="shrink-0 text-primary/70" />
+                    <Info size={15} className="shrink-0" style={{ color: "#936548" }} />
                   </button>
                 ))}
               </div>
