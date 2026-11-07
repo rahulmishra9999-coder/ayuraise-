@@ -38,15 +38,38 @@ const WL_INTER = { fontFamily: '"Inter", system-ui, sans-serif' } as const;
 function WLMS({ name, size = 20, fill = false, className = "" }: { name: string; size?: number; fill?: boolean; className?: string }) {
   return <span className={`material-symbols-outlined ${className}`} style={{ fontSize: size, lineHeight: 1, fontVariationSettings: fill ? "'FILL' 1" : "'FILL' 0" }}>{name}</span>;
 }
-type WLCard = { title: string; sub: string; icon: string; bg: string; fg: string; img: string; detail: string; heroImg?: string; benefits?: { icon: string; label: string }[]; callout?: { title: string; text: string } };
+type WLBenefit = { icon: string; label: string };
+type WLSection =
+  | { kind: "callout"; icon: string; title: string; text: string }
+  | { kind: "chips"; heading: string; items: { emoji: string; label: string }[] }
+  | { kind: "twocol"; good: { title: string; text: string }; bad: { title: string; text: string } }
+  | { kind: "checklist"; heading: string; items: string[]; stat?: { big: string; text: string } };
+type WLCard = { title: string; sub: string; icon: string; bg: string; fg: string; img: string; detail: string; heroImg?: string; benefits?: WLBenefit[]; sections?: WLSection[] };
 const WL_WHY_CARDS: WLCard[] = [
-  { title: "Cut calories gently", sub: "A small, sustainable reduction that works", icon: "restaurant", bg: "#FAECE2", fg: "#B05B27", img: "calories.png", detail: "Weight loss needs a calorie gap — but a small, steady one. Going extreme backfires: your body slows down to protect itself and hits back with revenge eating (cravings & binges). Don't starve — just trim a little. That's what actually lasts.", heroImg: "hero-salad.png", benefits: [{ icon: "local_fire_department", label: "Helps you burn stored fat" }, { icon: "balance", label: "Keeps your metabolism steady" }, { icon: "eco", label: "Is easier to follow long term" }], callout: { title: "How much to cut?", text: "A modest 10–20% fewer calories than what your body needs is enough for safe, steady fat loss." } },
-  { title: "Eat enough protein", sub: "Keeps you full for longer", icon: "egg_alt", bg: "#FEF4DC", fg: "#A67812", img: "protein.png", detail: "Protein is the most filling nutrient and protects your muscle while you lose fat. Lead your meals with dal, paneer, tofu, sprouts, eggs or curd at breakfast, lunch and dinner." },
-  { title: "Choose better carbs (low-GI)", sub: "Steady energy, no sudden crashes", icon: "eco", bg: "#EAF4E8", fg: "#3D7834", img: "carbs.png", detail: "Low-GI foods release glucose slowly, so your energy stays steady and you avoid the sugar-crash that triggers cravings — and it helps with insulin resistance. Pick whole grains, millets, oats and legumes over white rice, maida and sugar." },
-  { title: "Start with a salad", sub: "Helps you feel full, so you eat less", icon: "soup_kitchen", bg: "#FFF0E0", fg: "#BC671F", img: "salad.png", detail: "A plate of salad first fills part of your stomach with fibre and water, so you eat less of the heavier food that follows — without feeling deprived." },
-  { title: "Include sprouts at breakfast", sub: "Nutrient-rich and light on calories", icon: "nutrition", bg: "#FCECEE", fg: "#B83D4F", img: "sprouts.png", detail: "Sprouts are high in protein and fibre but low in calories — a filling, light way to start the day (also great at dinner)." },
-  { title: "Go easy on nuts & dry fruits", sub: "Nutritious, but calorie-dense — keep portions small", icon: "grain", bg: "#FBF0DD", fg: "#A66E14", img: "nuts.png", detail: "They're nutritious, but very calorie-dense — a small handful can be 150–200 calories. Keep the portion tiny." },
-  { title: "Chew well, eat slowly", sub: "Gives your brain time to feel satisfied", icon: "self_improvement", bg: "#FAEBEE", fg: "#B84058", img: "chew.png", detail: "Your stomach takes roughly 20 minutes to tell your brain it's full. Chewing each bite 20–30 times and eating slowly gives that 'I'm full' signal time to arrive — so you stop at enough instead of overeating." },
+  { title: "Cut calories gently", sub: "A small, sustainable reduction that works", icon: "restaurant", bg: "#FAECE2", fg: "#B05B27", img: "calories.png", detail: "Weight loss needs a calorie gap — but a small, steady one. Going extreme backfires: your body slows down to protect itself and hits back with revenge eating (cravings & binges). Don't starve — just trim a little. That's what actually lasts.", heroImg: "hero-salad.png",
+    benefits: [{ icon: "local_fire_department", label: "Helps you burn stored fat" }, { icon: "balance", label: "Keeps your metabolism steady" }, { icon: "eco", label: "Is easier to follow long term" }],
+    sections: [{ kind: "callout", icon: "track_changes", title: "How much to cut?", text: "A modest 10–20% fewer calories than what your body needs is enough for safe, steady fat loss." }] },
+  { title: "Eat enough protein", sub: "Keeps you full for longer", icon: "egg_alt", bg: "#FEF4DC", fg: "#A67812", img: "protein.png", detail: "Protein is the most filling nutrient and protects your muscle while you lose fat. Lead your meals with dal, paneer, tofu, sprouts, eggs or curd at breakfast, lunch and dinner.",
+    benefits: [{ icon: "restaurant", label: "Keeps you full for longer" }, { icon: "exercise", label: "Helps preserve muscle while losing fat" }, { icon: "local_fire_department", label: "May slightly boost your metabolism" }],
+    sections: [
+      { kind: "callout", icon: "track_changes", title: "How much do you need?", text: "Aim for ~1.0–1.2 g of protein per kg of your body weight daily." },
+      { kind: "chips", heading: "Good sources of protein", items: [{ emoji: "🍲", label: "Dal" }, { emoji: "🧀", label: "Paneer" }, { emoji: "🧈", label: "Tofu" }, { emoji: "🥚", label: "Eggs" }, { emoji: "🥛", label: "Curd" }, { emoji: "🌱", label: "Sprouts" }] },
+    ] },
+  { title: "Choose better carbs (low-GI)", sub: "Steady energy, no sudden crashes", icon: "eco", bg: "#EAF4E8", fg: "#3D7834", img: "carbs.png", detail: "Low-GI foods release glucose slowly, so your energy stays steady and you avoid the sugar-crash that triggers cravings — and it helps with insulin resistance.",
+    benefits: [{ icon: "trending_up", label: "Releases energy slowly" }, { icon: "bolt", label: "Keeps you full for longer" }, { icon: "water_drop", label: "Supports better blood sugar control" }],
+    sections: [{ kind: "twocol", good: { title: "Choose more", text: "Whole grains, millets, oats, legumes, fruits and veggies." }, bad: { title: "Limit or avoid", text: "White rice, refined flour (maida), and sugary foods (e.g., sweets, desserts, sugary drinks)." } }] },
+  { title: "Start with a salad", sub: "Feel full, so you eat less", icon: "soup_kitchen", bg: "#FFF0E0", fg: "#BC671F", img: "salad.png", detail: "A plate of salad first fills part of your stomach with fibre and water, so you eat less of the heavier food that follows — without feeling deprived.", heroImg: "hero-salad.png",
+    benefits: [{ icon: "restaurant", label: "Keeps you full for longer" }, { icon: "lunch_dining", label: "Helps you eat a smaller main meal" }, { icon: "water_drop", label: "Adds fibre and water with very few calories" }],
+    sections: [{ kind: "checklist", heading: "How to do it", items: ["Have a small bowl of salad (1–2 cups) before your main meal.", "Use a mix of raw vegetables (e.g., cucumber, tomato, carrot, lettuce, cabbage).", "Keep it simple — a squeeze of lemon, herbs or a light dressing."] }] },
+  { title: "Include sprouts at breakfast", sub: "A light, filling and nutritious way to start the day", icon: "nutrition", bg: "#FCECEE", fg: "#B83D4F", img: "sprouts.png", detail: "Sprouts are high in protein and fibre but low in calories — a filling, light way to start the day (also great at dinner).",
+    benefits: [{ icon: "exercise", label: "Adds plant protein" }, { icon: "eco", label: "High in fibre" }, { icon: "restaurant", label: "Keeps you full for longer" }],
+    sections: [{ kind: "chips", heading: "Easy ways to include", items: [{ emoji: "🥗", label: "Sprout salad" }, { emoji: "🥣", label: "Sprout chaat" }, { emoji: "🥛", label: "Sprouts with curd" }] }] },
+  { title: "Go easy on nuts & dry fruits", sub: "Nutritious, but calorie-dense", icon: "grain", bg: "#FBF0DD", fg: "#A66E14", img: "nuts.png", detail: "They're nutritious, but very calorie-dense — a small handful can be 150–200 calories. Keep the portion tiny.",
+    benefits: [{ icon: "favorite", label: "Rich in healthy fats" }, { icon: "eco", label: "Provides important nutrients" }, { icon: "restaurant", label: "Keeps you satisfied for longer" }],
+    sections: [{ kind: "twocol", good: { title: "Have a small portion", text: "About 15–20 g (≈ a small handful / 1–2 tbsp) is enough." }, bad: { title: "Avoid excess", text: "Large portions can quickly add extra calories and slow down weight loss." } }] },
+  { title: "Chew well, eat slowly", sub: "Give your body time to feel full", icon: "self_improvement", bg: "#FAEBEE", fg: "#B84058", img: "chew.png", detail: "Your stomach takes roughly 20 minutes to tell your brain it's full. Chewing each bite 20–30 times and eating slowly gives that 'I'm full' signal time to arrive — so you stop at enough instead of overeating.",
+    benefits: [{ icon: "restaurant", label: "Helps you feel full with less food" }, { icon: "gastroenterology", label: "Supports better digestion" }, { icon: "monitor_weight", label: "Makes it easier to manage your weight" }],
+    sections: [{ kind: "checklist", heading: "How to do it", items: ["Chew each bite 20–30 times.", "Put your fork/spoon down between bites.", "Take a few deep breaths and enjoy the taste and texture."], stat: { big: "~ 20 minutes", text: "The time your body typically takes to feel full." } }] },
 ];
 const WL_NAV: [string, string][] = [["home", "/home"], ["favorite", "/my-plans"], ["grid_view", "/learn"], ["school", "/diet/academy"], ["auto_awesome", "/coach"], ["person", "/profile"]];
 function WLWhyScreen({ progress, onBack, onNext }: { progress: number; onBack: () => void; onNext: () => void }) {
@@ -105,7 +128,7 @@ function WLWhyScreen({ progress, onBack, onNext }: { progress: number; onBack: (
 
               {open.benefits ? (
                 <>
-                  {/* paragraph + salad artwork */}
+                  {/* paragraph (+ optional artwork) */}
                   <div className="mt-4 flex items-start gap-1">
                     <p className="flex-1 text-[14px] leading-[1.55]" style={{ color: "#4A3F36" }}>{open.detail}</p>
                     {open.heroImg && (
@@ -126,16 +149,56 @@ function WLWhyScreen({ progress, onBack, onNext }: { progress: number; onBack: (
                       ))}
                     </div>
                   </div>
-                  {/* how much to cut */}
-                  {open.callout && (
-                    <div className="mt-3 flex items-start gap-3 rounded-[22px] p-4" style={{ background: "#FBE7D4" }}>
-                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full" style={{ background: "#F4DBBF", color: "#B05B27" }}><WLMS name="track_changes" size={24} /></div>
-                      <div className="min-w-0 flex-1">
-                        <h4 className="text-[17px] font-semibold leading-tight" style={{ ...WL_PLAYFAIR, color: "#2B211B" }}>{open.callout.title}</h4>
-                        <p className="mt-1 text-[13px] leading-[1.45]" style={{ color: "#4A3F36" }}>{open.callout.text}</p>
+                  {/* varying content sections */}
+                  {open.sections?.map((s, si) => {
+                    if (s.kind === "callout") return (
+                      <div key={si} className="mt-3 flex items-start gap-3 rounded-[22px] p-4" style={{ background: "#FBE7D4" }}>
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full" style={{ background: "#F4DBBF", color: "#B05B27" }}><WLMS name={s.icon} size={24} /></div>
+                        <div className="min-w-0 flex-1"><h4 className="text-[17px] font-semibold leading-tight" style={{ ...WL_PLAYFAIR, color: "#2B211B" }}>{s.title}</h4><p className="mt-1 text-[13px] leading-[1.45]" style={{ color: "#4A3F36" }}>{s.text}</p></div>
                       </div>
-                    </div>
-                  )}
+                    );
+                    if (s.kind === "chips") return (
+                      <div key={si} className="mt-4">
+                        <h4 className="text-[18px] font-semibold" style={{ ...WL_PLAYFAIR, color: "#7A3B16" }}>{s.heading}</h4>
+                        <div className={s.items.length <= 3 ? "mt-3 grid grid-cols-3 gap-2" : "mt-3 flex gap-2 overflow-x-auto pb-1"}>
+                          {s.items.map((it) => (
+                            <div key={it.label} className={`flex flex-col items-center gap-1 rounded-2xl px-2 py-3 ${s.items.length <= 3 ? "" : "w-[86px] shrink-0"}`} style={{ background: "#FBF2E6" }}>
+                              <span className="text-[26px] leading-none">{it.emoji}</span>
+                              <span className="text-center text-[12px] leading-tight" style={{ color: "#4A3F36" }}>{it.label}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                    if (s.kind === "twocol") return (
+                      <div key={si} className="mt-3 grid grid-cols-2 gap-3">
+                        <div className="rounded-[20px] p-3.5" style={{ background: "#EEF4E4" }}>
+                          <div className="flex items-center gap-2"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-white" style={{ background: "#5F9A4E" }}><WLMS name="check" size={15} /></span><h4 className="text-[16px] font-semibold leading-tight" style={{ ...WL_PLAYFAIR, color: "#5A3A14" }}>{s.good.title}</h4></div>
+                          <p className="mt-2 text-[12.5px] leading-[1.4]" style={{ color: "#4A3F36" }}>{s.good.text}</p>
+                        </div>
+                        <div className="rounded-[20px] p-3.5" style={{ background: "#FBE8DC" }}>
+                          <div className="flex items-center gap-2"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-white" style={{ background: "#D0693C" }}><WLMS name="close" size={15} /></span><h4 className="text-[16px] font-semibold leading-tight" style={{ ...WL_PLAYFAIR, color: "#5A3A14" }}>{s.bad.title}</h4></div>
+                          <p className="mt-2 text-[12.5px] leading-[1.4]" style={{ color: "#4A3F36" }}>{s.bad.text}</p>
+                        </div>
+                      </div>
+                    );
+                    return (
+                      <div key={si} className="mt-3 rounded-[22px] p-4" style={{ background: "#EFF3E2" }}>
+                        <h4 className="text-[18px] font-semibold" style={{ ...WL_PLAYFAIR, color: "#5A3A14" }}>{s.heading}</h4>
+                        <ul className="mt-2.5 space-y-2">
+                          {s.items.map((it) => (
+                            <li key={it} className="flex items-start gap-2.5"><span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-white" style={{ background: "#5F9A4E" }}><WLMS name="check" size={13} /></span><span className="text-[13px] leading-[1.4]" style={{ color: "#4A3F36" }}>{it}</span></li>
+                          ))}
+                        </ul>
+                        {s.stat && (
+                          <div className="mt-3 flex items-center gap-3 rounded-[18px] p-3" style={{ background: "#FBE7D1", color: "#B05B27" }}>
+                            <WLMS name="timer" size={26} />
+                            <p className="min-w-0 flex-1"><span className="text-[16px] font-bold" style={{ ...WL_PLAYFAIR, color: "#2B211B" }}>{s.stat.big}</span><span className="ml-2 text-[12.5px]" style={{ color: "#4A3F36" }}>{s.stat.text}</span></p>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </>
               ) : (
                 <p className="mt-3.5 text-[13.5px] leading-[1.6]" style={{ color: "#5A4B3C" }}>{open.detail}</p>
