@@ -38,9 +38,9 @@ const WL_INTER = { fontFamily: '"Inter", system-ui, sans-serif' } as const;
 function WLMS({ name, size = 20, fill = false, className = "" }: { name: string; size?: number; fill?: boolean; className?: string }) {
   return <span className={`material-symbols-outlined ${className}`} style={{ fontSize: size, lineHeight: 1, fontVariationSettings: fill ? "'FILL' 1" : "'FILL' 0" }}>{name}</span>;
 }
-type WLCard = { title: string; sub: string; icon: string; bg: string; fg: string; img: string; detail: string };
+type WLCard = { title: string; sub: string; icon: string; bg: string; fg: string; img: string; detail: string; heroImg?: string; benefits?: { icon: string; label: string }[]; callout?: { title: string; text: string } };
 const WL_WHY_CARDS: WLCard[] = [
-  { title: "Cut calories gently", sub: "A small, sustainable reduction that works", icon: "restaurant", bg: "#FAECE2", fg: "#B05B27", img: "calories.png", detail: "Weight loss needs a calorie gap — but a small, steady one. Going extreme backfires: your body slows down to protect itself and hits back with revenge eating (cravings & binges). Don't starve — just trim a little. That's what actually lasts." },
+  { title: "Cut calories gently", sub: "A small, sustainable reduction that works", icon: "restaurant", bg: "#FAECE2", fg: "#B05B27", img: "calories.png", detail: "Weight loss needs a calorie gap — but a small, steady one. Going extreme backfires: your body slows down to protect itself and hits back with revenge eating (cravings & binges). Don't starve — just trim a little. That's what actually lasts.", heroImg: "hero-salad.png", benefits: [{ icon: "local_fire_department", label: "Helps you burn stored fat" }, { icon: "balance", label: "Keeps your metabolism steady" }, { icon: "eco", label: "Is easier to follow long term" }], callout: { title: "How much to cut?", text: "A modest 10–20% fewer calories than what your body needs is enough for safe, steady fat loss." } },
   { title: "Eat enough protein", sub: "Keeps you full for longer", icon: "egg_alt", bg: "#FEF4DC", fg: "#A67812", img: "protein.png", detail: "Protein is the most filling nutrient and protects your muscle while you lose fat. Lead your meals with dal, paneer, tofu, sprouts, eggs or curd at breakfast, lunch and dinner." },
   { title: "Choose better carbs (low-GI)", sub: "Steady energy, no sudden crashes", icon: "eco", bg: "#EAF4E8", fg: "#3D7834", img: "carbs.png", detail: "Low-GI foods release glucose slowly, so your energy stays steady and you avoid the sugar-crash that triggers cravings — and it helps with insulin resistance. Pick whole grains, millets, oats and legumes over white rice, maida and sugar." },
   { title: "Start with a salad", sub: "Helps you feel full, so you eat less", icon: "soup_kitchen", bg: "#FFF0E0", fg: "#BC671F", img: "salad.png", detail: "A plate of salad first fills part of your stomach with fibre and water, so you eat less of the heavier food that follows — without feeling deprived." },
@@ -90,16 +90,62 @@ function WLWhyScreen({ progress, onBack, onNext }: { progress: number; onBack: (
       </nav>
       {/* detail popup — styled to match the weight-loss screen */}
       {open && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center" style={{ background: "rgba(43,33,27,0.42)", ...WL_INTER }} onClick={() => setOpen(null)}>
-          <div className="w-full max-w-[520px] rounded-t-[28px] px-5 pt-3 shadow-[0_-10px_40px_-12px_rgba(60,40,25,0.4)]" style={{ background: "#FFF8F2", paddingBottom: "max(1.25rem, env(safe-area-inset-bottom))" }} onClick={(e) => e.stopPropagation()}>
-            <div className="mx-auto mb-4 h-1 w-10 rounded-full" style={{ background: "#E6D9CA" }} />
-            <div className="flex items-center gap-3">
-              <div className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full" style={{ background: open.bg, color: open.fg }}><WLMS name={open.icon} size={24} /><img src={`/images/weightloss/${open.img}`} alt="" className="absolute inset-0 h-full w-full scale-[1.05] object-cover" onError={(e) => { e.currentTarget.style.display = "none"; }} /></div>
-              <h3 className="min-w-0 flex-1 text-[19px] font-semibold leading-tight" style={{ ...WL_PLAYFAIR, color: "#2B211B" }}>{open.title}</h3>
-              <button aria-label="Close" onClick={() => setOpen(null)} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full" style={{ background: "#F1E9DE", color: "#8A7B6C" }}><WLMS name="close" size={18} /></button>
+        <div className="fixed inset-0 z-50 flex items-end justify-center" style={{ background: "rgba(43,33,27,0.5)", ...WL_INTER }} onClick={() => setOpen(null)}>
+          <div className="flex max-h-[94vh] w-full max-w-[520px] flex-col rounded-t-[30px] shadow-[0_-10px_40px_-12px_rgba(60,40,25,0.45)]" style={{ background: "#FFF8F2" }} onClick={(e) => e.stopPropagation()}>
+            <div className="mx-auto mt-3 h-1 w-11 shrink-0 rounded-full" style={{ background: "#E6D9CA" }} />
+            <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-2">
+              {/* title row */}
+              <div className="flex items-start gap-3.5">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full" style={{ background: open.bg, color: open.fg }}><WLMS name={open.icon} size={28} /></div>
+                <div className="min-w-0 flex-1 pt-0.5">
+                  <h3 className="text-[23px] font-semibold leading-[1.1] tracking-[-0.01em]" style={{ ...WL_PLAYFAIR, color: "#2B211B" }}>{open.title}</h3>
+                  <p className="mt-1 text-[14px] font-medium leading-snug" style={{ color: "#9A6B3E" }}>{open.sub}</p>
+                </div>
+                <button aria-label="Close" onClick={() => setOpen(null)} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full active:scale-95" style={{ background: "#EFE7DC", color: "#8A7B6C" }}><WLMS name="close" size={18} /></button>
+              </div>
+
+              {open.benefits ? (
+                <>
+                  {/* paragraph + salad artwork */}
+                  <div className="mt-4 flex items-start gap-1">
+                    <p className="flex-1 text-[14px] leading-[1.55]" style={{ color: "#4A3F36" }}>{open.detail}</p>
+                    {open.heroImg && (
+                      <div className="relative -mr-5 ml-1 w-[150px] shrink-0 self-stretch overflow-hidden rounded-l-[22px]" style={{ background: "linear-gradient(140deg,#ECF4E4,#FBF2E6)" }}>
+                        <img src={`/images/weightloss/${open.heroImg}`} alt="" className="absolute inset-0 h-full w-full scale-[1.12] object-contain" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                      </div>
+                    )}
+                  </div>
+                  {/* why it works */}
+                  <div className="mt-5 rounded-[22px] p-4" style={{ background: "#FBF0E3" }}>
+                    <h4 className="text-[18px] font-semibold" style={{ ...WL_PLAYFAIR, color: "#7A3B16" }}>Why it works</h4>
+                    <div className="mt-3 grid grid-cols-3">
+                      {open.benefits.map((b, i) => (
+                        <div key={b.label} className="flex flex-col items-center gap-2 px-2 text-center" style={{ color: "#A66A2E", ...(i > 0 ? { borderLeft: "1px solid #EEDFCB" } : {}) }}>
+                          <WLMS name={b.icon} size={28} />
+                          <p className="text-[12.5px] leading-[1.3]" style={{ color: "#4A3F36" }}>{b.label}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  {/* how much to cut */}
+                  {open.callout && (
+                    <div className="mt-3 flex items-start gap-3 rounded-[22px] p-4" style={{ background: "#FBE7D4" }}>
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full" style={{ background: "#F4DBBF", color: "#B05B27" }}><WLMS name="track_changes" size={24} /></div>
+                      <div className="min-w-0 flex-1">
+                        <h4 className="text-[17px] font-semibold leading-tight" style={{ ...WL_PLAYFAIR, color: "#2B211B" }}>{open.callout.title}</h4>
+                        <p className="mt-1 text-[13px] leading-[1.45]" style={{ color: "#4A3F36" }}>{open.callout.text}</p>
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <p className="mt-3.5 text-[13.5px] leading-[1.6]" style={{ color: "#5A4B3C" }}>{open.detail}</p>
+              )}
             </div>
-            <p className="mt-3.5 text-[13.5px] leading-[1.6]" style={{ color: "#5A4B3C" }}>{open.detail}</p>
-            <button onClick={() => setOpen(null)} className="mt-5 w-full rounded-[22px] py-3 text-[14.5px] font-semibold text-white active:scale-[0.98]" style={{ background: "#936548" }}>Got it</button>
+            {/* got it */}
+            <div className="shrink-0 px-5 pt-3" style={{ paddingBottom: "max(1.25rem, env(safe-area-inset-bottom))" }}>
+              <button onClick={() => setOpen(null)} className="w-full rounded-[24px] py-3.5 text-[15px] font-semibold text-white active:scale-[0.98]" style={{ background: "#936548" }}>Got it</button>
+            </div>
           </div>
         </div>
       )}
