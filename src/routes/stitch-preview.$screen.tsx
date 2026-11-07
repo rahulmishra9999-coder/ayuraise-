@@ -1433,7 +1433,7 @@ function AYShell({ progress, onBack, label, children, nav }: { progress: number;
       <header className="shrink-0 px-5 pb-2" style={{ paddingTop: "max(0.9rem, env(safe-area-inset-top))" }}>
         <div className="flex items-center gap-4">
           <button aria-label="Back" onClick={onBack} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-stone-200/70 bg-white/95 shadow-sm active:scale-95" style={{ color: "#39332F" }}><MS name="arrow_back" size={20} /></button>
-          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-stone-200/80"><div className="h-full rounded-full" style={{ width: `${progress}%`, background: "#936548" }} /></div>
+          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-stone-200/80"><div className="h-full rounded-full" style={{ width: `${progress}%`, background: "linear-gradient(to right,#B98A5E,#8F4B25)" }} /></div>
         </div>
         {label && <p className="mt-3 text-center text-[12px] font-bold uppercase tracking-[0.15em]" style={{ color: "#5A4B3C" }}>{label}</p>}
       </header>
@@ -1567,11 +1567,13 @@ function AboutYouFlow({ initialView = "about" }: { initialView?: "about" | "name
   const [wUnit, setWUnit] = useState("kg");
   const [height, setHeight] = useState(177);
   const [hUnit, setHUnit] = useState("cm");
+  const [hTouched, setHTouched] = useState(false);
+  const [wTouched, setWTouched] = useState(false);
   if (view === "name") return <NameEntry initial={name} onBack={() => setView("about")} onSave={(v) => { setName(v); setView("about"); }} />;
-  if (view === "weight") return <WeightPicker kg={weight} unit={wUnit} setUnit={setWUnit} heightCm={height} onBack={() => setView("about")} onSave={(v) => { setWeight(v); setView("about"); }} />;
-  if (view === "height") return <HeightPicker cm={height} unit={hUnit} setUnit={setHUnit} onBack={() => setView("about")} onSave={(v) => { setHeight(v); setView("about"); }} />;
-  const hDisp = hUnit === "cm" ? `${height} cm` : (() => { const t = height / 2.54; return `${Math.floor(t / 12)}'${Math.round(t - Math.floor(t / 12) * 12)}"`; })();
-  const wDisp = wUnit === "kg" ? `${weight} kg` : `${Math.round(weight * 2.20462)} lb`;
+  if (view === "weight") return <WeightPicker kg={weight} unit={wUnit} setUnit={setWUnit} heightCm={height} onBack={() => setView("about")} onSave={(v) => { setWeight(v); setWTouched(true); setView("about"); }} />;
+  if (view === "height") return <HeightPicker cm={height} unit={hUnit} setUnit={setHUnit} onBack={() => setView("about")} onSave={(v) => { setHeight(v); setHTouched(true); setView("about"); }} />;
+  const hVal = hUnit === "cm" ? `${height}` : (() => { const t = height / 2.54; return `${Math.floor(t / 12)}'${Math.round(t - Math.floor(t / 12) * 12)}"`; })();
+  const wVal = wUnit === "kg" ? `${weight}` : `${Math.round(weight * 2.20462)}`;
   const card = { background: "#FFFDF9", borderColor: "#F0E6D8" } as const;
   const ring = (name: string, tint: string) => <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border" style={{ background: tint, borderColor: "#EADDC9", color: "#936548" }}><MS name={name} size={18} /></span>;
   const unitTog = (opts: [string, string][], val: string, set: (v: string) => void) => (
@@ -1580,8 +1582,8 @@ function AboutYouFlow({ initialView = "about" }: { initialView?: "about" | "name
   return (
     <AYShell progress={20} onBack={() => {}} nav>
       <main className="relative flex min-h-0 flex-1 flex-col overflow-y-auto px-5 pb-5 pt-1">
-        <img src="/images/aboutyou/stones.png" alt="" className="pointer-events-none absolute right-[-6px] top-[-6px] z-0 w-[120px]" style={{ WebkitMaskImage: "linear-gradient(to bottom,#000 62%,transparent)", maskImage: "linear-gradient(to bottom,#000 62%,transparent)" }} onError={(e) => { e.currentTarget.style.display = "none"; }} />
-        <div className="relative z-10 mb-4" style={{ maxWidth: 210 }}>
+        <img src="/images/aboutyou/stones.png" alt="" className="pointer-events-none absolute right-[-6px] top-[-12px] z-0 w-[158px]" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+        <div className="relative z-10 mb-4 flex flex-col" style={{ maxWidth: 208, minHeight: 210 }}>
           <h1 className="mb-1 text-[28px] font-semibold leading-tight tracking-[-0.01em]" style={{ ...PLAYFAIR, color: "#2B211B" }}>About You</h1>
           <p className="text-[12.5px] leading-[1.45]" style={{ color: "#6B625B" }}>Help us personalise your plan with a few basic details.</p>
         </div>
@@ -1591,7 +1593,7 @@ function AboutYouFlow({ initialView = "about" }: { initialView?: "about" | "name
             <div className="flex items-center gap-3">
               {ring("person", "#FBEFE0")}
               <span className="text-[14px] font-bold" style={{ color: "#2B211B" }}>Name</span>
-              <button onClick={() => setView("name")} className="ml-auto flex min-w-0 flex-1 items-center justify-between gap-2 rounded-full px-4 py-2.5 text-[13px]" style={{ background: "#F4ECE2" }}><span className="truncate" style={{ color: name ? "#2B211B" : "#A79684" }}>{name || "Enter your name"}</span><MS name="edit" size={15} className="text-[#B9A890]" /></button>
+              <button onClick={() => setView("name")} className="ml-auto flex min-w-0 flex-1 items-center rounded-full px-4 py-2.5 text-[13px]" style={{ background: "#F4ECE2" }}><span className="truncate" style={{ color: name ? "#2B211B" : "#A79684" }}>{name || "Enter your name"}</span></button>
             </div>
           </div>
           {/* Gender */}
@@ -1613,12 +1615,12 @@ function AboutYouFlow({ initialView = "about" }: { initialView?: "about" | "name
           {/* Height */}
           <div className="rounded-[20px] border p-3.5" style={card}>
             <div className="flex items-center gap-3">{ring("straighten", "#EAF4E8")}<span className="text-[14px] font-bold" style={{ color: "#2B211B" }}>Height</span><div className="ml-auto">{unitTog([["cm", "cm"], ["ft - in", "ft"]], hUnit, setHUnit)}</div></div>
-            <button onClick={() => setView("height")} className="mt-2.5 flex w-full items-center justify-between gap-2 rounded-full px-4 py-2.5 text-[13px]" style={{ background: "#F4ECE2" }}><span className="flex items-center gap-2"><span className="font-semibold" style={{ color: "#2B211B" }}>{hDisp.replace(/ (cm|").*/, "").trim() || "Select…"}</span><MS name="expand_more" size={16} className="text-[#B9A890]" /></span><span style={{ color: "#8A7B6C" }}>{hUnit === "cm" ? "cm" : "ft-in"}</span></button>
+            <button onClick={() => setView("height")} className="mt-2.5 flex w-full items-center justify-between gap-2 rounded-full px-4 py-2.5 text-[13px]" style={{ background: "#F4ECE2" }}><span className="flex items-center gap-2"><span className="font-semibold" style={{ color: hTouched ? "#2B211B" : "#A79684" }}>{hTouched ? hVal : "Select…"}</span><MS name="expand_more" size={16} className="text-[#B9A890]" /></span><span style={{ color: "#8A7B6C" }}>{hUnit === "cm" ? "cm" : "ft-in"}</span></button>
           </div>
           {/* Weight */}
           <div className="rounded-[20px] border p-3.5" style={card}>
             <div className="flex items-center gap-3">{ring("monitor_weight", "#FCECEE")}<span className="text-[14px] font-bold" style={{ color: "#2B211B" }}>Weight</span><div className="ml-auto">{unitTog([["kg", "kg"], ["lb", "lb"]], wUnit, setWUnit)}</div></div>
-            <button onClick={() => setView("weight")} className="mt-2.5 flex w-full items-center justify-between gap-2 rounded-full px-4 py-2.5 text-[13px]" style={{ background: "#F4ECE2" }}><span className="flex items-center gap-2"><span className="font-semibold" style={{ color: "#2B211B" }}>{wUnit === "kg" ? weight : Math.round(weight * 2.20462)}</span><MS name="expand_more" size={16} className="text-[#B9A890]" /></span><span style={{ color: "#8A7B6C" }}>{wUnit}</span></button>
+            <button onClick={() => setView("weight")} className="mt-2.5 flex w-full items-center justify-between gap-2 rounded-full px-4 py-2.5 text-[13px]" style={{ background: "#F4ECE2" }}><span className="flex items-center gap-2"><span className="font-semibold" style={{ color: wTouched ? "#2B211B" : "#A79684" }}>{wTouched ? wVal : "Select…"}</span><MS name="expand_more" size={16} className="text-[#B9A890]" /></span><span style={{ color: "#8A7B6C" }}>{wUnit}</span></button>
           </div>
           {/* Location */}
           <div className="rounded-[20px] border p-3.5" style={card}>
