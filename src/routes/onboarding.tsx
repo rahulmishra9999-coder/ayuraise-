@@ -333,87 +333,73 @@ function AboutStep(p: {
 }) {
   const [hUnit, setHUnit] = useState<"cm" | "ft">("cm");
   const [wUnit, setWUnit] = useState<"kg" | "lb">("kg");
+  const [locManual, setLocManual] = useState(false);
+  const [loc, setLoc] = useState("");
   const cm = Number(p.heightCm || 0), kg = Number(p.weightKg || 0);
   const GEN: { k: "male" | "female" | "other"; label: string }[] = [{ k: "male", label: "Male" }, { k: "female", label: "Female" }, { k: "other", label: "Other" }];
+  const CARD = "rounded-[20px] border p-3.5";
+  const CS = { background: "#FFFDF9", borderColor: "#F0E6D8", boxShadow: "0 1px 6px rgba(120,80,40,0.05)" } as const;
+  const PILL = { background: "#F4ECE2" } as const;
+  const ring = (ic: string, tint: string) => <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border" style={{ background: tint, borderColor: "#EADDC9", color: "#936548" }}><MS name={ic} size={20} /></span>;
+  const toggle = (opts: [string, string][], val: string, set: (v: never) => void) => (
+    <div className="flex rounded-full p-0.5" style={{ background: "#F1E9DE" }}>{opts.map(([lab, v]) => { const on = val === v; return <button type="button" key={v} onClick={() => set(v as never)} className="rounded-full px-3 py-1 text-[11.5px] font-semibold transition" style={on ? { background: "#936548", color: "#fff" } : { color: "#8A7B6C" }}>{lab}</button>; })}</div>
+  );
+  const lbl = { className: "text-[14px] font-bold", style: { color: "#2B211B" } } as const;
   return (
-    <>
-      <TopBar onBack={p.onBack} />
-      <main className="px-6 pb-10 pt-[4.75rem]">
-        <div className="mb-6 flex flex-col gap-2.5">
-          <div className="flex items-center justify-between text-[12px]"><span className="font-medium tracking-wide text-[#4b6159]">Step 1 of 4</span><span className="text-[#424845]">25% Complete</span></div>
-          <div className="h-1.5 w-full overflow-hidden rounded-full bg-[#ebeeef]"><div className="h-full rounded-full bg-[#4b6159]" style={{ width: "25%" }} /></div>
+    <div className="min-h-svh" style={{ background: "#FFF8F2", fontFamily: '"Manrope", system-ui, sans-serif' }}>
+      <header className="fixed inset-x-0 top-0 z-50 pt-[env(safe-area-inset-top)]" style={{ background: "#FFF8F2" }}>
+        <div className="mx-auto flex h-16 max-w-md items-center gap-3 px-5">
+          <button onClick={p.onBack} aria-label="Back" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white shadow-sm active:scale-95"><MS name="arrow_back" size={20} className="text-[#2B211B]" /></button>
+          <div className="h-2 flex-1 overflow-hidden rounded-full" style={{ background: "#EBE1D4" }}><div className="h-full rounded-full" style={{ width: "40%", background: "linear-gradient(to right,#B98A5E,#8F4B25)" }} /></div>
         </div>
-        <h1 className="mb-8 text-[28px] font-semibold tracking-tight text-[#181c1d]" style={SERIF4}>About You</h1>
+      </header>
+      <main className="relative mx-auto max-w-md px-5 pb-10 pt-[5.25rem]">
+        <img src="/images/aboutyou/hero-exact.png" alt="" className="pointer-events-none absolute right-[-8px] top-[46px] z-0 w-[132px]" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+        <div className="relative z-10 mb-4 flex flex-col" style={{ maxWidth: 206, minHeight: 178 }}>
+          <h1 className="mb-1.5 text-[30px] font-bold leading-[1.05]" style={{ fontFamily: '"Playfair Display", Georgia, serif', color: "#2B211B" }}>About You</h1>
+          <p className="text-[13px] leading-[1.45]" style={{ color: "#6B625B" }}>Help us personalise your plan with a few basic details.</p>
+        </div>
 
-        <div className="flex flex-col gap-4">
-          <div className="rounded-xl bg-white p-5 shadow-sm">
-            <label className="mb-1.5 block text-[12px] font-medium tracking-wider text-[#424845]">Name</label>
-            <div className="flex items-center gap-3">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#f1f4f5] text-[#4b6159]"><MS name="badge" size={18} /></div>
-              <input value={p.name} onChange={(e) => p.setName(e.target.value)} placeholder="Enter your name" className="w-full bg-transparent text-[18px] text-[#181c1d] placeholder:text-[#727875] focus:outline-none" />
+        <div className="relative z-10 flex flex-col gap-3">
+          {/* Name */}
+          <div className={CARD} style={CS}>
+            <div className="flex items-center gap-3">{ring("person", "#FBEFE0")}<span {...lbl}>Name</span>
+              <input value={p.name} onChange={(e) => p.setName(e.target.value)} placeholder="Enter your name" className="ml-auto min-w-0 flex-1 rounded-full px-4 py-2.5 text-[13px] text-[#2B211B] placeholder:text-[#A79684] focus:outline-none" style={PILL} />
             </div>
           </div>
-
-          <div className="rounded-xl bg-white p-5 shadow-sm">
-            <label className="mb-3 block text-[12px] font-medium tracking-wider text-[#424845]">Gender</label>
-            <div className="grid grid-cols-3 gap-2">
-              {GEN.map((g) => {
-                const on = p.gender === g.k;
-                return <button key={g.k} onClick={() => p.setGender(g.k)} className={`flex items-center justify-center gap-1.5 rounded-full px-3 py-2.5 text-[14px] font-semibold transition-all ${on ? "bg-[#4b6159] text-white shadow-sm" : "bg-[#f1f4f5] text-[#424845]"}`}>{on && <MS name="check" size={16} />}<span>{g.label}</span></button>;
-              })}
+          {/* Gender */}
+          <div className={CARD} style={CS}>
+            <div className="flex items-center gap-3">{ring("person", "#FBEFE0")}<span {...lbl}>Gender</span>
+              <div className="ml-auto flex gap-1.5">{GEN.map((g) => { const on = p.gender === g.k; return <button type="button" key={g.k} onClick={() => p.setGender(g.k)} className="rounded-full px-3.5 py-1.5 text-[12.5px] font-semibold transition" style={on ? { background: "#936548", color: "#fff" } : { background: "#F4ECE2", color: "#8A7B6C" }}>{g.label}</button>; })}</div>
             </div>
           </div>
-
-          <div className="rounded-xl bg-white p-5 shadow-sm">
-            <label className="mb-1.5 block text-[12px] font-medium tracking-wider text-[#424845]">Age</label>
-            <div className="flex items-baseline gap-2">
-              <input type="number" min={1} max={120} value={p.age} onChange={(e) => p.setAge(e.target.value)} placeholder="28" className="w-20 bg-transparent text-[24px] font-medium text-[#181c1d] focus:outline-none" style={SERIF4} />
-              <span className="text-[16px] text-[#424845]">years</span>
+          {/* Age */}
+          <div className={CARD} style={CS}>
+            <div className="flex items-center gap-3">{ring("calendar_month", "#FBEFE0")}<span {...lbl}>Age</span>
+              <div className="ml-auto flex min-w-0 flex-1 items-center gap-2 rounded-full px-4 py-2.5" style={PILL}><input type="number" min={1} max={120} value={p.age} onChange={(e) => p.setAge(e.target.value)} placeholder="Select…" className="min-w-0 flex-1 bg-transparent text-[13px] text-[#2B211B] placeholder:text-[#A79684] focus:outline-none" /><span className="text-[12px] text-[#8A7B6C]">yrs</span></div>
             </div>
           </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            {/* height */}
-            <div className="flex flex-col justify-between rounded-xl bg-white p-4 shadow-sm">
-              <div className="mb-3 flex items-center justify-between gap-1">
-                <span className="truncate text-[12px] font-medium tracking-wider text-[#424845]">Height</span>
-                <div className="flex shrink-0 rounded-full bg-[#f1f4f5] p-0.5">
-                  {(["cm", "ft"] as const).map((u) => <button key={u} onClick={() => setHUnit(u)} className={`rounded-full px-2 py-0.5 text-[12px] transition-all ${hUnit === u ? "bg-white font-semibold text-[#4b6159] shadow-sm" : "text-[#424845]"}`}>{u}</button>)}
-                </div>
-              </div>
-              <div className="flex items-baseline gap-1.5">
-                <input key={hUnit} type="text" inputMode="decimal" defaultValue={hUnit === "cm" ? p.heightCm : cmToFtStr(cm)}
-                  onChange={(e) => { const v = e.target.value; p.setHeightCm(hUnit === "cm" ? v.replace(/[^\d.]/g, "") : String(ftStrToCm(v) || "")); }}
-                  placeholder={hUnit === "cm" ? "170" : "5'7"} className="w-16 bg-transparent text-[24px] font-medium text-[#181c1d] focus:outline-none" style={SERIF4} />
-                <span className="text-[14px] text-[#424845]">{hUnit}</span>
-              </div>
-              <div className="mt-2 flex items-center gap-1 truncate text-[12px] text-[#727875]"><MS name="height" size={13} className="text-[#4b6159]" />{cm ? (hUnit === "cm" ? cmToFtStr(cm) + " ft/in" : cm + " cm") : "—"}</div>
-            </div>
-            {/* weight */}
-            <div className="flex flex-col justify-between rounded-xl bg-white p-4 shadow-sm">
-              <div className="mb-3 flex items-center justify-between gap-1">
-                <span className="truncate text-[12px] font-medium tracking-wider text-[#424845]">Weight</span>
-                <div className="flex shrink-0 rounded-full bg-[#f1f4f5] p-0.5">
-                  {(["kg", "lb"] as const).map((u) => <button key={u} onClick={() => setWUnit(u)} className={`rounded-full px-2 py-0.5 text-[12px] transition-all ${wUnit === u ? "bg-white font-semibold text-[#4b6159] shadow-sm" : "text-[#424845]"}`}>{u}</button>)}
-                </div>
-              </div>
-              <div className="flex items-baseline gap-1.5">
-                <input key={wUnit} type="text" inputMode="decimal" defaultValue={wUnit === "kg" ? p.weightKg : kgToLbStr(kg)}
-                  onChange={(e) => { const v = e.target.value; p.setWeightKg(wUnit === "kg" ? v.replace(/[^\d.]/g, "") : String(lbToKg(parseFloat(v)) || "")); }}
-                  placeholder={wUnit === "kg" ? "65" : "143"} className="w-16 bg-transparent text-[24px] font-medium text-[#181c1d] focus:outline-none" style={SERIF4} />
-                <span className="text-[14px] text-[#424845]">{wUnit}</span>
-              </div>
-              <div className="mt-2 flex items-center gap-1 truncate text-[12px] text-[#727875]"><MS name="monitor_weight" size={13} className="text-[#4b6159]" />{kg ? (wUnit === "kg" ? kgToLbStr(kg) + " lbs" : kg + " kg") : "—"}</div>
-            </div>
+          {/* Height */}
+          <div className={CARD} style={CS}>
+            <div className="flex items-center gap-3">{ring("straighten", "#EAF4E8")}<span {...lbl}>Height</span><div className="ml-auto">{toggle([["cm", "cm"], ["ft - in", "ft"]], hUnit, setHUnit)}</div></div>
+            <div className="mt-2.5 flex items-center gap-2 rounded-full px-4 py-2.5" style={PILL}><input key={hUnit} type="text" inputMode="decimal" defaultValue={hUnit === "cm" ? p.heightCm : cmToFtStr(cm)} onChange={(e) => { const v = e.target.value; p.setHeightCm(hUnit === "cm" ? v.replace(/[^\d.]/g, "") : String(ftStrToCm(v) || "")); }} placeholder="Select…" className="min-w-0 flex-1 bg-transparent text-[13px] font-semibold text-[#2B211B] placeholder:font-normal placeholder:text-[#A79684] focus:outline-none" /><span className="text-[13px] font-semibold text-[#2B211B]">{hUnit === "cm" ? "cm" : "ft-in"}</span></div>
           </div>
-
-          <div className="mt-2 flex flex-col items-center gap-3 pt-2">
-            <button onClick={p.onNext} disabled={!p.valid} className="flex w-full items-center justify-center gap-2 rounded-full bg-[#2d3132] px-6 py-4 text-[14px] font-semibold text-[#eef1f2] shadow-md transition-all active:scale-[0.99] disabled:opacity-40"><span>Continue</span><MS name="arrow_forward" size={18} /></button>
-            <div className="flex items-center gap-1.5 text-[12px] text-[#727875]"><MS name="lock" size={14} /><span>Your data is private and encrypted.</span></div>
+          {/* Weight */}
+          <div className={CARD} style={CS}>
+            <div className="flex items-center gap-3">{ring("monitor_weight", "#FCECEE")}<span {...lbl}>Weight</span><div className="ml-auto">{toggle([["kg", "kg"], ["lb", "lb"]], wUnit, setWUnit)}</div></div>
+            <div className="mt-2.5 flex items-center gap-2 rounded-full px-4 py-2.5" style={PILL}><input key={wUnit} type="text" inputMode="decimal" defaultValue={wUnit === "kg" ? p.weightKg : kgToLbStr(kg)} onChange={(e) => { const v = e.target.value; p.setWeightKg(wUnit === "kg" ? v.replace(/[^\d.]/g, "") : String(lbToKg(parseFloat(v)) || "")); }} placeholder="Select…" className="min-w-0 flex-1 bg-transparent text-[13px] font-semibold text-[#2B211B] placeholder:font-normal placeholder:text-[#A79684] focus:outline-none" /><span className="text-[13px] font-semibold text-[#2B211B]">{wUnit}</span></div>
+          </div>
+          {/* Location (optional) */}
+          <div className={CARD} style={CS}>
+            <div className="flex items-center gap-3">{ring("location_on", "#FFF0E0")}<span {...lbl}>Location</span><button type="button" onClick={() => { setLocManual(false); if (typeof navigator !== "undefined" && navigator.geolocation) navigator.geolocation.getCurrentPosition(() => setLoc("Current location"), () => {}); }} className="ml-auto flex items-center gap-1.5 rounded-full px-3 py-2 text-[11.5px] font-semibold" style={{ background: "#F7ECE1", color: "#936548" }}><MS name="my_location" size={14} />Use my current location</button></div>
+            <button type="button" onClick={() => setLocManual(true)} className="mt-2.5 flex w-full items-center justify-between gap-2 rounded-full px-4 py-2.5 text-[13px]" style={PILL}>{locManual ? <input autoFocus value={loc} onChange={(e) => setLoc(e.target.value)} onClick={(e) => e.stopPropagation()} placeholder="Enter your city" className="min-w-0 flex-1 bg-transparent text-[#2B211B] placeholder:text-[#8A7B6C] focus:outline-none" /> : <span className="flex items-center gap-2" style={{ color: "#8A7B6C" }}><MS name="edit" size={14} />{loc || "Enter location manually"}</span>}<MS name="expand_more" size={16} className="text-[#B9A890]" /></button>
           </div>
         </div>
+
+        <button onClick={p.onNext} disabled={!p.valid} className="relative z-10 mt-6 flex w-full items-center justify-center gap-2 rounded-[26px] px-6 py-3.5 text-[15px] font-semibold text-white shadow-[0_6px_16px_-8px_rgba(110,70,45,0.55)] transition active:scale-[0.99] disabled:opacity-40" style={{ background: "#936548" }}>Next <MS name="arrow_forward" size={18} /></button>
+        <div className="relative z-10 mt-3 flex items-center justify-center gap-1.5 text-[11.5px]" style={{ color: "#9A8E82" }}><MS name="lock" size={13} />Your data is private and encrypted.</div>
       </main>
-    </>
+    </div>
   );
 }
 
