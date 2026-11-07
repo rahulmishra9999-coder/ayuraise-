@@ -90,10 +90,9 @@ function WLWhyScreen({ progress, onBack, onNext }: { progress: number; onBack: (
       </nav>
       {/* detail popup — styled to match the weight-loss screen */}
       {open && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center" style={{ background: "rgba(43,33,27,0.5)", ...WL_INTER }} onClick={() => setOpen(null)}>
-          <div className="flex max-h-[94vh] w-full max-w-[520px] flex-col rounded-t-[30px] shadow-[0_-10px_40px_-12px_rgba(60,40,25,0.45)]" style={{ background: "#FFF8F2" }} onClick={(e) => e.stopPropagation()}>
-            <div className="mx-auto mt-3 h-1 w-11 shrink-0 rounded-full" style={{ background: "#E6D9CA" }} />
-            <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-2">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(43,33,27,0.5)", ...WL_INTER }} onClick={() => setOpen(null)}>
+          <div className="flex max-h-[90vh] w-full max-w-[460px] flex-col overflow-hidden rounded-[28px] shadow-[0_18px_50px_-12px_rgba(60,40,25,0.5)]" style={{ background: "#FFF8F2" }} onClick={(e) => e.stopPropagation()}>
+            <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-5">
               {/* title row */}
               <div className="flex items-start gap-3.5">
                 <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full" style={{ background: open.bg, color: open.fg }}><WLMS name={open.icon} size={28} /></div>
