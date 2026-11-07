@@ -1572,65 +1572,17 @@ function AboutYouFlow({ initialView = "about" }: { initialView?: "about" | "name
   if (view === "name") return <NameEntry initial={name} onBack={() => setView("about")} onSave={(v) => { setName(v); setView("about"); }} />;
   if (view === "weight") return <WeightPicker kg={weight} unit={wUnit} setUnit={setWUnit} heightCm={height} onBack={() => setView("about")} onSave={(v) => { setWeight(v); setWTouched(true); setView("about"); }} />;
   if (view === "height") return <HeightPicker cm={height} unit={hUnit} setUnit={setHUnit} onBack={() => setView("about")} onSave={(v) => { setHeight(v); setHTouched(true); setView("about"); }} />;
-  const hVal = hUnit === "cm" ? `${height}` : (() => { const t = height / 2.54; return `${Math.floor(t / 12)}'${Math.round(t - Math.floor(t / 12) * 12)}"`; })();
-  const wVal = wUnit === "kg" ? `${weight}` : `${Math.round(weight * 2.20462)}`;
-  const card = { background: "#FFFDF9", borderColor: "#F0E6D8" } as const;
-  const ring = (name: string, tint: string) => <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border" style={{ background: tint, borderColor: "#EADDC9", color: "#936548" }}><MS name={name} size={18} /></span>;
-  const unitTog = (opts: [string, string][], val: string, set: (v: string) => void) => (
-    <div className="flex rounded-full p-0.5" style={{ background: "#F1E9DE" }}>{opts.map(([lab, v]) => { const on = val === v; return <button key={v} onClick={() => set(v)} className="rounded-full px-3 py-1 text-[11.5px] font-semibold transition" style={on ? { background: "#936548", color: "#fff" } : { color: "#8A7B6C" }}>{lab}</button>; })}</div>
-  );
+  const DEBUG = false;
+  const tap = (top: number, h: number) => ({ left: "3%", top: `${top}%`, width: "94%", height: `${h}%` });
   return (
-    <AYShell progress={20} onBack={() => {}} nav>
-      <main className="relative flex min-h-0 flex-1 flex-col overflow-y-auto px-5 pb-5 pt-1">
-        <img src="/images/aboutyou/stones.png" alt="" className="pointer-events-none absolute right-[-6px] top-[-12px] z-0 w-[158px]" onError={(e) => { e.currentTarget.style.display = "none"; }} />
-        <div className="relative z-10 mb-4 flex flex-col" style={{ maxWidth: 208, minHeight: 210 }}>
-          <h1 className="mb-1 text-[28px] font-semibold leading-tight tracking-[-0.01em]" style={{ ...PLAYFAIR, color: "#2B211B" }}>About You</h1>
-          <p className="text-[12.5px] leading-[1.45]" style={{ color: "#6B625B" }}>Help us personalise your plan with a few basic details.</p>
-        </div>
-        <div className="relative z-10 flex flex-col gap-2.5">
-          {/* Name */}
-          <div className="rounded-[20px] border p-3.5" style={card}>
-            <div className="flex items-center gap-3">
-              {ring("person", "#FBEFE0")}
-              <span className="text-[14px] font-bold" style={{ color: "#2B211B" }}>Name</span>
-              <button onClick={() => setView("name")} className="ml-auto flex min-w-0 flex-1 items-center rounded-full px-4 py-2.5 text-[13px]" style={{ background: "#F4ECE2" }}><span className="truncate" style={{ color: name ? "#2B211B" : "#A79684" }}>{name || "Enter your name"}</span></button>
-            </div>
-          </div>
-          {/* Gender */}
-          <div className="rounded-[20px] border p-3.5" style={card}>
-            <div className="flex items-center gap-3">
-              {ring("person", "#FBEFE0")}
-              <span className="text-[14px] font-bold" style={{ color: "#2B211B" }}>Gender</span>
-              <div className="ml-auto flex gap-1.5">{["Male", "Female", "Other"].map((g) => { const on = gender === g; return <button key={g} onClick={() => setGender(g)} className="rounded-full px-3.5 py-1.5 text-[12.5px] font-semibold transition" style={on ? { background: "#936548", color: "#fff" } : { background: "#F4ECE2", color: "#8A7B6C" }}>{g}</button>; })}</div>
-            </div>
-          </div>
-          {/* Age */}
-          <div className="rounded-[20px] border p-3.5" style={card}>
-            <div className="flex items-center gap-3">
-              {ring("calendar_month", "#FBEFE0")}
-              <span className="text-[14px] font-bold" style={{ color: "#2B211B" }}>Age</span>
-              <button className="ml-auto flex min-w-0 flex-1 items-center justify-between gap-2 rounded-full px-4 py-2.5 text-[13px]" style={{ background: "#F4ECE2" }}><span style={{ color: "#A79684" }}>Select…</span><MS name="expand_more" size={16} className="text-[#B9A890]" /></button>
-            </div>
-          </div>
-          {/* Height */}
-          <div className="rounded-[20px] border p-3.5" style={card}>
-            <div className="flex items-center gap-3">{ring("straighten", "#EAF4E8")}<span className="text-[14px] font-bold" style={{ color: "#2B211B" }}>Height</span><div className="ml-auto">{unitTog([["cm", "cm"], ["ft - in", "ft"]], hUnit, setHUnit)}</div></div>
-            <button onClick={() => setView("height")} className="mt-2.5 flex w-full items-center justify-between gap-2 rounded-full px-4 py-2.5 text-[13px]" style={{ background: "#F4ECE2" }}><span className="flex items-center gap-2"><span className="font-semibold" style={{ color: hTouched ? "#2B211B" : "#A79684" }}>{hTouched ? hVal : "Select…"}</span><MS name="expand_more" size={16} className="text-[#B9A890]" /></span><span style={{ color: "#8A7B6C" }}>{hUnit === "cm" ? "cm" : "ft-in"}</span></button>
-          </div>
-          {/* Weight */}
-          <div className="rounded-[20px] border p-3.5" style={card}>
-            <div className="flex items-center gap-3">{ring("monitor_weight", "#FCECEE")}<span className="text-[14px] font-bold" style={{ color: "#2B211B" }}>Weight</span><div className="ml-auto">{unitTog([["kg", "kg"], ["lb", "lb"]], wUnit, setWUnit)}</div></div>
-            <button onClick={() => setView("weight")} className="mt-2.5 flex w-full items-center justify-between gap-2 rounded-full px-4 py-2.5 text-[13px]" style={{ background: "#F4ECE2" }}><span className="flex items-center gap-2"><span className="font-semibold" style={{ color: wTouched ? "#2B211B" : "#A79684" }}>{wTouched ? wVal : "Select…"}</span><MS name="expand_more" size={16} className="text-[#B9A890]" /></span><span style={{ color: "#8A7B6C" }}>{wUnit}</span></button>
-          </div>
-          {/* Location */}
-          <div className="rounded-[20px] border p-3.5" style={card}>
-            <div className="flex items-center gap-3">{ring("location_on", "#FFF0E0")}<span className="text-[14px] font-bold" style={{ color: "#2B211B" }}>Location</span><button className="ml-auto flex items-center gap-1.5 rounded-full px-3 py-2 text-[11.5px] font-semibold" style={{ background: "#F7ECE1", color: "#936548" }}><MS name="my_location" size={14} />Use my current location</button></div>
-            <button className="mt-2.5 flex w-full items-center justify-between gap-2 rounded-full px-4 py-2.5 text-[13px]" style={{ background: "#F4ECE2" }}><span className="flex items-center gap-2" style={{ color: "#8A7B6C" }}><MS name="edit" size={14} />Enter location manually</span><MS name="expand_more" size={16} className="text-[#B9A890]" /></button>
-          </div>
-        </div>
-        <button className="mt-5 flex w-full shrink-0 items-center justify-center gap-2 rounded-[26px] px-6 py-3.5 text-[15px] font-semibold text-white shadow-[0_6px_16px_-8px_rgba(110,70,45,0.55)]" style={{ background: "#936548" }}>Next <MS name="arrow_forward" size={18} /></button>
-      </main>
-    </AYShell>
+    <div className="flex h-dvh w-full items-center justify-center overflow-hidden" style={{ background: "#FFF8F2" }}>
+      <div className="relative h-full" style={{ aspectRatio: "852 / 1846" }}>
+        <img src="/images/aboutyou/about-you-exact.png" alt="About You" className="absolute inset-0 h-full w-full object-cover" />
+        <button aria-label="Name" onClick={() => setView("name")} className="absolute rounded-[18px]" style={{ ...tap(22.6, 7.3), outline: DEBUG ? "2px solid rgba(220,40,40,.6)" : undefined }} />
+        <button aria-label="Height" onClick={() => setView("height")} className="absolute rounded-[18px]" style={{ ...tap(45.4, 10.4), outline: DEBUG ? "2px solid rgba(40,80,220,.6)" : undefined }} />
+        <button aria-label="Weight" onClick={() => setView("weight")} className="absolute rounded-[18px]" style={{ ...tap(57.4, 10.4), outline: DEBUG ? "2px solid rgba(30,150,60,.6)" : undefined }} />
+      </div>
+    </div>
   );
 }
 
