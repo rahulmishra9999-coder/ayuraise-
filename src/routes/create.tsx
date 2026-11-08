@@ -49,25 +49,25 @@ const WL_WHY_CARDS: WLCard[] = [
   { title: "Cut calories gently", sub: "A small, sustainable reduction that works", icon: "restaurant", bg: "#FAECE2", fg: "#B05B27", img: "calories.png", detail: "Weight loss needs a calorie gap — but a small, steady one. Going extreme backfires: your body slows down to protect itself and hits back with revenge eating (cravings & binges). Don't starve — just trim a little. That's what actually lasts.", heroImg: "hero-salad.png",
     benefits: [{ icon: "local_fire_department", label: "Helps you burn stored fat" }, { icon: "balance", label: "Keeps your metabolism steady" }, { icon: "eco", label: "Is easier to follow long term" }],
     sections: [{ kind: "callout", icon: "track_changes", title: "How much to cut?", text: "A modest 10–20% fewer calories than what your body needs is enough for safe, steady fat loss." }] },
-  { title: "Eat enough protein", sub: "Keeps you full for longer", icon: "egg_alt", bg: "#FEF4DC", fg: "#A67812", img: "protein.png", detail: "Protein is the most filling nutrient and protects your muscle while you lose fat. Lead your meals with dal, paneer, tofu, sprouts, eggs or curd at breakfast, lunch and dinner.",
+  { title: "Eat enough protein", sub: "Keeps you full for longer", icon: "egg_alt", bg: "#FEF4DC", fg: "#A67812", img: "protein.png", detail: "Protein is the most filling nutrient and protects your muscle while you lose fat. Lead your meals with dal, paneer, tofu, sprouts, eggs or curd at breakfast, lunch and dinner.", heroImg: "protein-hero.png",
     benefits: [{ icon: "restaurant", label: "Keeps you full for longer" }, { icon: "exercise", label: "Helps preserve muscle while losing fat" }, { icon: "local_fire_department", label: "May slightly boost your metabolism" }],
     sections: [
       { kind: "callout", icon: "track_changes", title: "How much do you need?", text: "Aim for ~1.0–1.2 g of protein per kg of your body weight daily." },
       { kind: "chips", heading: "Good sources of protein", items: [{ emoji: "🍲", label: "Dal" }, { emoji: "🧀", label: "Paneer" }, { emoji: "🧈", label: "Tofu" }, { emoji: "🥚", label: "Eggs" }, { emoji: "🥛", label: "Curd" }, { emoji: "🌱", label: "Sprouts" }] },
     ] },
-  { title: "Choose better carbs (low-GI)", sub: "Steady energy, no sudden crashes", icon: "eco", bg: "#EAF4E8", fg: "#3D7834", img: "carbs.png", detail: "Low-GI foods release glucose slowly, so your energy stays steady and you avoid the sugar-crash that triggers cravings — and it helps with insulin resistance.",
+  { title: "Choose better carbs (low-GI)", sub: "Steady energy, no sudden crashes", icon: "eco", bg: "#EAF4E8", fg: "#3D7834", img: "carbs.png", detail: "Low-GI foods release glucose slowly, so your energy stays steady and you avoid the sugar-crash that triggers cravings — and it helps with insulin resistance.", heroImg: "carbs-hero.png",
     benefits: [{ icon: "trending_up", label: "Releases energy slowly" }, { icon: "bolt", label: "Keeps you full for longer" }, { icon: "water_drop", label: "Supports better blood sugar control" }],
     sections: [{ kind: "twocol", good: { title: "Choose more", text: "Whole grains, millets, oats, legumes, fruits and veggies." }, bad: { title: "Limit or avoid", text: "White rice, refined flour (maida), and sugary foods (e.g., sweets, desserts, sugary drinks)." } }] },
   { title: "Start with a salad", sub: "Feel full, so you eat less", icon: "soup_kitchen", bg: "#FFF0E0", fg: "#BC671F", img: "salad.png", detail: "A plate of salad first fills part of your stomach with fibre and water, so you eat less of the heavier food that follows — without feeling deprived.", heroImg: "hero-salad.png",
     benefits: [{ icon: "restaurant", label: "Keeps you full for longer" }, { icon: "lunch_dining", label: "Helps you eat a smaller main meal" }, { icon: "water_drop", label: "Adds fibre and water with very few calories" }],
     sections: [{ kind: "checklist", heading: "How to do it", items: ["Have a small bowl of salad (1–2 cups) before your main meal.", "Use a mix of raw vegetables (e.g., cucumber, tomato, carrot, lettuce, cabbage).", "Keep it simple — a squeeze of lemon, herbs or a light dressing."] }] },
-  { title: "Include sprouts at breakfast", sub: "A light, filling and nutritious way to start the day", icon: "nutrition", bg: "#FCECEE", fg: "#B83D4F", img: "sprouts.png", detail: "Sprouts are high in protein and fibre but low in calories — a filling, light way to start the day (also great at dinner).",
+  { title: "Include sprouts at breakfast", sub: "A light, filling and nutritious way to start the day", icon: "nutrition", bg: "#FCECEE", fg: "#B83D4F", img: "sprouts.png", detail: "Sprouts are high in protein and fibre but low in calories — a filling, light way to start the day (also great at dinner).", heroImg: "sprouts-hero.png",
     benefits: [{ icon: "exercise", label: "Adds plant protein" }, { icon: "eco", label: "High in fibre" }, { icon: "restaurant", label: "Keeps you full for longer" }],
     sections: [{ kind: "chips", heading: "Easy ways to include", items: [{ emoji: "🥗", label: "Sprout salad" }, { emoji: "🥣", label: "Sprout chaat" }, { emoji: "🥛", label: "Sprouts with curd" }] }] },
-  { title: "Go easy on nuts & dry fruits", sub: "Nutritious, but calorie-dense", icon: "grain", bg: "#FBF0DD", fg: "#A66E14", img: "nuts.png", detail: "They're nutritious, but very calorie-dense — a small handful can be 150–200 calories. Keep the portion tiny.",
+  { title: "Go easy on nuts & dry fruits", sub: "Nutritious, but calorie-dense", icon: "grain", bg: "#FBF0DD", fg: "#A66E14", img: "nuts.png", detail: "They're nutritious, but very calorie-dense — a small handful can be 150–200 calories. Keep the portion tiny.", heroImg: "nuts-hero.png",
     benefits: [{ icon: "favorite", label: "Rich in healthy fats" }, { icon: "eco", label: "Provides important nutrients" }, { icon: "restaurant", label: "Keeps you satisfied for longer" }],
     sections: [{ kind: "twocol", good: { title: "Have a small portion", text: "About 15–20 g (≈ a small handful / 1–2 tbsp) is enough." }, bad: { title: "Avoid excess", text: "Large portions can quickly add extra calories and slow down weight loss." } }] },
-  { title: "Chew well, eat slowly", sub: "Give your body time to feel full", icon: "self_improvement", bg: "#FAEBEE", fg: "#B84058", img: "chew.png", detail: "Your stomach takes roughly 20 minutes to tell your brain it's full. Chewing each bite 20–30 times and eating slowly gives that 'I'm full' signal time to arrive — so you stop at enough instead of overeating.",
+  { title: "Chew well, eat slowly", sub: "Give your body time to feel full", icon: "self_improvement", bg: "#FAEBEE", fg: "#B84058", img: "chew.png", detail: "Your stomach takes roughly 20 minutes to tell your brain it's full. Chewing each bite 20–30 times and eating slowly gives that 'I'm full' signal time to arrive — so you stop at enough instead of overeating.", heroImg: "chew-hero.png",
     benefits: [{ icon: "restaurant", label: "Helps you feel full with less food" }, { icon: "gastroenterology", label: "Supports better digestion" }, { icon: "monitor_weight", label: "Makes it easier to manage your weight" }],
     sections: [{ kind: "checklist", heading: "How to do it", items: ["Chew each bite 20–30 times.", "Put your fork/spoon down between bites.", "Take a few deep breaths and enjoy the taste and texture."], stat: { big: "~ 20 minutes", text: "The time your body typically takes to feel full." } }] },
 ];
@@ -132,8 +132,8 @@ function WLWhyScreen({ progress, onBack, onNext }: { progress: number; onBack: (
                   <div className="mt-4 flex items-start gap-1">
                     <p className="flex-1 text-[14px] leading-[1.55]" style={{ color: "#4A3F36" }}>{open.detail}</p>
                     {open.heroImg && (
-                      <div className="relative -mr-5 ml-1 w-[150px] shrink-0 self-stretch overflow-hidden rounded-l-[22px]" style={{ background: "linear-gradient(140deg,#ECF4E4,#FBF2E6)" }}>
-                        <img src={`/images/weightloss/${open.heroImg}`} alt="" className="absolute inset-0 h-full w-full scale-[1.12] object-contain" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                      <div className="relative -mr-5 ml-1 w-[150px] shrink-0 self-stretch overflow-hidden rounded-l-[22px]" style={{ background: "#FBF3E8" }}>
+                        <img src={`/images/weightloss/${open.heroImg}`} alt="" className="absolute inset-0 h-full w-full object-cover" onError={(e) => { e.currentTarget.style.display = "none"; }} />
                       </div>
                     )}
                   </div>
@@ -160,9 +160,9 @@ function WLWhyScreen({ progress, onBack, onNext }: { progress: number; onBack: (
                     if (s.kind === "chips") return (
                       <div key={si} className="mt-4">
                         <h4 className="text-[18px] font-semibold" style={{ ...WL_PLAYFAIR, color: "#7A3B16" }}>{s.heading}</h4>
-                        <div className={s.items.length <= 3 ? "mt-3 grid grid-cols-3 gap-2" : "mt-3 flex gap-2 overflow-x-auto pb-1"}>
+                        <div className="mt-3 grid grid-cols-3 gap-2">
                           {s.items.map((it) => (
-                            <div key={it.label} className={`flex flex-col items-center gap-1 rounded-2xl px-2 py-3 ${s.items.length <= 3 ? "" : "w-[86px] shrink-0"}`} style={{ background: "#FBF2E6" }}>
+                            <div key={it.label} className="flex flex-col items-center gap-1 rounded-2xl px-2 py-3" style={{ background: "#FBF2E6" }}>
                               <span className="text-[26px] leading-none">{it.emoji}</span>
                               <span className="text-center text-[12px] leading-tight" style={{ color: "#4A3F36" }}>{it.label}</span>
                             </div>
