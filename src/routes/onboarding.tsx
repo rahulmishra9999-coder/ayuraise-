@@ -341,9 +341,9 @@ function AboutStep(p: {
   const CARD = "rounded-[20px] border p-3.5";
   const CS = { background: "#FFFDF9", borderColor: "#F0E6D8", boxShadow: "0 1px 6px rgba(120,80,40,0.05)" } as const;
   const PILL = { background: "#F4ECE2" } as const;
-  const ring = (ic: string, tint: string) => <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border" style={{ background: tint, borderColor: "#EADDC9", color: "#936548" }}><MS name={ic} size={20} /></span>;
+  const ring = (ic: string, tint: string) => <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border" style={{ background: tint, borderColor: "#EADDC9", color: "#A26235" }}><MS name={ic} size={20} /></span>;
   const toggle = (opts: [string, string][], val: string, set: (v: never) => void) => (
-    <div className="flex rounded-full p-0.5" style={{ background: "#F1E9DE" }}>{opts.map(([lab, v]) => { const on = val === v; return <button type="button" key={v} onClick={() => set(v as never)} className="rounded-full px-3 py-1 text-[11.5px] font-semibold transition" style={on ? { background: "#936548", color: "#fff" } : { color: "#8A7B6C" }}>{lab}</button>; })}</div>
+    <div className="flex rounded-full p-0.5" style={{ background: "#F1E9DE" }}>{opts.map(([lab, v]) => { const on = val === v; return <button type="button" key={v} onClick={() => set(v as never)} className="rounded-full px-3 py-1 text-[11.5px] font-semibold transition" style={on ? { background: "#A26235", color: "#fff" } : { color: "#8A7B6C" }}>{lab}</button>; })}</div>
   );
   const lbl = { className: "text-[14px] font-bold", style: { color: "#2B211B" } } as const;
   return (
@@ -371,7 +371,7 @@ function AboutStep(p: {
           {/* Gender */}
           <div className={CARD} style={CS}>
             <div className="flex items-center gap-3">{ring("person", "#FBEFE0")}<span {...lbl}>Gender</span>
-              <div className="ml-auto flex gap-1.5">{GEN.map((g) => { const on = p.gender === g.k; return <button type="button" key={g.k} onClick={() => p.setGender(g.k)} className="rounded-full px-3.5 py-1.5 text-[12.5px] font-semibold transition" style={on ? { background: "#936548", color: "#fff" } : { background: "#F4ECE2", color: "#8A7B6C" }}>{g.label}</button>; })}</div>
+              <div className="ml-auto flex gap-1.5">{GEN.map((g) => { const on = p.gender === g.k; return <button type="button" key={g.k} onClick={() => p.setGender(g.k)} className="rounded-full px-3.5 py-1.5 text-[12.5px] font-semibold transition" style={on ? { background: "#A26235", color: "#fff" } : { background: "#F4ECE2", color: "#8A7B6C" }}>{g.label}</button>; })}</div>
             </div>
           </div>
           {/* Age */}
@@ -392,12 +392,12 @@ function AboutStep(p: {
           </div>
           {/* Location (optional) */}
           <div className={CARD} style={CS}>
-            <div className="flex items-center gap-3">{ring("location_on", "#FFF0E0")}<span {...lbl}>Location</span><button type="button" onClick={() => { setLocManual(false); if (typeof navigator !== "undefined" && navigator.geolocation) navigator.geolocation.getCurrentPosition(() => setLoc("Current location"), () => {}); }} className="ml-auto flex items-center gap-1.5 rounded-full px-3 py-2 text-[11.5px] font-semibold" style={{ background: "#F7ECE1", color: "#936548" }}><MS name="my_location" size={14} />Use my current location</button></div>
+            <div className="flex items-center gap-3">{ring("location_on", "#FFF0E0")}<span {...lbl}>Location</span><button type="button" onClick={() => { setLocManual(false); if (typeof navigator !== "undefined" && navigator.geolocation) navigator.geolocation.getCurrentPosition(() => setLoc("Current location"), () => {}); }} className="ml-auto flex items-center gap-1.5 rounded-full px-3 py-2 text-[11.5px] font-semibold" style={{ background: "#F7ECE1", color: "#A26235" }}><MS name="my_location" size={14} />Use my current location</button></div>
             <button type="button" onClick={() => setLocManual(true)} className="mt-2.5 flex w-full items-center justify-between gap-2 rounded-full px-4 py-2.5 text-[13px]" style={PILL}>{locManual ? <input autoFocus value={loc} onChange={(e) => setLoc(e.target.value)} onClick={(e) => e.stopPropagation()} placeholder="Enter your city" className="min-w-0 flex-1 bg-transparent text-[#2B211B] placeholder:text-[#8A7B6C] focus:outline-none" /> : <span className="flex items-center gap-2" style={{ color: "#8A7B6C" }}><MS name="edit" size={14} />{loc || "Enter location manually"}</span>}<MS name="expand_more" size={16} className="text-[#B9A890]" /></button>
           </div>
         </div>
 
-        <button onClick={p.onNext} disabled={!p.valid} className="relative z-10 mt-6 flex w-full items-center justify-center gap-2 rounded-[26px] px-6 py-3.5 text-[15px] font-semibold text-white shadow-[0_6px_16px_-8px_rgba(110,70,45,0.55)] transition active:scale-[0.99] disabled:opacity-40" style={{ background: "#936548" }}>Next <MS name="arrow_forward" size={18} /></button>
+        <button onClick={p.onNext} disabled={!p.valid} className="relative z-10 mt-6 flex w-full items-center justify-center gap-2 rounded-[26px] px-6 py-3.5 text-[15px] font-semibold text-white shadow-[0_6px_16px_-8px_rgba(110,70,45,0.55)] transition active:scale-[0.99] disabled:opacity-40" style={{ background: "#A26235" }}>Next <MS name="arrow_forward" size={18} /></button>
       </main>
       <nav aria-label="Bottom Navigation" className="fixed inset-x-0 bottom-0 z-40 px-5 pt-3" style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))", background: "linear-gradient(to top,#FFF8F2 72%,rgba(255,248,242,0))" }}>
         <div className="mx-auto flex h-[54px] max-w-md items-center justify-around rounded-full border px-4" style={{ background: "rgba(255,253,249,0.97)", borderColor: "#EEE2D4", boxShadow: "0 6px 20px -6px rgba(120,80,45,0.16)" }}>

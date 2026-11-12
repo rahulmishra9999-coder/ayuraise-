@@ -79,7 +79,7 @@ function WLWhyScreen({ progress, onBack, onNext }: { progress: number; onBack: (
       <header className="shrink-0 px-5 pb-2" style={{ paddingTop: "max(0.9rem, env(safe-area-inset-top))" }}>
         <div className="flex items-center gap-4">
           <button aria-label="Go back" onClick={onBack} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-stone-200/70 bg-white/95 shadow-sm active:scale-95" style={{ color: "#39332F" }}><WLMS name="arrow_back" size={20} /></button>
-          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-stone-200/80"><div className="h-full rounded-full" style={{ width: `${progress}%`, background: "#936548" }} /></div>
+          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-stone-200/80"><div className="h-full rounded-full" style={{ width: `${progress}%`, background: "#A26235" }} /></div>
         </div>
       </header>
       <main className="relative flex min-h-0 flex-1 flex-col overflow-y-auto px-5 pb-5 pt-2">
@@ -98,11 +98,11 @@ function WLWhyScreen({ progress, onBack, onNext }: { progress: number; onBack: (
                 <h2 className="text-[14.5px] font-semibold leading-snug" style={{ color: "#39332F" }}>{c.title}</h2>
                 <p className="text-[12px] leading-[1.35]" style={{ color: "#6B625B" }}>{c.sub}</p>
               </div>
-              <span className="shrink-0" style={{ color: "#936548" }}><WLMS name="chevron_right" size={20} /></span>
+              <span className="shrink-0" style={{ color: "#A26235" }}><WLMS name="chevron_right" size={20} /></span>
             </button>
           ))}
         </div>
-        <button onClick={onNext} className="mt-3 flex w-full shrink-0 items-center justify-center gap-2 rounded-[26px] px-6 py-3 text-[15px] font-semibold text-white shadow-[0_6px_16px_-8px_rgba(110,70,45,0.55)] active:scale-[0.98]" style={{ background: "#936548" }}>Next <WLMS name="arrow_forward" size={18} /></button>
+        <button onClick={onNext} className="mt-3 flex w-full shrink-0 items-center justify-center gap-2 rounded-[26px] px-6 py-3 text-[15px] font-semibold text-white shadow-[0_6px_16px_-8px_rgba(110,70,45,0.55)] active:scale-[0.98]" style={{ background: "#A26235" }}>Next <WLMS name="arrow_forward" size={18} /></button>
       </main>
       <nav aria-label="Bottom Navigation" className="shrink-0 px-5 pt-2" style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}>
         <div className="flex h-[54px] items-center justify-around rounded-full border px-4" style={{ background: "rgba(255,253,249,0.97)", borderColor: "#EEE2D4", boxShadow: "0 6px 20px -6px rgba(120,80,45,0.16)" }}>
@@ -204,7 +204,7 @@ function WLWhyScreen({ progress, onBack, onNext }: { progress: number; onBack: (
             </div>
             {/* got it */}
             <div className="shrink-0 px-5 pt-3" style={{ paddingBottom: "max(1.25rem, env(safe-area-inset-bottom))" }}>
-              <button onClick={() => setOpen(null)} className="w-full rounded-[24px] py-3.5 text-[15px] font-semibold text-white active:scale-[0.98]" style={{ background: "#936548" }}>Got it</button>
+              <button onClick={() => setOpen(null)} className="w-full rounded-[24px] py-3.5 text-[15px] font-semibold text-white active:scale-[0.98]" style={{ background: "#A26235" }}>Got it</button>
             </div>
           </div>
         </div>
@@ -1201,7 +1201,7 @@ function CreatePlan() {
                       <p className="text-[13.5px] font-semibold" style={{ color: "#39332F" }}>{x.title}</p>
                       {x.sub && <p className="text-[11px] leading-snug" style={{ color: "#6B625B" }}>{x.sub}</p>}
                     </div>
-                    <Info size={15} className="shrink-0" style={{ color: "#936548" }} />
+                    <Info size={15} className="shrink-0" style={{ color: "#A26235" }} />
                   </button>
                 ))}
               </div>
