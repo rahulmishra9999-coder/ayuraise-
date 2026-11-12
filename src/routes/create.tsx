@@ -115,7 +115,7 @@ function WLWhyScreen({ progress, onBack, onNext }: { progress: number; onBack: (
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(43,33,27,0.5)", ...WL_INTER }} onClick={() => setOpen(null)}>
           <div className="flex max-h-[90vh] w-full max-w-[460px] flex-col overflow-hidden rounded-[28px] shadow-[0_18px_50px_-12px_rgba(60,40,25,0.5)]" style={{ background: "#FFF8F2" }} onClick={(e) => e.stopPropagation()}>
-            <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-5">
+            <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-5 pt-5">
               {/* title row */}
               <div className="flex items-start gap-3.5">
                 <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full" style={{ background: open.bg, color: open.fg }}><WLMS name={open.icon} size={28} /></div>
@@ -128,14 +128,12 @@ function WLWhyScreen({ progress, onBack, onNext }: { progress: number; onBack: (
 
               {open.benefits ? (
                 <>
-                  {/* paragraph (+ optional artwork) */}
-                  <div className="mt-4 flex items-start gap-1">
-                    <p className="flex-1 text-[14px] leading-[1.55]" style={{ color: "#4A3F36" }}>{open.detail}</p>
+                  {/* paragraph with the food photo floated beside it (full image, text wraps) */}
+                  <div className="mt-4">
                     {open.heroImg && (
-                      <div className="relative -mr-5 ml-1 w-[150px] shrink-0 self-stretch overflow-hidden rounded-l-[22px]" style={{ background: "#FBF3E8" }}>
-                        <img src={`/images/weightloss/${open.heroImg}`} alt="" className="absolute inset-0 h-full w-full object-cover" onError={(e) => { e.currentTarget.style.display = "none"; }} />
-                      </div>
+                      <img src={`/images/weightloss/${open.heroImg}`} alt="" className="float-right ml-3 mb-1.5 w-[44%] rounded-[16px]" onError={(e) => { e.currentTarget.style.display = "none"; }} />
                     )}
+                    <p className="text-[14px] leading-[1.58]" style={{ color: "#4A3F36" }}>{open.detail}</p>
                   </div>
                   {/* why it works */}
                   <div className="mt-5 rounded-[22px] p-4" style={{ background: "#FBF0E3" }}>
