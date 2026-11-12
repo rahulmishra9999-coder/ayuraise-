@@ -398,7 +398,6 @@ function AboutStep(p: {
         </div>
 
         <button onClick={p.onNext} disabled={!p.valid} className="relative z-10 mt-6 flex w-full items-center justify-center gap-2 rounded-[26px] px-6 py-3.5 text-[15px] font-semibold text-white shadow-[0_6px_16px_-8px_rgba(110,70,45,0.55)] transition active:scale-[0.99] disabled:opacity-40" style={{ background: "#936548" }}>Next <MS name="arrow_forward" size={18} /></button>
-        <div className="relative z-10 mt-3 flex items-center justify-center gap-1.5 text-[11.5px]" style={{ color: "#9A8E82" }}><MS name="lock" size={13} />Your data is private and encrypted.</div>
       </main>
       <nav aria-label="Bottom Navigation" className="fixed inset-x-0 bottom-0 z-40 px-5 pt-3" style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))", background: "linear-gradient(to top,#FFF8F2 72%,rgba(255,248,242,0))" }}>
         <div className="mx-auto flex h-[54px] max-w-md items-center justify-around rounded-full border px-4" style={{ background: "rgba(255,253,249,0.97)", borderColor: "#EEE2D4", boxShadow: "0 6px 20px -6px rgba(120,80,45,0.16)" }}>
