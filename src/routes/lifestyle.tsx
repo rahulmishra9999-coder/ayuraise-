@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useMemo, useState, type ReactNode, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { ArrowLeft, Stethoscope, HeartPulse, Dumbbell, Sparkles, Moon, Flower2 } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
@@ -15,6 +15,95 @@ const SANS = { fontFamily: '"Manrope", system-ui, sans-serif' } as const;
 /* ===== warm "About You" (matches the weight-loss / cut-calories palette & the updated reference) ===== */
 const PLAYFAIR = { fontFamily: '"Playfair Display", Georgia, serif' } as const;
 const AY_NAV: [string, string][] = [["home", "/home"], ["favorite", "/my-plans"], ["grid_view", "/learn"], ["school", "/diet/academy"], ["auto_awesome", "/coach"], ["person", "/profile"]];
+function WeightGoalWarm({ a, set, curKg, unit, onBack, onNext }: { a: Record<string, any>; set: (k: string, v: any) => void; curKg: number; unit: string; onBack: () => void; onNext: () => void }) {
+  const toDisp = (k: number) => unit === "lb" ? Math.round(k / 0.453592) : Math.round(k);
+  const fromDisp = (d: number) => unit === "lb" ? d * 0.453592 : d;
+  useEffect(() => {
+    if (curKg > 0 && !a.targetKg) set("targetKg", String(Math.max(1, Math.round(curKg - 5))));
+    if (a.pace == null) set("pace", 0.5);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const pace = Number(a.pace ?? 0.5);
+  const targetKg = parseFloat(a.targetKg) || 0;
+  const loseKg = Math.max(0, curKg - targetKg);
+  const weeks = loseKg > 0 && pace > 0 ? Math.ceil(loseKg / pace) : 0;
+  const date = weeks > 0 ? new Date(Date.now() + weeks * 7 * 86400000) : null;
+  const dateStr = date ? date.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "—";
+  const deficit = Math.round((pace * 7700 / 7) / 50) * 50;
+  const band = pace <= 0.25 ? "Easy" : pace <= 0.5 ? "Medium" : "Advanced";
+  const BANDS: [string, string][] = [["Easy", "0 – 0.25 kg/week"], ["Medium", "0.25 – 0.50 kg/week"], ["Advanced", "0.50 – 1.00 kg/week"]];
+  const ESP = "#5A3A1E", BR = "#A26235", ORANGE = "#E8832B", GREEN = "#7FAE57";
+  const CS = { background: "#FFFDF9", borderColor: "#F0E6D8", boxShadow: "0 1px 6px rgba(120,80,40,0.05)" } as const;
+  return (
+    <div className="flex min-h-svh flex-col" style={{ background: "#FFF8F2", fontFamily: '"Manrope", system-ui, sans-serif' }}>
+      <header className="shrink-0 px-5 pt-[max(0.9rem,env(safe-area-inset-top))]">
+        <div className="flex items-center gap-3">
+          <button onClick={onBack} aria-label="Back" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white shadow-sm active:scale-95"><MS name="arrow_back" size={19} style={{ color: "#2B211B" }} /></button>
+          <span className="text-[17px] font-bold" style={{ ...PLAYFAIR, color: ESP }}>A little about you</span>
+        </div>
+        <div className="mt-3 h-1.5 overflow-hidden rounded-full" style={{ background: "#EBE1D4" }}><div className="h-full rounded-full" style={{ width: "40%", background: BR }} /></div>
+      </header>
+      <main className="flex min-h-0 flex-1 flex-col overflow-y-auto px-5 pb-3 pt-3">
+        <h1 className="text-[27px] font-bold leading-tight" style={{ ...PLAYFAIR, color: ESP }}>Your weight goal</h1>
+        <p className="mt-0.5 text-[13px]" style={{ color: "#6B625B" }}>Set your target and the pace that works for you.</p>
+
+        <div className="relative mt-5 flex items-stretch justify-between gap-2">
+          <svg className="pointer-events-none absolute left-[24%] right-[24%] top-[-12px] h-9" viewBox="0 0 100 30" preserveAspectRatio="none" fill="none"><path d="M4 28 Q50 -6 96 24" stroke={BR} strokeWidth="2.5" strokeLinecap="round" /><circle cx="96" cy="24" r="3.5" fill={BR} /></svg>
+          <div className="flex flex-1 flex-col items-center justify-center rounded-[20px] px-2 py-3 text-center" style={{ background: "#FBF0E4" }}>
+            <MS name="monitor_weight" size={19} style={{ color: BR }} />
+            <div className="mt-0.5 text-[19px] font-bold leading-none" style={{ color: "#2B211B" }}>{curKg ? toDisp(curKg) : "—"} {unit}</div>
+            <div className="mt-1 text-[10.5px]" style={{ color: "#8A7B6C" }}>Current weight</div>
+          </div>
+          <div className="flex h-[92px] w-[92px] shrink-0 flex-col items-center justify-center rounded-full" style={{ background: "#FBE7D1" }}>
+            <span className="text-[12px] font-semibold" style={{ color: BR }}>{targetKg <= curKg ? "Lose" : "Gain"}</span>
+            <span className="text-[22px] font-bold leading-none" style={{ ...PLAYFAIR, color: "#2B211B" }}>{toDisp(Math.abs(curKg - targetKg))} {unit}</span>
+            <MS name="eco" size={16} style={{ color: GREEN }} />
+          </div>
+          <div className="flex flex-1 flex-col items-center justify-center rounded-[20px] px-2 py-3 text-center" style={{ background: "#FBF0E4" }}>
+            <MS name="flag" size={19} style={{ color: BR }} />
+            <input value={a.targetKg ? String(toDisp(targetKg)) : ""} onChange={(e) => { const d = parseFloat(e.target.value.replace(/[^\d.]/g, "")); set("targetKg", isNaN(d) ? "" : String(fromDisp(d))); }} inputMode="numeric" placeholder="65" className="mt-0.5 w-full bg-transparent text-center text-[19px] font-bold leading-none text-[#2B211B] placeholder:text-[#C7B6A4] focus:outline-none" />
+            <div className="mt-1 text-[10.5px]" style={{ color: "#8A7B6C" }}>Target weight ({unit})</div>
+          </div>
+        </div>
+
+        <div className="mt-4 rounded-[22px] border p-4" style={CS}>
+          <div className="flex items-center gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full" style={{ background: "#FBE7D1" }}><MS name="directions_run" size={22} style={{ color: BR }} /></span>
+            <div className="min-w-0 flex-1"><div className="text-[15px] font-bold" style={{ color: "#2B211B" }}>Choose your weekly pace</div><div className="text-[11.5px]" style={{ color: "#8A7B6C" }}>How much weight you'd like to lose per week.</div></div>
+            <span className="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold" style={{ background: "#FBF0E4", color: BR }}>{pace.toFixed(2)} kg/week · {band}</span>
+          </div>
+          <input type="range" min={0.1} max={1} step={0.05} value={pace} onChange={(e) => set("pace", parseFloat(e.target.value))} aria-label="Weekly pace" className="mt-3 w-full" style={{ accentColor: BR }} />
+          <div className="mt-1 grid grid-cols-3 text-center">
+            {BANDS.map(([b, r], i) => { const on = band === b; return <div key={b} className="rounded-xl px-1 py-1" style={{ ...(i > 0 ? { borderLeft: "1px solid #EEDFCB" } : {}), ...(on ? { background: "#FBF0E4" } : {}) }}><div className="text-[13px] font-bold" style={{ color: on ? BR : "#6B625B" }}>{b}</div><div className="text-[9.5px]" style={{ color: "#9A8E82" }}>({r})</div></div>; })}
+          </div>
+          <div className="mt-3 flex items-center gap-2.5 rounded-[16px] px-3 py-2.5" style={{ background: "#FBF0E4" }}>
+            <MS name="calendar_month" size={18} style={{ color: BR }} />
+            <span className="text-[13px] font-bold" style={{ color: "#2B211B" }}>Reach {curKg ? toDisp(targetKg) : "—"} {unit} by {dateStr}</span>
+            <span className="ml-auto text-[11px]" style={{ color: "#8A7B6C" }}>Lose {loseKg.toFixed(1)} kg over ~{weeks} weeks</span>
+          </div>
+        </div>
+
+        <div className="mt-3 flex items-center gap-3 rounded-[22px] border p-4" style={CS}>
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full" style={{ background: "#FCE7D0" }}><MS name="local_fire_department" size={24} fill style={{ color: ORANGE }} /></span>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1 text-[12px] font-semibold" style={{ color: "#6B625B" }}>Estimated daily calorie deficit <MS name="info" size={13} style={{ color: "#B9A890" }} /></div>
+            <div className="text-[21px] font-bold leading-tight" style={{ ...PLAYFAIR, color: "#2B211B" }}>≈ {deficit} kcal/day</div>
+          </div>
+          <div className="flex items-center gap-2 border-l pl-3" style={{ borderColor: "#EEDFCB" }}>
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full" style={{ background: "#FCE7D0" }}><MS name="directions_walk" size={20} style={{ color: ORANGE }} /></span>
+            <span className="text-[11px] leading-tight" style={{ color: "#6B625B" }}>≈ 30 min brisk walk<br />= ~150 kcal burn</span>
+          </div>
+        </div>
+
+        <button onClick={onNext} className="mt-auto flex w-full shrink-0 items-center justify-center gap-2 rounded-[26px] px-6 py-3.5 text-[15px] font-semibold text-white shadow-[0_6px_16px_-8px_rgba(110,70,45,0.55)]" style={{ background: BR }}>Next <MS name="arrow_forward" size={18} /></button>
+      </main>
+      <nav aria-label="Bottom Navigation" className="shrink-0 px-5 pt-1" style={{ paddingBottom: "max(0.6rem, env(safe-area-inset-bottom))" }}>
+        <div className="mx-auto flex h-[52px] max-w-md items-center justify-around rounded-full border px-4" style={{ background: "rgba(255,253,249,0.97)", borderColor: "#EEE2D4", boxShadow: "0 6px 20px -6px rgba(120,80,45,0.16)" }}>
+          {AY_NAV.map(([icon, to], i) => (<Link key={icon} to={to} aria-label={icon} className="flex items-center justify-center" style={{ color: i === 0 ? "#7E5234" : "#A9815F" }}><MS name={icon} size={22} /></Link>))}
+        </div>
+      </nav>
+    </div>
+  );
+}
 function AboutYouWarm({ a, set, onBack, onNext, canNext }: { a: Record<string, any>; set: (k: string, v: any) => void; onBack: () => void; onNext: () => void; canNext: boolean }) {
   const [locManual, setLocManual] = useState(false);
   const [loc, setLoc] = useState("");
@@ -73,8 +162,8 @@ function AboutYouWarm({ a, set, onBack, onNext, canNext }: { a: Record<string, a
     </div>
   );
 }
-function MS({ name, size = 20, fill = false, className = "" }: { name: string; size?: number; fill?: boolean; className?: string }) {
-  return <span className={`material-symbols-outlined ${className}`} style={{ fontSize: size, lineHeight: 1, fontVariationSettings: fill ? "'FILL' 1" : "'FILL' 0" }}>{name}</span>;
+function MS({ name, size = 20, fill = false, className = "", style }: { name: string; size?: number; fill?: boolean; className?: string; style?: CSSProperties }) {
+  return <span className={`material-symbols-outlined ${className}`} style={{ fontSize: size, lineHeight: 1, fontVariationSettings: fill ? "'FILL' 1" : "'FILL' 0", ...style }}>{name}</span>;
 }
 function TopBar({ onBack, progress }: { onBack: () => void; progress?: number }) {
   return (
@@ -570,7 +659,7 @@ function LifestylePage() {
     : planFlow
     ? ["conditions", ...(female ? ["cycle"] : []), "goals"]          // disease-first short flow
     : [ // profile: basics → gate → the 3 core screens → one goal page → focus
-        "about", "movement", "sleep", "eating", "habits", "mind", "gate",
+        "about", "weight-goal", "movement", "sleep", "eating", "habits", "mind", "gate",
         "pick-all",
         ...(older ? ["seniors"] : []),
         "goals",
@@ -652,7 +741,7 @@ function LifestylePage() {
     return s;
   }, [a.habits, a.habitDetail, a.lastMeal, a.water, a.sleep]);
 
-  const canNext = key === "about" ? (!!a.age && !!a.sex && cm > 0 && kg > 0) : true;
+  const canNext = key === "about" ? (!!a.age && !!a.sex && cm > 0 && kg > 0) : key === "weight-goal" ? ((parseFloat(a.targetKg) || 0) > 0 && kg > 0) : true;
   const back = () => (step === 0 ? navigate({ to: "/home" }) : setStep((s) => s - 1));
   const next = () => { if (canNext) setStep((s) => Math.min(stepKeys.length - 1, s + 1)); };
   const persist = () => { try { localStorage.setItem("ayuraise.lifestyle", JSON.stringify({ ...a, cm: Math.round(cm), kg: Math.round(kg), tdee, updatedAt: Date.now() })); } catch { /* ignore */ } };
@@ -731,6 +820,7 @@ function LifestylePage() {
 
   // ===== The 4 create-profile screens, redesigned in the sage "Stitch" system =====
   if (key === "about") return <AboutYouWarm a={a} set={set} onBack={back} onNext={next} canNext={canNext} />;
+  if (key === "weight-goal") return <WeightGoalWarm a={a} set={set} curKg={kg} unit={a.weightUnit === "lb" ? "lb" : "kg"} onBack={back} onNext={next} />;
   if (["movement", "sleep", "eating"].includes(key)) {
     const actIcon = (id: string) => id === "sedentary" ? "chair" : id === "light" ? "directions_walk" : id === "active" ? "fitness_center" : "bolt";
     return (
