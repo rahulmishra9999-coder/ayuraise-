@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { ArrowLeft, Stethoscope, HeartPulse, Dumbbell, Sparkles, Moon, Flower2 } from "lucide-react";
@@ -11,6 +11,68 @@ import { cuisineRegion } from "@/lib/cuisines";
 /* ===== sage Material-3 "Stitch" kit — used by the create-profile screens (about/movement/sleep/eating) ===== */
 const SERIF4 = { fontFamily: '"Source Serif 4", Georgia, serif' } as const;
 const SANS = { fontFamily: '"Manrope", system-ui, sans-serif' } as const;
+
+/* ===== warm "About You" (matches the weight-loss / cut-calories palette & the updated reference) ===== */
+const PLAYFAIR = { fontFamily: '"Playfair Display", Georgia, serif' } as const;
+const AY_NAV: [string, string][] = [["home", "/home"], ["favorite", "/my-plans"], ["grid_view", "/learn"], ["school", "/diet/academy"], ["auto_awesome", "/coach"], ["person", "/profile"]];
+function AboutYouWarm({ a, set, onBack, onNext, canNext }: { a: Record<string, any>; set: (k: string, v: any) => void; onBack: () => void; onNext: () => void; canNext: boolean }) {
+  const [locManual, setLocManual] = useState(false);
+  const [loc, setLoc] = useState("");
+  const CARD = "rounded-[20px] border p-3.5";
+  const CS = { background: "#FFFDF9", borderColor: "#F0E6D8", boxShadow: "0 1px 6px rgba(120,80,40,0.05)" } as const;
+  const PILL = { background: "#F4ECE2" } as const;
+  const ring = (ic: string, tint: string) => <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border" style={{ background: tint, borderColor: "#EADDC9", color: "#A26235" }}><MS name={ic} size={20} /></span>;
+  const lbl = { className: "text-[14px] font-bold", style: { color: "#2B211B" } } as const;
+  const hUnit = a.heightUnit ?? "cm", wUnit = a.weightUnit ?? "kg";
+  const toggle = (opts: [string, string][], val: string, k: string) => (
+    <div className="flex rounded-full p-0.5" style={{ background: "#F1E9DE" }}>{opts.map(([lab, v]) => { const on = val === v; return <button type="button" key={v} onClick={() => set(k, v)} className="rounded-full px-3 py-1 text-[11.5px] font-semibold transition" style={on ? { background: "#A26235", color: "#fff" } : { color: "#8A7B6C" }}>{lab}</button>; })}</div>
+  );
+  const pillInput = (val: string, onChange: (v: string) => void, unit: string) => (
+    <div className="mt-2.5 flex items-center gap-2 rounded-full px-4 py-2.5" style={PILL}><input value={val} onChange={(e) => onChange(e.target.value)} placeholder="Select…" inputMode="decimal" className="min-w-0 flex-1 bg-transparent text-[13px] font-semibold text-[#2B211B] placeholder:font-normal placeholder:text-[#A79684] focus:outline-none" /><span className="text-[13px] font-semibold text-[#2B211B]">{unit}</span></div>
+  );
+  return (
+    <div className="min-h-svh" style={{ background: "#FFF8F2", fontFamily: '"Manrope", system-ui, sans-serif' }}>
+      <header className="fixed inset-x-0 top-0 z-50 pt-[env(safe-area-inset-top)]" style={{ background: "#FFF8F2" }}>
+        <div className="mx-auto flex h-16 max-w-md items-center gap-3 px-5">
+          <button onClick={onBack} aria-label="Back" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white shadow-sm active:scale-95"><MS name="arrow_back" size={20} className="text-[#2B211B]" /></button>
+          <div className="h-2 flex-1 overflow-hidden rounded-full" style={{ background: "#EBE1D4" }}><div className="h-full rounded-full" style={{ width: "25%", background: "linear-gradient(to right,#B98A5E,#8F4B25)" }} /></div>
+        </div>
+      </header>
+      <main className="relative mx-auto max-w-md px-5 pb-28 pt-[5.25rem]">
+        <img src="/images/aboutyou/hero-exact.png" alt="" className="pointer-events-none absolute right-[-8px] top-[46px] z-0 w-[132px]" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+        <div className="relative z-10 mb-4 flex flex-col" style={{ maxWidth: 206, minHeight: 120 }}>
+          <h1 className="mb-1.5 text-[30px] font-bold leading-[1.05]" style={{ ...PLAYFAIR, color: "#2B211B" }}>About You</h1>
+          <p className="text-[13px] leading-[1.45]" style={{ color: "#6B625B" }}>Help us personalise your plan with a few basic details.</p>
+        </div>
+        <div className="relative z-10 flex flex-col gap-3">
+          <div className={CARD} style={CS}><div className="flex items-center gap-3">{ring("person", "#FBEFE0")}<span {...lbl}>Name</span><input value={a.name ?? ""} onChange={(e) => set("name", e.target.value)} placeholder="Enter your name" className="ml-auto min-w-0 flex-1 rounded-full px-4 py-2.5 text-[13px] text-[#2B211B] placeholder:text-[#A79684] focus:outline-none" style={PILL} /></div></div>
+          <div className={CARD} style={CS}><div className="flex items-center gap-3">{ring("person", "#FBEFE0")}<span {...lbl}>Gender</span><div className="ml-auto flex gap-1.5">{SEX.map((s) => { const on = a.sex === s; return <button type="button" key={s} onClick={() => set("sex", s)} className="rounded-full px-3.5 py-1.5 text-[12.5px] font-semibold transition" style={on ? { background: "#A26235", color: "#fff" } : { background: "#F4ECE2", color: "#8A7B6C" }}>{s}</button>; })}</div></div></div>
+          <div className={CARD} style={CS}><div className="flex items-center gap-3">{ring("calendar_month", "#FBEFE0")}<span {...lbl}>Age</span><div className="ml-auto flex min-w-0 flex-1 items-center gap-2 rounded-full px-4 py-2.5" style={PILL}><input type="number" min={1} max={120} value={a.age ?? ""} onChange={(e) => set("age", e.target.value)} placeholder="Select…" className="min-w-0 flex-1 bg-transparent text-[13px] text-[#2B211B] placeholder:text-[#A79684] focus:outline-none" /><span className="text-[12px] text-[#8A7B6C]">yrs</span></div></div></div>
+          <div className={CARD} style={CS}>
+            <div className="flex items-center gap-3">{ring("straighten", "#EAF4E8")}<span {...lbl}>Height</span><div className="ml-auto">{toggle([["cm", "cm"], ["ft - in", "ft"]], hUnit, "heightUnit")}</div></div>
+            {hUnit === "ft"
+              ? <div className="mt-2.5 flex items-center gap-2 rounded-full px-4 py-2.5" style={PILL}><input value={a.heightFt ?? ""} onChange={(e) => set("heightFt", e.target.value)} placeholder="5" inputMode="decimal" className="w-10 bg-transparent text-[13px] font-semibold text-[#2B211B] placeholder:font-normal placeholder:text-[#A79684] focus:outline-none" /><span className="text-[12px] text-[#8A7B6C]">ft</span><input value={a.heightIn ?? ""} onChange={(e) => set("heightIn", e.target.value)} placeholder="7" inputMode="decimal" className="w-10 bg-transparent text-[13px] font-semibold text-[#2B211B] placeholder:font-normal placeholder:text-[#A79684] focus:outline-none" /><span className="text-[12px] text-[#8A7B6C]">in</span><span className="ml-auto text-[13px] font-semibold text-[#2B211B]">ft-in</span></div>
+              : pillInput(a.heightCm ?? "", (v) => set("heightCm", v), "cm")}
+          </div>
+          <div className={CARD} style={CS}>
+            <div className="flex items-center gap-3">{ring("monitor_weight", "#FCECEE")}<span {...lbl}>Weight</span><div className="ml-auto">{toggle([["kg", "kg"], ["lb", "lb"]], wUnit, "weightUnit")}</div></div>
+            {wUnit === "lb" ? pillInput(a.weightLb ?? "", (v) => set("weightLb", v), "lb") : pillInput(a.weightKg ?? "", (v) => set("weightKg", v), "kg")}
+          </div>
+          <div className={CARD} style={CS}>
+            <div className="flex items-center gap-3">{ring("location_on", "#FFF0E0")}<span {...lbl}>Location</span><button type="button" onClick={() => { setLocManual(false); if (typeof navigator !== "undefined" && navigator.geolocation) navigator.geolocation.getCurrentPosition(() => setLoc("Current location"), () => {}); }} className="ml-auto flex items-center gap-1.5 rounded-full px-3 py-2 text-[11.5px] font-semibold" style={{ background: "#F7ECE1", color: "#A26235" }}><MS name="my_location" size={14} />Use my current location</button></div>
+            <button type="button" onClick={() => setLocManual(true)} className="mt-2.5 flex w-full items-center justify-between gap-2 rounded-full px-4 py-2.5 text-[13px]" style={PILL}>{locManual ? <input autoFocus value={loc} onChange={(e) => setLoc(e.target.value)} onClick={(e) => e.stopPropagation()} placeholder="Enter your city" className="min-w-0 flex-1 bg-transparent text-[#2B211B] placeholder:text-[#8A7B6C] focus:outline-none" /> : <span className="flex items-center gap-2" style={{ color: "#8A7B6C" }}><MS name="edit" size={14} />{loc || "Enter location manually"}</span>}<MS name="expand_more" size={16} className="text-[#B9A890]" /></button>
+          </div>
+        </div>
+        <button onClick={onNext} disabled={!canNext} className="relative z-10 mt-6 flex w-full items-center justify-center gap-2 rounded-[26px] px-6 py-3.5 text-[15px] font-semibold text-white shadow-[0_6px_16px_-8px_rgba(110,70,45,0.55)] transition active:scale-[0.99] disabled:opacity-40" style={{ background: "#A26235" }}>Next <MS name="arrow_forward" size={18} /></button>
+      </main>
+      <nav aria-label="Bottom Navigation" className="fixed inset-x-0 bottom-0 z-40 px-5 pt-3" style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))", background: "linear-gradient(to top,#FFF8F2 72%,rgba(255,248,242,0))" }}>
+        <div className="mx-auto flex h-[54px] max-w-md items-center justify-around rounded-full border px-4" style={{ background: "rgba(255,253,249,0.97)", borderColor: "#EEE2D4", boxShadow: "0 6px 20px -6px rgba(120,80,45,0.16)" }}>
+          {AY_NAV.map(([icon, to], i) => (<Link key={icon} to={to} aria-label={icon} className="flex items-center justify-center active:scale-95" style={{ color: i === 0 ? "#7E5234" : "#A9815F" }}><MS name={icon} size={23} /></Link>))}
+        </div>
+      </nav>
+    </div>
+  );
+}
 function MS({ name, size = 20, fill = false, className = "" }: { name: string; size?: number; fill?: boolean; className?: string }) {
   return <span className={`material-symbols-outlined ${className}`} style={{ fontSize: size, lineHeight: 1, fontVariationSettings: fill ? "'FILL' 1" : "'FILL' 0" }}>{name}</span>;
 }
@@ -668,7 +730,8 @@ function LifestylePage() {
   const capHint = key === "fitness" ? "Pick any 1" : null;
 
   // ===== The 4 create-profile screens, redesigned in the sage "Stitch" system =====
-  if (["about", "movement", "sleep", "eating"].includes(key)) {
+  if (key === "about") return <AboutYouWarm a={a} set={set} onBack={back} onNext={next} canNext={canNext} />;
+  if (["movement", "sleep", "eating"].includes(key)) {
     const actIcon = (id: string) => id === "sedentary" ? "chair" : id === "light" ? "directions_walk" : id === "active" ? "fitness_center" : "bolt";
     return (
       <div className="min-h-svh bg-[#f7fafb] text-[#181c1d]" style={SANS}>
@@ -1395,7 +1458,7 @@ export const Route = createFileRoute("/lifestyle")({
   }),
   head: () => ({
     links: [
-      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600&family=Manrope:wght@400;500;600;700&display=swap" },
+      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600&family=Manrope:wght@400;500;600;700&display=swap" },
       { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" },
     ],
   }),
