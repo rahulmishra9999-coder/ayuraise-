@@ -86,8 +86,8 @@ function HomePage() {
           <ChevronRight size={15} className="shrink-0 opacity-80" />
         </Link>
 
-        {/* Create my profile — opens the About You onboarding flow (new warm design) */}
-        <Link to="/onboarding" search={{ profileId: "new" } as never} className="mt-2 flex items-center gap-2.5 rounded-2xl bg-card px-3.5 py-2.5 ring-1 ring-border/60 active:scale-[0.99]">
+        {/* Create my profile — full lifestyle flow (basics + picker); moves into onboarding later */}
+        <Link to="/lifestyle" className="mt-2 flex items-center gap-2.5 rounded-2xl bg-card px-3.5 py-2.5 ring-1 ring-border/60 active:scale-[0.99]">
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-accent/50 text-[15px]">🪷</span>
           <div className="min-w-0 flex-1">
             <p className="text-[12.5px] font-bold text-foreground">Create my profile</p>
