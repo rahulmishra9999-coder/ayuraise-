@@ -355,8 +355,8 @@ function AboutStep(p: {
         </div>
       </header>
       <main className="relative mx-auto max-w-md px-5 pb-28 pt-[5.25rem]">
-        <img src="/images/aboutyou/hero-exact.png" alt="" className="pointer-events-none absolute right-[-8px] top-[46px] z-0 w-[132px]" onError={(e) => { e.currentTarget.style.display = "none"; }} />
-        <div className="relative z-10 mb-4 flex flex-col" style={{ maxWidth: 206, minHeight: 120 }}>
+        <img src="/images/aboutyou/hero-exact.png" alt="" className="pointer-events-none absolute right-[10px] top-[40px] z-0 w-[116px]" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+        <div className="relative z-10 mb-3 flex flex-col" style={{ maxWidth: 200, minHeight: 92 }}>
           <h1 className="mb-1.5 text-[30px] font-bold leading-[1.05]" style={{ fontFamily: '"Playfair Display", Georgia, serif', color: "#2B211B" }}>About You</h1>
           <p className="text-[13px] leading-[1.45]" style={{ color: "#6B625B" }}>Help us personalise your plan with a few basic details.</p>
         </div>
