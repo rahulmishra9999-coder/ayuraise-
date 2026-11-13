@@ -128,8 +128,8 @@ function WLWhyScreen({ progress, onBack, onNext }: { progress: number; onBack: (
 
               {open.benefits ? (
                 <>
-                  {/* paragraph with the food photo floated beside it (full image, text wraps) */}
-                  <div className="mt-4">
+                  {/* paragraph with the food photo floated beside it (full image, text wraps; overflow-hidden contains the float) */}
+                  <div className="mt-4 overflow-hidden">
                     {open.heroImg && (
                       <img src={`/images/weightloss/${open.heroImg}`} alt="" className="float-right ml-3 mb-1.5 w-[44%] rounded-[16px]" onError={(e) => { e.currentTarget.style.display = "none"; }} />
                     )}
