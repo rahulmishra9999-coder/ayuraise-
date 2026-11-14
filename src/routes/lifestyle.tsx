@@ -174,7 +174,7 @@ function AboutYouWarm({ a, set, onBack, onNext, canNext }: { a: Record<string, a
 const WATER4 = ["<1.5", "1.5–2", "2–2.5", ">2.5"];
 const FOOD_ICON: Record<string, string> = { Veg: "eco", Vegan: "favorite", Eggetarian: "egg_alt", "Non-veg": "set_meal" };
 const ACT_ICON = (id: string) => id === "sedentary" ? "chair" : id === "light" ? "directions_walk" : id === "active" ? "fitness_center" : "bolt";
-const WCARD = "rounded-[20px] border p-3.5";
+const WCARD = "rounded-[20px] border p-3";
 const WCS = { background: "#FFFDF9", borderColor: "#F0E6D8", boxShadow: "0 1px 6px rgba(120,80,40,0.05)" } as const;
 function warmLbl(t: string) { return <span className="text-[12.5px] font-bold tracking-wide" style={{ color: "#2B211B" }}>{t}</span>; }
 function warmPills(opts: string[], val: string, onPick: (v: string) => void) {
@@ -195,11 +195,11 @@ function WarmShell({ progress, hero, heroW = 116, title, subtitle, children, onB
       </header>
       <main className="relative mx-auto flex min-h-0 w-full max-w-md flex-1 flex-col overflow-y-auto px-5 pt-3">
         {hero && <img src={hero} alt="" className="pointer-events-none absolute right-[4px] top-[2px] z-0" style={{ width: heroW }} onError={(e) => { e.currentTarget.style.display = "none"; }} />}
-        <div className="relative z-10 mb-3 flex flex-col" style={{ maxWidth: 200, minHeight: 80 }}>
+        <div className="relative z-10 mb-3 flex shrink-0 flex-col" style={{ maxWidth: 192, minHeight: 130 }}>
           <h1 className="mb-1 text-[29px] font-bold leading-[1.05]" style={{ ...PLAYFAIR, color: "#2B211B" }}>{title}</h1>
           <p className="text-[13px] leading-[1.4]" style={{ color: "#6B625B" }}>{subtitle}</p>
         </div>
-        <div className="relative z-10 flex flex-col gap-2.5 pb-2">{children}</div>
+        <div className="relative z-10 flex min-h-0 flex-1 flex-col justify-between gap-2 pb-2">{children}</div>
       </main>
       <div className="mx-auto w-full max-w-md shrink-0 px-5 pt-2">
         <button onClick={onNext} disabled={nextDisabled} className="flex w-full items-center justify-center gap-2 rounded-[26px] px-6 py-3.5 text-[15px] font-semibold text-white shadow-[0_6px_16px_-8px_rgba(110,70,45,0.55)] transition active:scale-[0.99] disabled:opacity-40" style={{ background: "#A26235" }}>Next <MS name="arrow_forward" size={18} /></button>
@@ -214,9 +214,9 @@ function WarmShell({ progress, hero, heroW = 116, title, subtitle, children, onB
 }
 function ActivityWarm({ a, set, onBack, onNext, canNext }: { a: Record<string, any>; set: (k: string, v: any) => void; onBack: () => void; onNext: () => void; canNext: boolean }) {
   return (
-    <WarmShell progress={50} hero="/images/aboutyou/activity-hero.png" heroW={158} title="Activity Level" subtitle="Pick the option that best describes your typical day." onBack={onBack} onNext={onNext} nextDisabled={!canNext}>
+    <WarmShell progress={50} hero="/images/aboutyou/activity-hero.png" heroW={132} title="Activity Level" subtitle="Pick the option that best describes your typical day." onBack={onBack} onNext={onNext} nextDisabled={!canNext}>
       {ACTIVITY.map((x) => { const on = a.activity === x.id; return (
-        <button type="button" key={x.id} onClick={() => set("activity", x.id)} className="rounded-[20px] border p-3.5 text-left transition active:scale-[0.99]" style={on ? { background: "#FFFDF9", borderColor: "#E4C5A6", boxShadow: "0 3px 12px -5px rgba(162,98,53,0.35)" } : WCS}>
+        <button type="button" key={x.id} onClick={() => set("activity", x.id)} className="rounded-[20px] border p-3 text-left transition active:scale-[0.99]" style={on ? { background: "#FFFDF9", borderColor: "#E4C5A6", boxShadow: "0 3px 12px -5px rgba(162,98,53,0.35)" } : WCS}>
           <div className="flex items-start gap-3">
             <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full" style={{ background: "#FBEAD6", color: "#A26235" }}><MS name={ACT_ICON(x.id)} size={22} /></span>
             <div className="min-w-0 flex-1">
@@ -232,7 +232,7 @@ function ActivityWarm({ a, set, onBack, onNext, canNext }: { a: Record<string, a
 }
 function SleepWarm({ a, set, onBack, onNext }: { a: Record<string, any>; set: (k: string, v: any) => void; onBack: () => void; onNext: () => void }) {
   return (
-    <WarmShell progress={75} hero="/images/aboutyou/sleep-hero.png" heroW={172} title="Sleep" subtitle="Help us calibrate your circadian baseline and nightly recovery." onBack={onBack} onNext={onNext}>
+    <WarmShell progress={75} hero="/images/aboutyou/sleep-hero.png" heroW={152} title="Sleep" subtitle="Help us calibrate your circadian baseline and nightly recovery." onBack={onBack} onNext={onNext}>
       <div className={WCARD} style={WCS}>
         <div className="flex items-center gap-3">{wring("bedtime")}{warmLbl("BEDTIME")}<span className="ml-auto text-[11px]" style={{ color: "#8A7B6C" }}>Usual window</span></div>
         <div className="mt-2.5">{warmSelect(a.bedtime, (v) => set("bedtime", v), BEDTIME, "Select…")}</div>
@@ -252,7 +252,7 @@ function SleepWarm({ a, set, onBack, onNext }: { a: Record<string, any>; set: (k
 }
 function FoodWarm({ a, set, onBack, onNext }: { a: Record<string, any>; set: (k: string, v: any) => void; onBack: () => void; onNext: () => void }) {
   return (
-    <WarmShell progress={100} hero="/images/aboutyou/food-hero.png" heroW={164} title="Food & Meals" subtitle="Choose your preferred food style and meal timings." onBack={onBack} onNext={onNext}>
+    <WarmShell progress={100} hero="/images/aboutyou/food-hero.png" heroW={146} title="Food & Meals" subtitle="Choose your preferred food style and meal timings." onBack={onBack} onNext={onNext}>
       <div className={WCARD} style={WCS}>
         {warmLbl("FOOD STYLE")}
         <div className="mt-2.5 grid grid-cols-4 gap-2">{FOOD_STYLE.map((s) => { const on = a.foodstyle === s; return <button type="button" key={s} onClick={() => set("foodstyle", s)} className="flex flex-col items-center gap-1 rounded-[16px] py-2.5 transition" style={on ? { background: "#A26235", color: "#fff" } : { background: "#F4ECE2", color: "#6B625B" }}><MS name={FOOD_ICON[s] ?? "restaurant"} size={18} style={{ color: on ? "#fff" : "#A26235" }} /><span className="text-[11.5px] font-semibold">{s}</span></button>; })}</div>
