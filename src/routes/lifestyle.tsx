@@ -170,6 +170,106 @@ function AboutYouWarm({ a, set, onBack, onNext, canNext }: { a: Record<string, a
     </div>
   );
 }
+/* ===== warm Activity / Sleep / Food screens (shared shell + helpers) ===== */
+const WATER4 = ["<1.5", "1.5–2", "2–2.5", ">2.5"];
+const FOOD_ICON: Record<string, string> = { Veg: "eco", Vegan: "favorite", Eggetarian: "egg_alt", "Non-veg": "set_meal" };
+const ACT_ICON = (id: string) => id === "sedentary" ? "chair" : id === "light" ? "directions_walk" : id === "active" ? "fitness_center" : "bolt";
+const WCARD = "rounded-[20px] border p-3.5";
+const WCS = { background: "#FFFDF9", borderColor: "#F0E6D8", boxShadow: "0 1px 6px rgba(120,80,40,0.05)" } as const;
+function warmLbl(t: string) { return <span className="text-[12.5px] font-bold tracking-wide" style={{ color: "#2B211B" }}>{t}</span>; }
+function warmPills(opts: string[], val: string, onPick: (v: string) => void) {
+  return <div className="mt-2.5 grid gap-2" style={{ gridTemplateColumns: `repeat(${opts.length},minmax(0,1fr))` }}>{opts.map((o) => { const on = val === o; return <button type="button" key={o} onClick={() => onPick(o)} className="rounded-full py-2 text-[13px] font-semibold transition" style={on ? { background: "#A26235", color: "#fff" } : { background: "#F4ECE2", color: "#6B625B" }}>{o}</button>; })}</div>;
+}
+function warmSelect(val: string, onPick: (v: string) => void, opts: { v: string; l: string }[], ph: string) {
+  return <div className="relative"><select value={val ?? ""} onChange={(e) => onPick(e.target.value)} className="w-full appearance-none rounded-full px-4 py-2.5 pr-9 text-[13px] font-semibold focus:outline-none" style={{ background: "#F4ECE2", color: val ? "#2B211B" : "#A79684" }}><option value="">{ph}</option>{opts.map((o) => <option key={o.v} value={o.v}>{o.l}</option>)}</select><span className="pointer-events-none absolute inset-y-0 right-3 flex items-center"><MS name="expand_more" size={16} style={{ color: "#B9A890" }} /></span></div>;
+}
+const wring = (ic: string) => <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border" style={{ background: "#FBEFE0", borderColor: "#EADDC9", color: "#A26235" }}><MS name={ic} size={18} /></span>;
+function WarmShell({ progress, hero, heroW = 116, title, subtitle, children, onBack, onNext, nextDisabled }: { progress: number; hero?: string; heroW?: number; title: string; subtitle: string; children: ReactNode; onBack: () => void; onNext: () => void; nextDisabled?: boolean }) {
+  return (
+    <div className="flex h-dvh flex-col" style={{ background: "#FFF8F2", fontFamily: '"Manrope", system-ui, sans-serif' }}>
+      <header className="shrink-0 px-5 pt-[max(0.7rem,env(safe-area-inset-top))]">
+        <div className="mx-auto flex max-w-md items-center gap-3">
+          <button onClick={onBack} aria-label="Back" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white shadow-sm active:scale-95"><MS name="arrow_back" size={20} style={{ color: "#2B211B" }} /></button>
+          <div className="h-2 flex-1 overflow-hidden rounded-full" style={{ background: "#EBE1D4" }}><div className="h-full rounded-full" style={{ width: `${progress}%`, background: "linear-gradient(to right,#B98A5E,#8F4B25)" }} /></div>
+        </div>
+      </header>
+      <main className="relative mx-auto flex min-h-0 w-full max-w-md flex-1 flex-col overflow-y-auto px-5 pt-3">
+        {hero && <img src={hero} alt="" className="pointer-events-none absolute right-[4px] top-[2px] z-0" style={{ width: heroW }} onError={(e) => { e.currentTarget.style.display = "none"; }} />}
+        <div className="relative z-10 mb-3 flex flex-col" style={{ maxWidth: 200, minHeight: 80 }}>
+          <h1 className="mb-1 text-[29px] font-bold leading-[1.05]" style={{ ...PLAYFAIR, color: "#2B211B" }}>{title}</h1>
+          <p className="text-[13px] leading-[1.4]" style={{ color: "#6B625B" }}>{subtitle}</p>
+        </div>
+        <div className="relative z-10 flex flex-col gap-2.5 pb-2">{children}</div>
+      </main>
+      <div className="mx-auto w-full max-w-md shrink-0 px-5 pt-2">
+        <button onClick={onNext} disabled={nextDisabled} className="flex w-full items-center justify-center gap-2 rounded-[26px] px-6 py-3.5 text-[15px] font-semibold text-white shadow-[0_6px_16px_-8px_rgba(110,70,45,0.55)] transition active:scale-[0.99] disabled:opacity-40" style={{ background: "#A26235" }}>Next <MS name="arrow_forward" size={18} /></button>
+      </div>
+      <nav aria-label="Bottom Navigation" className="shrink-0 px-5 pt-2" style={{ paddingBottom: "max(0.6rem,env(safe-area-inset-bottom))" }}>
+        <div className="mx-auto flex h-[52px] max-w-md items-center justify-around rounded-full border px-4" style={{ background: "rgba(255,253,249,0.97)", borderColor: "#EEE2D4", boxShadow: "0 6px 20px -6px rgba(120,80,45,0.16)" }}>
+          {AY_NAV.map(([icon, to], i) => (<Link key={icon} to={to} aria-label={icon} className="flex items-center justify-center active:scale-95" style={{ color: i === 0 ? "#7E5234" : "#A9815F" }}><MS name={icon} size={22} /></Link>))}
+        </div>
+      </nav>
+    </div>
+  );
+}
+function ActivityWarm({ a, set, onBack, onNext, canNext }: { a: Record<string, any>; set: (k: string, v: any) => void; onBack: () => void; onNext: () => void; canNext: boolean }) {
+  return (
+    <WarmShell progress={50} hero="/images/aboutyou/activity-hero.png" heroW={158} title="Activity Level" subtitle="Pick the option that best describes your typical day." onBack={onBack} onNext={onNext} nextDisabled={!canNext}>
+      {ACTIVITY.map((x) => { const on = a.activity === x.id; return (
+        <button type="button" key={x.id} onClick={() => set("activity", x.id)} className="rounded-[20px] border p-3.5 text-left transition active:scale-[0.99]" style={on ? { background: "#FFFDF9", borderColor: "#E4C5A6", boxShadow: "0 3px 12px -5px rgba(162,98,53,0.35)" } : WCS}>
+          <div className="flex items-start gap-3">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full" style={{ background: "#FBEAD6", color: "#A26235" }}><MS name={ACT_ICON(x.id)} size={22} /></span>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-start justify-between gap-2"><h3 className="text-[16px] font-bold leading-tight" style={{ color: "#2B211B" }}>{x.label}</h3><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full" style={on ? { background: "#A26235", color: "#fff" } : { border: "2px solid #D8C3AC" }}>{on && <MS name="check" size={14} />}</span></div>
+              <div className="mt-0.5 text-[13px] font-semibold" style={{ color: "#2B211B" }}>{x.note}</div>
+              <p className="mt-0.5 text-[12px] leading-[1.35]" style={{ color: "#8A7B6C" }}>{x.desc}</p>
+            </div>
+          </div>
+        </button>
+      ); })}
+    </WarmShell>
+  );
+}
+function SleepWarm({ a, set, onBack, onNext }: { a: Record<string, any>; set: (k: string, v: any) => void; onBack: () => void; onNext: () => void }) {
+  return (
+    <WarmShell progress={75} hero="/images/aboutyou/sleep-hero.png" heroW={172} title="Sleep" subtitle="Help us calibrate your circadian baseline and nightly recovery." onBack={onBack} onNext={onNext}>
+      <div className={WCARD} style={WCS}>
+        <div className="flex items-center gap-3">{wring("bedtime")}{warmLbl("BEDTIME")}<span className="ml-auto text-[11px]" style={{ color: "#8A7B6C" }}>Usual window</span></div>
+        <div className="mt-2.5">{warmSelect(a.bedtime, (v) => set("bedtime", v), BEDTIME, "Select…")}</div>
+      </div>
+      <div className={WCARD} style={WCS}>
+        <div className="flex items-center gap-3">{wring("schedule")}{warmLbl("SLEEP DURATION")}<span className="ml-auto rounded-full px-2.5 py-0.5 text-[12.5px] font-bold" style={{ background: "#E7F0DC", color: "#4A6B2E" }}>{a.sleep ?? 7} hrs</span></div>
+        <input type="range" min={4} max={10} step={0.5} value={a.sleep ?? 7} onChange={(e) => set("sleep", Number(e.target.value))} aria-label="Sleep duration" className="mt-3 w-full" style={{ accentColor: "#A26235" }} />
+        <div className="mt-0.5 flex justify-between px-1 text-[11px]" style={{ color: "#8A7B6C" }}><span>4h</span><span>6h</span><span>8h</span><span>10h</span></div>
+      </div>
+      <div className={WCARD} style={WCS}>
+        <div className="flex items-center gap-3">{wring("timelapse")}{warmLbl("TIME TO FALL ASLEEP")}</div>
+        <div className="mt-2.5 grid grid-cols-2 gap-2">{LATENCY.map((o) => { const on = a.latency === o; return <button type="button" key={o} onClick={() => set("latency", o)} className="rounded-full py-2.5 text-[13px] font-semibold transition" style={on ? { background: "#A26235", color: "#fff" } : { background: "#F4ECE2", color: "#6B625B" }}>{o}</button>; })}</div>
+      </div>
+      <div className={WCARD} style={WCS}>{warmLbl("DAYTIME NAP")}<div className="mt-2.5">{warmPills(["No", "Sometimes", "Daily"], a.nap ?? "", (v) => set("nap", v))}</div></div>
+    </WarmShell>
+  );
+}
+function FoodWarm({ a, set, onBack, onNext }: { a: Record<string, any>; set: (k: string, v: any) => void; onBack: () => void; onNext: () => void }) {
+  return (
+    <WarmShell progress={100} hero="/images/aboutyou/food-hero.png" heroW={164} title="Food & Meals" subtitle="Choose your preferred food style and meal timings." onBack={onBack} onNext={onNext}>
+      <div className={WCARD} style={WCS}>
+        {warmLbl("FOOD STYLE")}
+        <div className="mt-2.5 grid grid-cols-4 gap-2">{FOOD_STYLE.map((s) => { const on = a.foodstyle === s; return <button type="button" key={s} onClick={() => set("foodstyle", s)} className="flex flex-col items-center gap-1 rounded-[16px] py-2.5 transition" style={on ? { background: "#A26235", color: "#fff" } : { background: "#F4ECE2", color: "#6B625B" }}><MS name={FOOD_ICON[s] ?? "restaurant"} size={18} style={{ color: on ? "#fff" : "#A26235" }} /><span className="text-[11.5px] font-semibold">{s}</span></button>; })}</div>
+      </div>
+      <div className={WCARD} style={WCS}>{warmLbl("MAIN MEALS / DAY")}{warmPills(MAIN_MEALS, a.main ?? "", (v) => set("main", v))}</div>
+      <div className={WCARD} style={WCS}>{warmLbl("SNACKS / DAY")}{warmPills(MINI_MEALS, a.mini ?? "", (v) => set("mini", v))}</div>
+      <div className={WCARD} style={WCS}>
+        {warmLbl("MEAL TIMING")}
+        <div className="mt-2.5 grid grid-cols-2 gap-3">
+          <div><div className="mb-1.5 flex items-center gap-1.5"><MS name="wb_sunny" size={16} style={{ color: "#E8832B" }} /><span className="text-[13px] font-semibold" style={{ color: "#2B211B" }}>Breakfast</span></div>{warmSelect(a.firstMeal, (v) => set("firstMeal", v), FIRST_MEAL_SLOTS, "Select…")}</div>
+          <div><div className="mb-1.5 flex items-center gap-1.5"><MS name="bedtime" size={16} style={{ color: "#A26235" }} /><span className="text-[13px] font-semibold" style={{ color: "#2B211B" }}>Dinner</span></div>{warmSelect(a.lastMeal, (v) => set("lastMeal", v), LAST_MEAL_SLOTS, "Select…")}</div>
+        </div>
+      </div>
+      <div className={WCARD} style={WCS}>{warmLbl("WATER / DAY (L)")}{warmPills(WATER4, a.water ?? "", (v) => set("water", v))}</div>
+    </WarmShell>
+  );
+}
 function MS({ name, size = 20, fill = false, className = "", style }: { name: string; size?: number; fill?: boolean; className?: string; style?: CSSProperties }) {
   return <span className={`material-symbols-outlined ${className}`} style={{ fontSize: size, lineHeight: 1, fontVariationSettings: fill ? "'FILL' 1" : "'FILL' 0", ...style }}>{name}</span>;
 }
@@ -749,7 +849,7 @@ function LifestylePage() {
     return s;
   }, [a.habits, a.habitDetail, a.lastMeal, a.water, a.sleep]);
 
-  const canNext = key === "about" ? (!!a.age && !!a.sex && cm > 0 && kg > 0) : key === "weight-goal" ? ((parseFloat(a.targetKg) || 0) > 0 && kg > 0) : true;
+  const canNext = key === "about" ? (!!a.age && !!a.sex && cm > 0 && kg > 0) : key === "weight-goal" ? ((parseFloat(a.targetKg) || 0) > 0 && kg > 0) : key === "movement" ? !!a.activity : true;
   const back = () => (step === 0 ? navigate({ to: "/home" }) : setStep((s) => s - 1));
   const next = () => { if (canNext) setStep((s) => Math.min(stepKeys.length - 1, s + 1)); };
   const persist = () => { try { localStorage.setItem("ayuraise.lifestyle", JSON.stringify({ ...a, cm: Math.round(cm), kg: Math.round(kg), tdee, updatedAt: Date.now() })); } catch { /* ignore */ } };
@@ -829,6 +929,9 @@ function LifestylePage() {
   // ===== The 4 create-profile screens, redesigned in the sage "Stitch" system =====
   if (key === "about") return <AboutYouWarm a={a} set={set} onBack={back} onNext={next} canNext={canNext} />;
   if (key === "weight-goal") return <WeightGoalWarm a={a} set={set} curKg={kg} unit={a.weightUnit === "lb" ? "lb" : "kg"} onBack={back} onNext={next} />;
+  if (key === "movement") return <ActivityWarm a={a} set={set} onBack={back} onNext={next} canNext={canNext} />;
+  if (key === "sleep") return <SleepWarm a={a} set={set} onBack={back} onNext={next} />;
+  if (key === "eating") return <FoodWarm a={a} set={set} onBack={back} onNext={next} />;
   if (["movement", "sleep", "eating"].includes(key)) {
     const actIcon = (id: string) => id === "sedentary" ? "chair" : id === "light" ? "directions_walk" : id === "active" ? "fitness_center" : "bolt";
     return (
